@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using LabelFlowStudio.Data;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Diagnostics;
@@ -15,15 +16,19 @@ public partial class App : Application
         base.OnStartup(e);
 
         _host = Host.CreateDefaultBuilder()
-            .ConfigureAppConfiguration((ctx, cfg) =>
-            {
-                cfg.AddUserSecrets<App>(optional: true);
-            })
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddSingleton<MainWindow>();
-            })
-            .Build();
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    config.AddUserSecrets<App>(optional: true);
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    // Database
+                    services.AddLabelFlowDataAccess(context.Configuration);
+
+                    // UI
+                    services.AddSingleton<MainWindow>();
+                })
+                .Build();
 
         _host.Start();
 
