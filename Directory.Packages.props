@@ -8,17 +8,16 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="6.0.36" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.36" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.36" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="6.0.36" />
 
     <!-- Oracle EF Core provider -->
     <PackageVersion Include="Oracle.EntityFrameworkCore" Version="6.21.170" />
 
     <!-- Microsoft.Extensions.* -->
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
 
     <!-- UI -->
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.03719.77" />
