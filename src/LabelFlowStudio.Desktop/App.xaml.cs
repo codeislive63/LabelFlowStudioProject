@@ -68,6 +68,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             Log.Fatal(ex, "Application failed to start");
+            Log.CloseAndFlush();
             throw;
         }
 
@@ -81,8 +82,23 @@ public partial class App : System.Windows.Application
             if (_host is not null)
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await _host.StopAsync(cts.Token);
-                _host.Dispose();
+
+                try
+                {
+                    await _host.StopAsync(cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    Log.Warning("Host stop timed out");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Host stop failed");
+                }
+                finally
+                {
+                    _host.Dispose();
+                }
             }
         }
         finally
@@ -90,8 +106,6 @@ public partial class App : System.Windows.Application
             Log.CloseAndFlush();
             base.OnExit(e);
         }
-
-        base.OnExit(e);
     }
 
     private static void ConfigureGlobalExceptionLogging()
@@ -101,6 +115,7 @@ public partial class App : System.Windows.Application
             if (args.ExceptionObject is Exception exception)
             {
                 Log.Fatal(exception, "Unhandled exception");
+                Log.CloseAndFlush();
             }
         };
 
