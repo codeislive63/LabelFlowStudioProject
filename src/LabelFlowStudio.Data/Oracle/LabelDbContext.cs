@@ -6,7 +6,9 @@ namespace LabelFlowStudio.Data.Oracle;
 public sealed class LabelDbContext : DbContext
 {
     public LabelDbContext(DbContextOptions<LabelDbContext> options)
-        : base(options) { }
+        : base(options) 
+    { 
+    }
 
     public DbSet<LabelRecord> LabelRecords => Set<LabelRecord>();
 
