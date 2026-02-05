@@ -14,7 +14,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
 
-    private readonly SemaphoreSlim _scannerGate = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _scannerGate = new(1, 1);
 
     private WorkMode _mode = WorkMode.Manual;
 
@@ -128,13 +128,15 @@ public sealed class MainViewModel : ViewModelBase
 
     private async Task LoadRecordsAsync()
     {
-        IsBusy = true;
+        await RunOnUiThreadAsync(() =>
+        {
+            IsBusy = true;
+            StatusMessage = "Загрузка";
+            Records.Clear();
+        });
 
         try
         {
-            StatusMessage = "Загрузка";
-            Records.Clear();
-
             var request = new BoxProcessingRequest(
                 Tenam: Tenam,
                 Mode: Mode,
@@ -143,21 +145,27 @@ public sealed class MainViewModel : ViewModelBase
 
             var response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
 
-            foreach (var record in response.Records)
+            await RunOnUiThreadAsync(() =>
             {
-                Records.Add(record);
-            }
+                foreach (var record in response.Records)
+                {
+                    Records.Add(record);
+                }
 
-            StatusMessage = response.Message;
+                StatusMessage = response.Message;
 
-            if (response.Status == BoxProcessingStatus.Success)
-            {
-                Tenam = string.Empty;
-            }
+                if (response.Status == BoxProcessingStatus.Success)
+                {
+                    Tenam = string.Empty;
+                }
+            });
         }
         finally
         {
-            IsBusy = false;
+            await RunOnUiThreadAsync(() =>
+            {
+                IsBusy = false;
+            });
         }
     }
 
@@ -183,9 +191,9 @@ public sealed class MainViewModel : ViewModelBase
                 _scannerGate.Release();
             }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _logger.LogError(ex, "Failed to update scanner state");
+            _logger.LogError(exception, "Failed to update scanner state");
         }
     }
 
@@ -202,25 +210,61 @@ public sealed class MainViewModel : ViewModelBase
             if (!_boxScanner.IsRunning)
             {
                 await _boxScanner.StartAsync(CancellationToken.None);
-                StatusMessage = "Сканер запущен";
+
+                await RunOnUiThreadAsync(() =>
+                {
+                    StatusMessage = "Сканер запущен";
+                });
             }
         }
         catch (OptionsValidationException exception)
         {
             _logger.LogError(exception, "Box scanner configuration is invalid");
-            StatusMessage = "Сканер не настроен";
-            Mode = WorkMode.Manual;
+
+            if (_isScannerSubscribed)
+            {
+                _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
+                _isScannerSubscribed = false;
+            }
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Сканер не настроен";
+
+                if (Mode == WorkMode.Automatic)
+                {
+                    Mode = WorkMode.Manual;
+                }
+            });
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogError(exception, "Box scanner is not configured");
-            StatusMessage = "Сканер не настроен";
-            Mode = WorkMode.Manual;
+
+            if (_isScannerSubscribed)
+            {
+                _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
+                _isScannerSubscribed = false;
+            }
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Сканер не настроен";
+
+                if (Mode == WorkMode.Automatic)
+                {
+                    Mode = WorkMode.Manual;
+                }
+            });
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to start box scanner");
-            StatusMessage = "Не удалось запустить сканер";
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Не удалось запустить сканер";
+            });
         }
     }
 
@@ -231,13 +275,21 @@ public sealed class MainViewModel : ViewModelBase
             if (_boxScanner.IsRunning)
             {
                 await _boxScanner.StopAsync(CancellationToken.None);
-                StatusMessage = "Сканер остановлен";
+
+                await RunOnUiThreadAsync(() =>
+                {
+                    StatusMessage = "Сканер остановлен";
+                });
             }
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to stop box scanner");
-            StatusMessage = "Не удалось остановить сканер";
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Не удалось остановить сканер";
+            });
         }
         finally
         {
@@ -251,14 +303,7 @@ public sealed class MainViewModel : ViewModelBase
 
     private void OnBoxNumberReceived(object? sender, BoxNumberReceivedEventArgs eventArgs)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        
-        if (dispatcher is null)
-        {
-            return;
-        }
-
-        _ = dispatcher.InvokeAsync(() =>
+        _ = RunOnUiThreadAsync(() =>
         {
             if (Mode != WorkMode.Automatic)
             {
@@ -279,9 +324,24 @@ public sealed class MainViewModel : ViewModelBase
         });
     }
 
+    private static Task RunOnUiThreadAsync(Action action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        return dispatcher.InvokeAsync(action).Task;
+    }
 
     private void HandleCommandException(Exception exception)
     {
-        StatusMessage = exception.Message;
+        _ = RunOnUiThreadAsync(() =>
+        {
+            StatusMessage = exception.Message;
+        });
     }
 }
