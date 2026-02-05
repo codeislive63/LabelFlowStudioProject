@@ -1,4 +1,5 @@
 ﻿using LabelFlowStudio.Data;
+using LabelFlowStudio.Desktop.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,6 +28,9 @@ public partial class App : Application
 
                     // UI
                     services.AddSingleton<MainWindow>();
+
+                    // ViewModel
+                    services.AddSingleton<MainViewModel>();
                 })
                 .Build();
 
