@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Core.Models;
 
-namespace LabelFlowStudio.App.BoxProcessing;
+namespace LabelFlowStudio.Application.BoxProcessing;
+
 
 public sealed record BoxProcessingResponse(
     BoxProcessingStatus Status,
