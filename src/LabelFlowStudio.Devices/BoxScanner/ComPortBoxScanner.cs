@@ -7,7 +7,7 @@ namespace LabelFlowStudio.Devices.BoxScanner;
 
 public sealed class ComPortBoxScanner : IBoxScanner
 {
-    private readonly BoxScannerOptions _options;
+    private readonly IOptionsMonitor<BoxScannerOptions> _optionsMonitor;
     private readonly ILogger<ComPortBoxScanner> _logger;
 
     private readonly object _sync = new();
@@ -16,9 +16,11 @@ public sealed class ComPortBoxScanner : IBoxScanner
     private SerialPort? _serialPort;
     private bool _disposed;
 
-    public ComPortBoxScanner(IOptions<BoxScannerOptions> options, ILogger<ComPortBoxScanner> logger)
+    private BoxScannerOptions _optionsSnapshot = new();
+
+    public ComPortBoxScanner(IOptionsMonitor<BoxScannerOptions> optionsMonitor, ILogger<ComPortBoxScanner> logger)
     {
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,20 +37,24 @@ public sealed class ComPortBoxScanner : IBoxScanner
             return Task.CompletedTask;
         }
 
-        if (string.IsNullOrWhiteSpace(_options.PortName))
+        var options = _optionsMonitor.CurrentValue;
+
+        if (string.IsNullOrWhiteSpace(options.PortName))
         {
             throw new InvalidOperationException("Box scanner PortName is not configured");
         }
 
         try
         {
-            _serialPort = new SerialPort(_options.PortName, _options.BaudRate)
+            _optionsSnapshot = options;
+
+            _serialPort = new SerialPort(options.PortName, options.BaudRate)
             {
-                DataBits = _options.DataBits,
-                Parity = _options.Parity,
-                StopBits = _options.StopBits,
-                Handshake = _options.Handshake,
-                ReadTimeout = _options.ReadTimeoutMilliseconds
+                DataBits = options.DataBits,
+                Parity = options.Parity,
+                StopBits = options.StopBits,
+                Handshake = options.Handshake,
+                ReadTimeout = options.ReadTimeoutMilliseconds
             };
 
             _serialPort.DataReceived += OnDataReceived;
@@ -56,12 +62,12 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
             IsRunning = true;
 
-            _logger.LogInformation("Box scanner started on {PortName}", _options.PortName);
+            _logger.LogInformation("Box scanner started on {PortName}", options.PortName);
             return Task.CompletedTask;
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to start box scanner on {PortName}", _options.PortName);
+            _logger.LogError(exception, "Failed to start box scanner on {PortName}", options.PortName);
 
             CleanupPort();
             throw;
@@ -105,7 +111,6 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
         catch
         {
-            // при dispose не падаем
         }
     }
 
@@ -141,17 +146,27 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
     private void ProcessBufferLocked()
     {
-        var separator = _options.LineSeparator;
+        var separator = _optionsSnapshot.LineSeparator;
         
         if (string.IsNullOrEmpty(separator))
         {
-            separator = "\r\n";
+            separator = "\n";
         }
 
         while (true)
         {
             var bufferText = _buffer.ToString();
             var separatorIndex = bufferText.IndexOf(separator, StringComparison.Ordinal);
+
+            if (separatorIndex < 0 && separator != "\n")
+            {
+                separatorIndex = bufferText.IndexOf("\n", StringComparison.Ordinal);
+                
+                if (separatorIndex >= 0)
+                {
+                    separator = "\n";
+                }
+            }
 
             if (separatorIndex < 0)
             {
@@ -202,7 +217,6 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
 
         serialPort.Dispose();
-        
         _serialPort = null;
 
         lock (_sync)
