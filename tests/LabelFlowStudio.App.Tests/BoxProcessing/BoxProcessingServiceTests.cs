@@ -1,4 +1,4 @@
-using LabelFlowStudio.Application.BoxProcessing;
+п»їusing LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Core.Models;
 
@@ -48,7 +48,7 @@ public sealed class BoxProcessingServiceTests
         );
 
         Assert.Equal(BoxProcessingStatus.Error, response.Status);
-        Assert.Equal("TENAM пустой", response.Message);
+        Assert.Equal("TENAM РїСѓСЃС‚РѕР№", response.Message);
         Assert.Empty(response.Records);
         Assert.False(response.ShouldPrintDropSheet);
         Assert.False(response.ShouldPrintEmptyDropSheet);
@@ -82,7 +82,7 @@ public sealed class BoxProcessingServiceTests
         );
 
         Assert.Equal(BoxProcessingStatus.NotFound, response.Status);
-        Assert.Equal("Данных по коробу не найдено", response.Message);
+        Assert.Equal("Р”Р°РЅРЅС‹С… РїРѕ РєРѕСЂРѕР±Сѓ РЅРµ РЅР°Р№РґРµРЅРѕ", response.Message);
         Assert.Empty(response.Records);
         Assert.False(response.ShouldPrintDropSheet);
         Assert.False(response.ShouldPrintEmptyDropSheet);
@@ -106,7 +106,7 @@ public sealed class BoxProcessingServiceTests
         );
 
         Assert.Equal(BoxProcessingStatus.NeedWeight, response.Status);
-        Assert.Equal("Нет веса в БД. Поставьте короб на весы", response.Message);
+        Assert.Equal("РќРµС‚ РІРµСЃР° РІ Р‘Р”. РџРѕСЃС‚Р°РІСЊС‚Рµ РєРѕСЂРѕР± РЅР° РІРµСЃС‹", response.Message);
         Assert.Single(response.Records);
         Assert.False(response.ShouldPrintDropSheet);
         Assert.False(response.ShouldPrintEmptyDropSheet);
@@ -130,7 +130,7 @@ public sealed class BoxProcessingServiceTests
         );
 
         Assert.Equal(BoxProcessingStatus.Success, response.Status);
-        Assert.Equal("Нет веса в БД. Авто-режим: печатаю пустой лист сброса", response.Message);
+        Assert.Equal("РќРµС‚ РІРµСЃР° РІ Р‘Р”. РђРІС‚Рѕ-СЂРµР¶РёРј: РїРµС‡Р°С‚Р°СЋ РїСѓСЃС‚РѕР№ Р»РёСЃС‚ СЃР±СЂРѕСЃР°", response.Message);
         Assert.Single(response.Records);
         Assert.False(response.ShouldPrintDropSheet);
         Assert.True(response.ShouldPrintEmptyDropSheet);
@@ -154,7 +154,7 @@ public sealed class BoxProcessingServiceTests
         );
 
         Assert.Equal(BoxProcessingStatus.Success, response.Status);
-        Assert.Equal("Данные загружены", response.Message);
+        Assert.Equal("Р”Р°РЅРЅС‹Рµ Р·Р°РіСЂСѓР¶РµРЅС‹", response.Message);
         Assert.Single(response.Records);
         Assert.Equal(6.325m, response.Weight);
         Assert.True(response.ShouldPrintDropSheet);
