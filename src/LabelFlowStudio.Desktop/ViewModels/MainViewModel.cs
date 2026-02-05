@@ -3,6 +3,7 @@ using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
@@ -203,6 +204,18 @@ public sealed class MainViewModel : ViewModelBase
                 await _boxScanner.StartAsync(CancellationToken.None);
                 StatusMessage = "Сканер запущен";
             }
+        }
+        catch (OptionsValidationException exception)
+        {
+            _logger.LogError(exception, "Box scanner configuration is invalid");
+            StatusMessage = "Сканер не настроен";
+            Mode = WorkMode.Manual;
+        }
+        catch (InvalidOperationException exception)
+        {
+            _logger.LogError(exception, "Box scanner is not configured");
+            StatusMessage = "Сканер не настроен";
+            Mode = WorkMode.Manual;
         }
         catch (Exception exception)
         {

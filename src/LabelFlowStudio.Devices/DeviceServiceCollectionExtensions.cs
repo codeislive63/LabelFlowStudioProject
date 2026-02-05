@@ -12,7 +12,8 @@ public static class DeviceServiceCollectionExtensions
     {
         services.AddOptions<BoxScannerOptions>()
                 .Bind(configuration.GetSection(ScannerSection))
-                .ValidateDataAnnotations();
+                .ValidateDataAnnotations()
+                .Validate(options => !string.IsNullOrWhiteSpace(options.PortName), "Devices:Scanner:PortName is required");
 
         services.AddSingleton<IBoxScanner, ComPortBoxScanner>();
 
