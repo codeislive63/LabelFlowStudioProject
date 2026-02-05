@@ -79,26 +79,28 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            if (_host is not null)
+            if (_host is null)
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                return;
+            }
 
-                try
-                {
-                    await _host.StopAsync(cts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    Log.Warning("Host stop timed out");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Host stop failed");
-                }
-                finally
-                {
-                    _host.Dispose();
-                }
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+            try
+            {
+                await _host.StopAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("Host stop timed out");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Host stop failed");
+            }
+            finally
+            {
+                _host.Dispose();
             }
         }
         finally
