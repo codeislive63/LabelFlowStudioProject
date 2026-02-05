@@ -2,6 +2,7 @@
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Devices.BoxScanner;
+using LabelFlowStudio.Printing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
@@ -11,6 +12,8 @@ namespace LabelFlowStudio.Desktop.ViewModels;
 public sealed class MainViewModel : ViewModelBase
 {
     private readonly IBoxProcessingService _boxProcessingService;
+    private readonly IPrintService _printService;
+
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
 
@@ -26,10 +29,12 @@ public sealed class MainViewModel : ViewModelBase
 
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
+        IPrintService printService,
         IBoxScanner boxScanner,
         ILogger<MainViewModel> logger)
     {
         _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
+        _printService = printService ?? throw new ArgumentNullException(nameof(printService));
         _boxScanner = boxScanner ?? throw new ArgumentNullException(nameof(boxScanner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -128,6 +133,8 @@ public sealed class MainViewModel : ViewModelBase
 
     private async Task LoadRecordsAsync()
     {
+        var tenamSnapshot = Tenam?.Trim() ?? string.Empty;
+
         await RunOnUiThreadAsync(() =>
         {
             IsBusy = true;
@@ -138,7 +145,7 @@ public sealed class MainViewModel : ViewModelBase
         try
         {
             var request = new BoxProcessingRequest(
-                Tenam: Tenam,
+                Tenam: tenamSnapshot,
                 Mode: Mode,
                 ShouldPrintEndLabels: ShouldPrintEndLabels
             );
@@ -159,12 +166,51 @@ public sealed class MainViewModel : ViewModelBase
                     Tenam = string.Empty;
                 }
             });
+
+            await TryPrintAsync(response, tenamSnapshot);
         }
         finally
         {
             await RunOnUiThreadAsync(() =>
             {
                 IsBusy = false;
+            });
+        }
+    }
+
+    private async Task TryPrintAsync(BoxProcessingResponse response, string tenam)
+    {
+        try
+        {
+            if (response.ShouldPrintEmptyDropSheet)
+            {
+                await _printService.PrintEmptyDropSheetAsync(tenam, CancellationToken.None);
+            }
+
+            if (response.ShouldPrintDropSheet)
+            {
+                await _printService.PrintDropSheetAsync(response, tenam, CancellationToken.None);
+            }
+
+            if (response.ShouldPrintEndLabels)
+            {
+                await _printService.PrintEndLabelAsync(response, tenam, CancellationToken.None);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Печать отменена";
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Printing failed");
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = "Ошибка печати";
             });
         }
     }

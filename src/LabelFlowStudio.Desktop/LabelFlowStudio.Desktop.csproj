@@ -25,5 +25,6 @@
 	  <ProjectReference Include="..\LabelFlowStudio.Application\LabelFlowStudio.Application.csproj" />
 	  <ProjectReference Include="..\LabelFlowStudio.Data\LabelFlowStudio.Data.csproj" />
 	  <ProjectReference Include="..\LabelFlowStudio.Devices\LabelFlowStudio.Devices.csproj" />
+	  <ProjectReference Include="..\LabelFlowStudio.Printing\LabelFlowStudio.Printing.csproj" />
 	</ItemGroup>
 </Project>
