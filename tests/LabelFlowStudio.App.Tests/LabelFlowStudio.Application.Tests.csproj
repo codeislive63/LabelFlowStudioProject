@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LabelFlowStudio.Application\LabelFlowStudio.Application.csproj" />
-    <ProjectReference Include="..\..\src\LabelFlowStudio.App\LabelFlowStudio.Application.csproj" />
   </ItemGroup>
 
 </Project>
