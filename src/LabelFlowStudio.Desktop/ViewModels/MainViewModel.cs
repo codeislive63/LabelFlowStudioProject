@@ -44,7 +44,14 @@ public sealed class MainViewModel : ViewModelBase
     public WorkMode Mode
     {
         get => _mode;
-        set => SetProperty(ref _mode, value);
+        set
+        {
+            if (SetProperty(ref _mode, value))
+            {
+                OnPropertyChanged(nameof(IsManual));
+                OnPropertyChanged(nameof(IsAutomatic));
+            }
+        }
     }
 
     public bool IsManual
