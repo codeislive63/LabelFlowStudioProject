@@ -1,4 +1,4 @@
-﻿namespace LabelFlowStudio.App.BoxProcessing;
+﻿namespace LabelFlowStudio.Application.BoxProcessing;
 
 public interface IBoxProcessingService
 {

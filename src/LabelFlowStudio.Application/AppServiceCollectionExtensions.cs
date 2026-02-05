@@ -1,7 +1,7 @@
-﻿using LabelFlowStudio.App.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LabelFlowStudio.App;
+namespace LabelFlowStudio.Application;
 
 public static class AppServiceCollectionExtensions
 {

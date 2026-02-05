@@ -17,7 +17,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\LabelFlowStudio.App\LabelFlowStudio.App.csproj" />
+	  <ProjectReference Include="..\LabelFlowStudio.Application\LabelFlowStudio.Application.csproj" />
+	  <ProjectReference Include="..\LabelFlowStudio.App\LabelFlowStudio.Application.csproj" />
 	  <ProjectReference Include="..\LabelFlowStudio.Data\LabelFlowStudio.Data.csproj" />
 	</ItemGroup>
 </Project>

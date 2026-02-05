@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.App;
+﻿using LabelFlowStudio.Application;
 using LabelFlowStudio.Data;
 using LabelFlowStudio.Desktop.ViewModels;
 using Microsoft.Extensions.Configuration;
@@ -9,7 +9,7 @@ using System.Windows;
 
 namespace LabelFlowStudio.Desktop;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private IHost? _host;
 
@@ -27,7 +27,7 @@ public partial class App : Application
                     // Database
                     services.AddLabelFlowDataAccess(context.Configuration);
 
-                    // App
+                    // Application
                     services.AddLabelFlowApplication();
 
                     // UI

@@ -1,10 +1,10 @@
 <Solution>
-  <Project Path="src/LabelFlowStudio.App/LabelFlowStudio.App.csproj" />
+  <Project Path="src/LabelFlowStudio.Application/LabelFlowStudio.Application.csproj" />
   <Project Path="src/LabelFlowStudio.Core/LabelFlowStudio.Core.csproj" />
   <Project Path="src/LabelFlowStudio.Data/LabelFlowStudio.Data.csproj" />
   <Project Path="src/LabelFlowStudio.Desktop/LabelFlowStudio.Desktop.csproj" />
   <Project Path="src/LabelFlowStudio.Devices/LabelFlowStudio.Devices.csproj" />
   <Project Path="src/LabelFlowStudio.Printing/LabelFlowStudio.Printing.csproj" />
   <Project Path="src/LabelFlowStudio.Templates/LabelFlowStudio.Templates.csproj" />
-  <Project Path="tests/LabelFlowStudio.App.Tests/LabelFlowStudio.App.Tests.csproj" />
+  <Project Path="tests/LabelFlowStudio.App.Tests/LabelFlowStudio.Application.Tests.csproj" />
 </Solution>

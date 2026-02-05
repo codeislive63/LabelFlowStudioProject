@@ -1,6 +1,6 @@
 ﻿using LabelFlowStudio.Core.Abstractions;
 
-namespace LabelFlowStudio.App.BoxProcessing;
+namespace LabelFlowStudio.Application.BoxProcessing;
 
 public sealed class BoxProcessingService : IBoxProcessingService
 {
