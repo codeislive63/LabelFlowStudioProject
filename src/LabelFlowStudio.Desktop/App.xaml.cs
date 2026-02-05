@@ -1,4 +1,5 @@
-﻿using LabelFlowStudio.Data;
+﻿using LabelFlowStudio.App;
+using LabelFlowStudio.Data;
 using LabelFlowStudio.Desktop.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,9 @@ public partial class App : Application
                 {
                     // Database
                     services.AddLabelFlowDataAccess(context.Configuration);
+
+                    // App
+                    services.AddLabelFlowApplication();
 
                     // UI
                     services.AddSingleton<MainWindow>();
