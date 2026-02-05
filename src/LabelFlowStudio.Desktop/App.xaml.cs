@@ -3,6 +3,7 @@ using LabelFlowStudio.Data;
 using LabelFlowStudio.Desktop.Logging;
 using LabelFlowStudio.Desktop.ViewModels;
 using LabelFlowStudio.Devices;
+using LabelFlowStudio.Printing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,6 +55,9 @@ public partial class App : System.Windows.Application
 
                     // Application
                     services.AddLabelFlowApplication();
+
+                    // Printing
+                    services.AddLabelFlowPrinting(context.Configuration);
 
                     // UI
                     services.AddSingleton<MainWindow>();
