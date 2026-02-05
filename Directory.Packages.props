@@ -18,6 +18,11 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+<PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="7.0.0" />
+
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
 
     <!-- UI -->
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.03719.77" />
@@ -36,5 +41,8 @@
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
+
+    <!-- Serial ports -->
+    <PackageVersion Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 using LabelFlowStudio.Data;
 using LabelFlowStudio.Desktop.Logging;
 using LabelFlowStudio.Desktop.ViewModels;
+using LabelFlowStudio.Devices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,6 +48,9 @@ public partial class App : System.Windows.Application
                 {
                     // Database
                     services.AddLabelFlowDataAccess(context.Configuration);
+
+                    // Devices
+                    services.AddLabelFlowDevices(context.Configuration);
 
                     // Application
                     services.AddLabelFlowApplication();
