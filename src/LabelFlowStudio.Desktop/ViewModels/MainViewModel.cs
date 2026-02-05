@@ -1,21 +1,23 @@
-﻿using System.Collections.ObjectModel;
-using LabelFlowStudio.Core.Abstractions;
+﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Commands;
+using System.Collections.ObjectModel;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
 public sealed class MainViewModel : ViewModelBase
 {
-    private readonly ILabelRepository _labelRepository;
+    private readonly IBoxProcessingService _boxProcessingService;
+    private WorkMode _mode = WorkMode.Manual;
 
     private string _tenam = string.Empty;
     private string _statusMessage = string.Empty;
     private bool _isBusy;
+    private bool _shouldPrintEndLabels;
 
-    public MainViewModel(ILabelRepository labelRepository)
+    public MainViewModel(IBoxProcessingService boxProcessingService)
     {
-        _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
+        _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
 
         Records = new ObservableCollection<LabelRecord>();
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
@@ -33,15 +35,48 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    public bool ShouldPrintEndLabels
+    {
+        get => _shouldPrintEndLabels;
+        set => SetProperty(ref _shouldPrintEndLabels, value);
+    }
+
+    public WorkMode Mode
+    {
+        get => _mode;
+        set => SetProperty(ref _mode, value);
+    }
+
+    public bool IsManual
+    {
+        get => _mode == WorkMode.Manual;
+        set
+        {
+            if (value)
+            {
+                Mode = WorkMode.Manual;
+            }
+        }
+    }
+
+    public bool IsAutomatic
+    {
+        get => _mode == WorkMode.Automatic;
+        set
+        {
+            if (value)
+            {
+                Mode = WorkMode.Automatic;
+            }
+        }
+    }
+
     public ObservableCollection<LabelRecord> Records { get; }
 
     public string StatusMessage
     {
         get => _statusMessage;
-        private set
-        {
-            SetProperty(ref _statusMessage, value);
-        }
+        private set => SetProperty(ref _statusMessage, value);
     }
 
     public bool IsBusy
@@ -74,24 +109,27 @@ public sealed class MainViewModel : ViewModelBase
 
         try
         {
-            StatusMessage = "Загрузка...";
+            StatusMessage = "Загрузка";
             Records.Clear();
 
-            IReadOnlyList<LabelRecord> records =
-                await _labelRepository.GetByTenamAsync(Tenam, CancellationToken.None);
+            var request = new BoxProcessingRequest(
+                Tenam: Tenam,
+                Mode: Mode,
+                ShouldPrintEndLabels: ShouldPrintEndLabels
+            );
 
-            foreach (LabelRecord record in records)
+            var response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
+
+            foreach (var record in response.Records)
             {
                 Records.Add(record);
             }
 
-            if (records.Count == 0)
+            StatusMessage = response.Message;
+
+            if (response.Status == BoxProcessingStatus.Success)
             {
-                StatusMessage = "Данных не найдено.";
-            }
-            else
-            {
-                StatusMessage = $"Загружено строк: {records.Count}.";
+                Tenam = string.Empty;
             }
         }
         finally
