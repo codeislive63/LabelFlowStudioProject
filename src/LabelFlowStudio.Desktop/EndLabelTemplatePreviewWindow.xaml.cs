@@ -1,27 +1,33 @@
 ﻿using System.IO;
 using System.Text;
 using System.Windows;
+using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 
 namespace LabelFlowStudio.Desktop;
 
 public partial class EndLabelTemplatePreviewWindow : Window
 {
+    private readonly BoxProcessingResponse _response;
     private readonly string _tenam;
-    private readonly decimal? _weight;
 
+    private readonly SemaphoreSlim _previewGate = new(1, 1);
+
+    private Task? _initializeWebViewTask;
     private bool _isPreviewReady;
 
-    public EndLabelTemplatePreviewWindow(string tenam, decimal? weight)
+    public EndLabelTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
     {
+        _response = response ?? throw new ArgumentNullException(nameof(response));
+
         if (string.IsNullOrWhiteSpace(tenam))
         {
             throw new ArgumentException("Tenam is required", nameof(tenam));
         }
 
         _tenam = tenam;
-        _weight = weight;
 
         InitializeComponent();
         Loaded += OnLoaded;
@@ -35,25 +41,86 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private async Task LoadPreviewAsync()
     {
+        if (!await _previewGate.WaitAsync(0))
+        {
+            return;
+        }
+
         try
         {
             SetPreviewState(isReady: false, status: "Загрузка предпросмотра");
 
             var template = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
-            var html = EndLabelHtmlTemplateRenderer.Render(template, _tenam, _weight);
+            var html = EndLabelHtmlTemplateRenderer.Render(template, _response, _tenam);
 
             var previewFilePath = await SavePreviewHtmlAsync(html, CancellationToken.None);
 
-            await PreviewWebView.EnsureCoreWebView2Async();
+            await EnsureWebViewReadyAsync();
 
-            // навигация именно на file:///… даёт стабильную печать и предсказуемую загрузку
-            PreviewWebView.Source = new Uri(previewFilePath, UriKind.Absolute);
+            PreviewWebView.Source = new Uri(previewFilePath);
+        }
+        catch (TimeoutException exception)
+        {
+            SetPreviewState(isReady: false, status: "WebView2 не инициализировался");
+            MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception exception)
         {
             SetPreviewState(isReady: false, status: "Ошибка предпросмотра");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        finally
+        {
+            _previewGate.Release();
+        }
+    }
+
+    private Task EnsureWebViewReadyAsync()
+    {
+        if (PreviewWebView.CoreWebView2 is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _initializeWebViewTask ??= InitializeWebViewAsync();
+
+        return WaitWithTimeoutAsync(
+            _initializeWebViewTask,
+            timeout: TimeSpan.FromSeconds(15),
+            message: "Не удалось инициализировать WebView2"
+        );
+    }
+
+    private async Task InitializeWebViewAsync()
+    {
+        var userDataFolder = GetWebViewUserDataFolder();
+        Directory.CreateDirectory(userDataFolder);
+
+        PreviewWebView.CreationProperties ??= new CoreWebView2CreationProperties
+        {
+            UserDataFolder = userDataFolder
+        };
+
+        var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+        await PreviewWebView.EnsureCoreWebView2Async(environment);
+    }
+
+    private static string GetWebViewUserDataFolder()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "LabelFlowStudio", "WebView2");
+    }
+
+    private static async Task WaitWithTimeoutAsync(Task task, TimeSpan timeout, string message)
+    {
+        var completed = await Task.WhenAny(task, Task.Delay(timeout));
+
+        if (completed != task)
+        {
+            throw new TimeoutException(message);
+        }
+
+        await task;
     }
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
@@ -65,11 +132,6 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
 
         SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
-    }
-
-    private void OnReloadClick(object sender, RoutedEventArgs eventArgs)
-    {
-        _ = LoadPreviewAsync();
     }
 
     private void OnPrintClick(object sender, RoutedEventArgs eventArgs)
@@ -107,7 +169,12 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
         var filePath = Path.Combine(folder, "end-label-preview.html");
 
-        await File.WriteAllTextAsync(filePath, html, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+        await File.WriteAllTextAsync(
+            filePath,
+            html,
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            cancellationToken
+        );
 
         return filePath;
     }

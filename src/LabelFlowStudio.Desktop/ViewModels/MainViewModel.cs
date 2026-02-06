@@ -255,17 +255,17 @@ public sealed class MainViewModel : ViewModelBase
     private Task OpenEndLabelPreviewAsync()
     {
         var response = _lastSuccessfulResponse;
+        
         if (response is null)
         {
             return Task.CompletedTask;
         }
 
         var tenam = _lastSuccessfulTenam;
-        var weight = response.Weight;
 
         return RunOnUiThreadAsync(() =>
         {
-            var window = new EndLabelTemplatePreviewWindow(tenam, weight)
+            var window = new EndLabelTemplatePreviewWindow(response, tenam)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };

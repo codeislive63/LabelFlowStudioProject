@@ -1,49 +1,265 @@
 <!doctype html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <style>
-        @page {
-            size: 100mm 150mm;
-            margin: 0;
+<meta charset="utf-8" />
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        overflow: hidden;
+        width: 150mm;
+        height: 100mm;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-family: Segoe UI, Arial, sans-serif;
+    }
+
+    img {
+        border: 0;
+        outline: 0;
+        display: block;
+    }
+
+    @page {
+        size: 150mm 100mm;
+        margin: 0;
+    }
+
+    .label {
+        width: 150mm;
+        height: 100mm;
+        box-sizing: border-box;
+        background: #fff;
+        padding: 4mm 6mm 6mm; /* top | left+right | bottom */
+        overflow: hidden;
+        /* поднимаем всё содержимое (если нужно) */
+        transform: translateY(-2mm) !important;
+    }
+
+    .cap {
+        font-weight: 700;
+        font-size: 12px;
+        margin-bottom: 2mm;
+    }
+
+    .text {
+        font-size: 12px;
+        line-height: 1.25;
+    }
+
+    .small {
+        font-size: 11px;
+        line-height: 1.25;
+        opacity: 0.95;
+    }
+
+    .mt {
+        margin-top: 3mm;
+    }
+
+    .top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 6mm;
+    }
+
+    .shop {
+        min-width: 28mm;
+    }
+
+    .shop-code {
+        font-size: 20px;
+        font-weight: 500;
+        margin-top: 1mm;
+    }
+
+    /* ====== ШТРИХКОД: прижимаем к правому краю как EAC ====== */
+    .barcode-block {
+        margin-left: auto; /* толкает блок к правому краю */
+        flex: 0 0 95mm; /* фиксируем ширину блока под штрихкод */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end; /* всё внутри вправо */
+    }
+
+    .barcode-wrap {
+        width: 100%; /* = 95mm */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end; /* штрихкод вправо */
+    }
+
+    .barcode {
+        width: 100%;
+        height: 18mm;
+        background: #fff;
+        border: none;
+        outline: none;
+        image-rendering: pixelated;
+    }
+
+    .tenam {
+        margin-top: 1.5mm;
+        font-size: 12px;
+        opacity: 0.9;
+        width: 100%; /* подпись ровно под штрихкодом */
+        text-align: center;
+    }
+
+    .rule {
+        border-top: 1px solid #999;
+        margin: 4mm 0;
+    }
+
+    /* Адрес: слева адрес, справа EAC */
+    .section.address {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8mm;
+    }
+
+    .address-left {
+        flex: 1;
+    }
+
+    .address-right {
+        width: 42mm;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .eac {
+        font-weight: 700;
+        font-size: 30px;
+        letter-spacing: 0.5px;
+        margin-top: 0;
+    }
+
+    .mid {
+        display: flex;
+        justify-content: space-between;
+        gap: 8mm;
+        margin-right: -1mm;
+    }
+
+    .left {
+        flex: 1;
+    }
+
+    .right {
+        margin-left: auto;
+        width: 42mm;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        height: 100%;
+    }
+
+    /* было width:100% — из-за этого и не "липнет" */
+    .kpi {
+        margin-top: auto;
+        width: auto; /* <-- ключевое */
+        display: inline-flex; /* "коробка" по содержимому */
+        flex-direction: column;
+        align-items: flex-end; /* <-- прижать вправо как EAC */
+        text-align: right;
+        padding-bottom: 2mm;
+    }
+
+    /* строки не должны растягиваться */
+    .kpi-row {
+        width: auto; /* <-- ключевое */
+        display: flex;
+        justify-content: flex-end;
+        gap: 3mm;
+        margin-top: 3mm;
+        font-size: 12px;
+        white-space: nowrap;
+        align-items: center;
+    }
+
+
+        .kpi-row > span:first-child {
+            width: 28mm;
+            text-align: right;
         }
 
-        html, body {
-            margin: 0;
-            padding: 0;
-        }
+    .kpi-val {
+        font-weight: 400;
+        font-size: 12px;
+        display: inline-block;
+        width: 10mm;
+        text-align: left;
+    }
 
-        .page {
-            width: 100mm;
-            height: 150mm;
-            box-sizing: border-box;
-            padding: 6mm;
-            font-family: Segoe UI, Arial, sans-serif;
-        }
+    .cap .cap-value {
+        font-weight: 400;
+        margin-left: 2mm;
+    }
+</style>
 
-        .title {
-            font-size: 20pt;
-            font-weight: 600;
-            margin-bottom: 4mm;
-        }
-
-        .barcode {
-            width: 100%;
-            height: 22mm;
-            object-fit: contain;
-            margin-bottom: 4mm;
-        }
-
-        .weight {
-            font-size: 16pt;
-        }
-    </style>
-</head>
 <body>
-    <div class="page">
-        <div class="title">TENAM {{TENAM}}</div>
-        <img class="barcode" src="{{BARCODE_DATA_URL}}" alt="barcode" />
-        <div class="weight">{{WEIGHT_TEXT}}</div>
+    <div class="label">
+        <div class="top">
+            <div class="shop">
+                <div class="cap">Код магазина</div>
+                <div class="shop-code">{{Lfakdnr}}</div>
+            </div>
+
+            <div class="barcode-block">
+                <div class="barcode-wrap">
+                    <img class="barcode" src="{{BarcodeDataUri}}" alt="barcode" />
+                    <div class="tenam">{{Tenam}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rule"></div>
+
+        <!-- Адрес + EAC справа -->
+        <div class="section address">
+            <div class="address-left">
+                <div class="cap">Адрес доставки</div>
+                <div class="text">{{Gpbez}}</div>
+                <div class="text">{{Gport1}}</div>
+                <div class="text">{{Gpstrasse}}</div>
+            </div>
+
+            <div class="address-right">
+                <div class="eac">EAC</div>
+            </div>
+        </div>
+
+        <div class="rule"></div>
+
+        <div class="mid">
+            <div class="left">
+                <div class="cap">Грузополучатель</div>
+                <div class="text">{{Gpbez}}</div>
+
+                <div class="cap mt">Код заказа</div>
+                <div class="small">{{Bstchgnam5}}</div>
+
+                <div class="cap mt">Вес брутто (кг): <span class="cap-value">{{Brutto}}</span></div>
+            </div>
+
+            <div class="right">
+                <div class="kpi">
+                    <div class="kpi-row">
+                        <span>Короб в заказ:</span>
+                        <span class="kpi-val">{{Countbst}}</span>
+                    </div>
+                    <div class="kpi-row">
+                        <span>Изделий в коробе:</span>
+                        <span class="kpi-val">{{SumBst}}</span>
+                    </div>
+                    <div class="kpi-row">
+                        <span>Объём (м.куб):</span>
+                        <span class="kpi-val">06</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
-</html>
