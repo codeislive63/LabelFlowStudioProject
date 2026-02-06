@@ -20,7 +20,6 @@ public sealed class BoxScannerOptions
 
     public Handshake Handshake { get; set; } = Handshake.None;
 
-    [Required]
     public string LineSeparator { get; set; } = "\n";
 
     [Range(50, 10000)]

@@ -31,10 +31,9 @@ public static class EndLabelHtmlTemplateRenderer
 
         var barcodeDataUrl = CreateBarcodeDataUrl(tenam);
 
-        // Вес: берем из response.Weight (если есть), иначе из первой записи (если у тебя там есть Brutto)
         var brutto = response.Weight;
         var bruttoText = brutto.HasValue
-            ? brutto.Value.ToString("0.###", CultureInfo.CurrentCulture)
+            ? brutto.Value.ToString("0.###", CultureInfo.InvariantCulture)
             : string.Empty;
 
         var countBstText = header?.CountBst.HasValue == true
@@ -65,10 +64,10 @@ public static class EndLabelHtmlTemplateRenderer
         // Вес и KPI
         result = ReplaceEncoded(result, "{{Brutto}}", bruttoText);
 
-        // В шаблоне у тебя {{Countbst}} (b маленькая) — подстрахуемся обоими вариантами
-        result = ReplaceEncoded(result, "{{Countbst}}", countBstText);
+        // Короб в заказ
         result = ReplaceEncoded(result, "{{CountBst}}", countBstText);
 
+        // Изделий в коробе
         result = ReplaceEncoded(result, "{{SumBst}}", sumBstText);
 
         return result;
