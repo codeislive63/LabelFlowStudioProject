@@ -144,7 +144,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 return;
             }
 
-            PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.System);
+            PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
         }
         catch (Exception exception)
         {
