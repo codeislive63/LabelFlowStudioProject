@@ -57,7 +57,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
             await EnsureWebViewReadyAsync();
 
-            PreviewWebView.Source = new Uri(previewFilePath);
+            PreviewWebView.Source = new Uri(previewFilePath, UriKind.Absolute);
         }
         catch (TimeoutException exception)
         {
@@ -75,20 +75,27 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
     }
 
-    private Task EnsureWebViewReadyAsync()
+    private async Task EnsureWebViewReadyAsync()
     {
         if (PreviewWebView.CoreWebView2 is not null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        _initializeWebViewTask ??= InitializeWebViewAsync();
+        if (_initializeWebViewTask is null || _initializeWebViewTask.IsFaulted || _initializeWebViewTask.IsCanceled)
+        {
+            _initializeWebViewTask = InitializeWebViewAsync();
+        }
 
-        return WaitWithTimeoutAsync(
-            _initializeWebViewTask,
-            timeout: TimeSpan.FromSeconds(15),
-            message: "Не удалось инициализировать WebView2"
-        );
+        try
+        {
+            await _initializeWebViewTask.WaitAsync(TimeSpan.FromSeconds(60));
+        }
+        catch (TimeoutException)
+        {
+            _initializeWebViewTask = null;
+            throw new TimeoutException("WebView2 не успел инициализироваться за 60 секунд");
+        }
     }
 
     private async Task InitializeWebViewAsync()
@@ -100,27 +107,15 @@ public partial class EndLabelTemplatePreviewWindow : Window
         {
             UserDataFolder = userDataFolder
         };
-
-        var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
-        await PreviewWebView.EnsureCoreWebView2Async(environment);
+        
+        await PreviewWebView.EnsureCoreWebView2Async();
     }
 
     private static string GetWebViewUserDataFolder()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(localAppData, "LabelFlowStudio", "WebView2");
-    }
 
-    private static async Task WaitWithTimeoutAsync(Task task, TimeSpan timeout, string message)
-    {
-        var completed = await Task.WhenAny(task, Task.Delay(timeout));
-
-        if (completed != task)
-        {
-            throw new TimeoutException(message);
-        }
-
-        await task;
+        return Path.Combine(localAppData, "LabelFlowStudio", "WebView2", $"pid-{Environment.ProcessId}");
     }
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
