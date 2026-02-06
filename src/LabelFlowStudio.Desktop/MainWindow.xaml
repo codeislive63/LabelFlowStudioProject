@@ -41,6 +41,12 @@
             <CheckBox Content="Печатать торцевые"
                       IsChecked="{Binding ShouldPrintEndLabels}"
                       VerticalAlignment="Center"/>
+
+            <Button Content="Предпросмотр торцевой"
+                    Command="{Binding OpenEndLabelPreviewCommand}"
+                    Padding="12,6"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"/>
         </StackPanel>
 
         <TextBlock Grid.Row="1"

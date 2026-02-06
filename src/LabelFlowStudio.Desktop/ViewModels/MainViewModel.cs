@@ -6,6 +6,7 @@ using LabelFlowStudio.Printing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -13,11 +14,13 @@ public sealed class MainViewModel : ViewModelBase
 {
     private readonly IBoxProcessingService _boxProcessingService;
     private readonly IPrintService _printService;
-
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
 
     private readonly SemaphoreSlim _scannerGate = new(1, 1);
+
+    private BoxProcessingResponse? _lastSuccessfulResponse;
+    private string _lastSuccessfulTenam = string.Empty;
 
     private WorkMode _mode = WorkMode.Manual;
 
@@ -41,8 +44,15 @@ public sealed class MainViewModel : ViewModelBase
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         Records = new ObservableCollection<LabelRecord>();
+
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
+        OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
     }
+
+    public ObservableCollection<LabelRecord> Records { get; }
+
+    public AsyncCommand LoadRecordsCommand { get; }
+    public AsyncCommand OpenEndLabelPreviewCommand { get; }
 
     public string Tenam
     {
@@ -52,6 +62,25 @@ public sealed class MainViewModel : ViewModelBase
             if (SetProperty(ref _tenam, value))
             {
                 LoadRecordsCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        private set => SetProperty(ref _statusMessage, value);
+    }
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        private set
+        {
+            if (SetProperty(ref _isBusy, value))
+            {
+                LoadRecordsCommand.RaiseCanExecuteChanged();
+                OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -101,28 +130,6 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<LabelRecord> Records { get; }
-
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        private set => SetProperty(ref _statusMessage, value);
-    }
-
-    public bool IsBusy
-    {
-        get => _isBusy;
-        private set
-        {
-            if (SetProperty(ref _isBusy, value))
-            {
-                LoadRecordsCommand.RaiseCanExecuteChanged();
-            }
-        }
-    }
-
-    public AsyncCommand LoadRecordsCommand { get; }
-
     private bool CanLoadRecords()
     {
         if (IsBusy)
@@ -165,8 +172,18 @@ public sealed class MainViewModel : ViewModelBase
 
                 if (response.Status == BoxProcessingStatus.Success)
                 {
+                    _lastSuccessfulResponse = response;
+                    _lastSuccessfulTenam = tenamSnapshot;
+
                     Tenam = string.Empty;
                 }
+                else
+                {
+                    _lastSuccessfulResponse = null;
+                    _lastSuccessfulTenam = string.Empty;
+                }
+
+                OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
             });
 
             await TryPrintAsync(response, tenamSnapshot);
@@ -220,6 +237,43 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    private bool CanOpenEndLabelPreview()
+    {
+        if (IsBusy)
+        {
+            return false;
+        }
+
+        if (_lastSuccessfulResponse is null)
+        {
+            return false;
+        }
+
+        return !string.IsNullOrWhiteSpace(_lastSuccessfulTenam);
+    }
+
+    private Task OpenEndLabelPreviewAsync()
+    {
+        var response = _lastSuccessfulResponse;
+        if (response is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var tenam = _lastSuccessfulTenam;
+        var weight = response.Weight;
+
+        return RunOnUiThreadAsync(() =>
+        {
+            var window = new EndLabelTemplatePreviewWindow(tenam, weight)
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+
+            window.ShowDialog();
+        });
+    }
+
     private async Task UpdateScannerStateAsync()
     {
         try
@@ -271,42 +325,12 @@ public sealed class MainViewModel : ViewModelBase
         catch (OptionsValidationException exception)
         {
             _logger.LogError(exception, "Box scanner configuration is invalid");
-
-            if (_isScannerSubscribed)
-            {
-                _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
-                _isScannerSubscribed = false;
-            }
-
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = "Сканер не настроен";
-
-                if (Mode == WorkMode.Automatic)
-                {
-                    Mode = WorkMode.Manual;
-                }
-            });
+            await FailScannerStartAsync();
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogError(exception, "Box scanner is not configured");
-
-            if (_isScannerSubscribed)
-            {
-                _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
-                _isScannerSubscribed = false;
-            }
-
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = "Сканер не настроен";
-
-                if (Mode == WorkMode.Automatic)
-                {
-                    Mode = WorkMode.Manual;
-                }
-            });
+            await FailScannerStartAsync();
         }
         catch (Exception exception)
         {
@@ -317,6 +341,25 @@ public sealed class MainViewModel : ViewModelBase
                 StatusMessage = "Не удалось запустить сканер";
             });
         }
+    }
+
+    private Task FailScannerStartAsync()
+    {
+        if (_isScannerSubscribed)
+        {
+            _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
+            _isScannerSubscribed = false;
+        }
+
+        return RunOnUiThreadAsync(() =>
+        {
+            StatusMessage = "Сканер не настроен";
+
+            if (Mode == WorkMode.Automatic)
+            {
+                Mode = WorkMode.Manual;
+            }
+        });
     }
 
     private async Task EnsureScannerStoppedAsync()
