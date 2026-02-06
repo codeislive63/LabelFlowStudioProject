@@ -27,6 +27,8 @@ public sealed class MainViewModel : ViewModelBase
     private bool _shouldPrintEndLabels;
     private bool _isScannerSubscribed;
 
+    private const bool IsDropSheetPrintingEnabled = false;
+
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
         IPrintService printService,
@@ -182,14 +184,17 @@ public sealed class MainViewModel : ViewModelBase
     {
         try
         {
-            if (response.ShouldPrintEmptyDropSheet)
+            if (IsDropSheetPrintingEnabled)
             {
-                await _printService.PrintEmptyDropSheetAsync(tenam, CancellationToken.None);
-            }
+                if (response.ShouldPrintEmptyDropSheet)
+                {
+                    await _printService.PrintEmptyDropSheetAsync(tenam, CancellationToken.None);
+                }
 
-            if (response.ShouldPrintDropSheet)
-            {
-                await _printService.PrintDropSheetAsync(response, tenam, CancellationToken.None);
+                if (response.ShouldPrintDropSheet)
+                {
+                    await _printService.PrintDropSheetAsync(response, tenam, CancellationToken.None);
+                }
             }
 
             if (response.ShouldPrintEndLabels)
