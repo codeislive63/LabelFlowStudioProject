@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Text;
+using System.Windows;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
 
@@ -8,6 +10,8 @@ public partial class EndLabelTemplatePreviewWindow : Window
 {
     private readonly string _tenam;
     private readonly decimal? _weight;
+
+    private bool _isPreviewReady;
 
     public EndLabelTemplatePreviewWindow(string tenam, decimal? weight)
     {
@@ -33,16 +37,34 @@ public partial class EndLabelTemplatePreviewWindow : Window
     {
         try
         {
+            SetPreviewState(isReady: false, status: "Загрузка предпросмотра");
+
             var template = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
             var html = EndLabelHtmlTemplateRenderer.Render(template, _tenam, _weight);
 
+            var previewFilePath = await SavePreviewHtmlAsync(html, CancellationToken.None);
+
             await PreviewWebView.EnsureCoreWebView2Async();
-            PreviewWebView.NavigateToString(html);
+
+            // навигация именно на file:///… даёт стабильную печать и предсказуемую загрузку
+            PreviewWebView.Source = new Uri(previewFilePath, UriKind.Absolute);
         }
         catch (Exception exception)
         {
+            SetPreviewState(isReady: false, status: "Ошибка предпросмотра");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
+    {
+        if (eventArgs.IsSuccess)
+        {
+            SetPreviewState(isReady: true, status: string.Empty);
+            return;
+        }
+
+        SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
     }
 
     private void OnReloadClick(object sender, RoutedEventArgs eventArgs)
@@ -54,6 +76,12 @@ public partial class EndLabelTemplatePreviewWindow : Window
     {
         try
         {
+            if (!_isPreviewReady)
+            {
+                StatusText.Text = "Предпросмотр загружается";
+                return;
+            }
+
             if (PreviewWebView.CoreWebView2 is null)
             {
                 return;
@@ -70,5 +98,24 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private void OnCloseClick(object sender, RoutedEventArgs eventArgs)
     {
         Close();
+    }
+
+    private static async Task<string> SavePreviewHtmlAsync(string html, CancellationToken cancellationToken)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "LabelFlowStudio");
+        Directory.CreateDirectory(folder);
+
+        var filePath = Path.Combine(folder, "end-label-preview.html");
+
+        await File.WriteAllTextAsync(filePath, html, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), cancellationToken);
+
+        return filePath;
+    }
+
+    private void SetPreviewState(bool isReady, string status)
+    {
+        _isPreviewReady = isReady;
+        PrintButton.IsEnabled = isReady;
+        StatusText.Text = status;
     }
 }
