@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="EndLabel\" />
+
+	  <EmbeddedResource Include="EndLabel\EndLabel.html" />
+  </ItemGroup>
+
 </Project>

@@ -19,6 +19,8 @@
 		<PackageReference Include="Serilog.Extensions.Hosting" />
 		<PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Serilog.Sinks.Debug" />
+
+		<PackageReference Include="Microsoft.Web.WebView2" />
 	</ItemGroup>
 
 	<ItemGroup>
