@@ -1,203 +1,231 @@
 <!doctype html>
-<meta charset="utf-8" />
-<style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        background: #fff;
-        overflow: hidden;
-        width: 150mm;
-        height: 100mm;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        font-family: Segoe UI, Arial, sans-serif;
-    }
-
-    img {
-        border: 0;
-        outline: 0;
-        display: block;
-    }
-
-    @page {
-        size: 150mm 100mm;
-        margin: 0;
-    }
-
-    .label {
-        width: 150mm;
-        height: 100mm;
-        box-sizing: border-box;
-        background: #fff;
-        padding: 4mm 6mm 6mm; /* top | left+right | bottom */
-        overflow: hidden;
-        /* поднимаем всё содержимое (если нужно) */
-        transform: translateY(-2mm) !important;
-    }
-
-    .cap {
-        font-weight: 700;
-        font-size: 12px;
-        margin-bottom: 2mm;
-    }
-
-    .text {
-        font-size: 12px;
-        line-height: 1.25;
-    }
-
-    .small {
-        font-size: 11px;
-        line-height: 1.25;
-        opacity: 0.95;
-    }
-
-    .mt {
-        margin-top: 3mm;
-    }
-
-    .top {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 6mm;
-    }
-
-    .shop {
-        min-width: 28mm;
-    }
-
-    .shop-code {
-        font-size: 20px;
-        font-weight: 500;
-        margin-top: 1mm;
-    }
-
-    /* ====== ШТРИХКОД: прижимаем к правому краю как EAC ====== */
-    .barcode-block {
-        margin-left: auto; /* толкает блок к правому краю */
-        flex: 0 0 95mm; /* фиксируем ширину блока под штрихкод */
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end; /* всё внутри вправо */
-    }
-
-    .barcode-wrap {
-        width: 100%; /* = 95mm */
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end; /* штрихкод вправо */
-    }
-
-    .barcode {
-        width: 100%;
-        height: 18mm;
-        background: #fff;
-        border: none;
-        outline: none;
-        image-rendering: pixelated;
-    }
-
-    .tenam {
-        margin-top: 1.5mm;
-        font-size: 12px;
-        opacity: 0.9;
-        width: 100%; /* подпись ровно под штрихкодом */
-        text-align: center;
-    }
-
-    .rule {
-        border-top: 1px solid #999;
-        margin: 4mm 0;
-    }
-
-    /* Адрес: слева адрес, справа EAC */
-    .section.address {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 8mm;
-    }
-
-    .address-left {
-        flex: 1;
-    }
-
-    .address-right {
-        width: 42mm;
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .eac {
-        font-weight: 700;
-        font-size: 30px;
-        letter-spacing: 0.5px;
-        margin-top: 0;
-    }
-
-    .mid {
-        display: flex;
-        justify-content: space-between;
-        gap: 8mm;
-        margin-right: -1mm;
-    }
-
-    .left {
-        flex: 1;
-    }
-
-    .right {
-        margin-left: auto;
-        width: 42mm;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        height: 100%;
-    }
-
-    /* было width:100% — из-за этого и не "липнет" */
-    .kpi {
-        margin-top: auto;
-        width: auto; /* <-- ключевое */
-        display: inline-flex; /* "коробка" по содержимому */
-        flex-direction: column;
-        align-items: flex-end; /* <-- прижать вправо как EAC */
-        text-align: right;
-        padding-bottom: 2mm;
-    }
-
-    /* строки не должны растягиваться */
-    .kpi-row {
-        width: auto; /* <-- ключевое */
-        display: flex;
-        justify-content: flex-end;
-        gap: 3mm;
-        margin-top: 3mm;
-        font-size: 12px;
-        white-space: nowrap;
-        align-items: center;
-    }
-
-
-        .kpi-row > span:first-child {
-            width: 28mm;
-            text-align: right;
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        @page {
+            size: 150mm 100mm;
+            margin: 0;
         }
 
-    .kpi-val {
-        font-weight: 400;
-        font-size: 12px;
-        display: inline-block;
-        width: 10mm;
-        text-align: left;
-    }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            font-family: Segoe UI, Arial, sans-serif;
+        }
 
-    .cap .cap-value {
-        font-weight: 400;
-        margin-left: 2mm;
-    }
-</style>
+        img {
+            border: 0;
+            outline: 0;
+            display: block;
+        }
+
+        .label {
+            width: 150mm;
+            height: 100mm;
+            box-sizing: border-box;
+            background: #fff;
+            padding: 4mm 6mm 6mm;
+            overflow: hidden;
+            transform: translateY(-2mm);
+        }
+
+        @media screen {
+            html, body {
+                width: 100%;
+                height: 100%;
+            }
+
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .label {
+                outline: 2px solid #000;
+                outline-offset: 0;
+            }
+        }
+
+        @media print {
+            html, body {
+                width: 150mm;
+                height: 100mm;
+            }
+
+            body {
+                display: block;
+            }
+
+            .label {
+                outline: none !important;
+                border: none !important;
+            }
+        }
+
+        .cap {
+            font-weight: 700;
+            font-size: 12px;
+            margin-bottom: 2mm;
+        }
+
+        .text {
+            font-size: 12px;
+            line-height: 1.25;
+        }
+
+        .small {
+            font-size: 11px;
+            line-height: 1.25;
+            opacity: 0.95;
+        }
+
+        .mt {
+            margin-top: 3mm;
+        }
+
+        .top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 6mm;
+        }
+
+        .shop {
+            min-width: 28mm;
+        }
+
+        .shop-code {
+            font-size: 20px;
+            font-weight: 500;
+            margin-top: 1mm;
+        }
+
+        .barcode-block {
+            margin-left: auto;
+            flex: 0 0 60mm;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .barcode-wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .barcode {
+            width: 100%;
+            height: 18mm;
+            background: #fff;
+            border: none;
+            outline: none;
+            image-rendering: pixelated;
+        }
+
+        .tenam {
+            margin-top: 1.5mm;
+            font-size: 12px;
+            opacity: 0.9;
+            width: 100%;
+            text-align: center;
+        }
+
+        .rule {
+            border-top: 1px solid #999;
+            margin: 4mm 0;
+        }
+
+        .section.address {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8mm;
+        }
+
+        .address-left {
+            flex: 1;
+        }
+
+        .address-right {
+            width: 42mm;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .eac {
+            font-weight: 700;
+            font-size: 30px;
+            letter-spacing: 0.5px;
+            margin-top: 0;
+        }
+
+        .mid {
+            display: flex;
+            justify-content: space-between;
+            gap: 8mm;
+            margin-right: -1mm;
+        }
+
+        .left {
+            flex: 1;
+        }
+
+        .right {
+            margin-left: auto;
+            width: 42mm;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            height: 100%;
+        }
+
+        .kpi {
+            margin-top: auto;
+            width: auto;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+            padding-bottom: 2mm;
+        }
+
+        .kpi-row {
+            width: auto;
+            display: flex;
+            justify-content: flex-end;
+            gap: 3mm;
+            margin-top: 3mm;
+            font-size: 12px;
+            white-space: nowrap;
+            align-items: center;
+        }
+
+            .kpi-row > span:first-child {
+                width: 28mm;
+                text-align: right;
+            }
+
+        .kpi-val {
+            font-weight: 400;
+            font-size: 12px;
+            display: inline-block;
+            width: 10mm;
+            text-align: left;
+        }
+
+        .cap .cap-value {
+            font-weight: 400;
+            margin-left: 2mm;
+        }
+    </style>
+</head>
 
 <body>
     <div class="label">
@@ -217,7 +245,6 @@
 
         <div class="rule"></div>
 
-        <!-- Адрес + EAC справа -->
         <div class="section address">
             <div class="address-left">
                 <div class="cap">Адрес доставки</div>
@@ -248,7 +275,7 @@
                 <div class="kpi">
                     <div class="kpi-row">
                         <span>Короб в заказ:</span>
-                        <span class="kpi-val">{{Countbst}}</span>
+                        <span class="kpi-val">{{CountBst}}</span>
                     </div>
                     <div class="kpi-row">
                         <span>Изделий в коробе:</span>
@@ -263,3 +290,4 @@
         </div>
     </div>
 </body>
+</html>

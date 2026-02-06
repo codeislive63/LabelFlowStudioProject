@@ -1,5 +1,4 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
-using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Printing;
 using System.Globalization;
 using System.IO;
