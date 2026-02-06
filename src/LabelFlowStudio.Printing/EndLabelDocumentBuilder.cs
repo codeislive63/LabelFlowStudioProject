@@ -3,8 +3,6 @@ using Microsoft.Extensions.Options;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using ZXing;
 
 namespace LabelFlowStudio.Printing;
 
@@ -60,7 +58,7 @@ public sealed class EndLabelDocumentBuilder
         var barcodeWidth = (int)Math.Max(1, Math.Round(pageWidth - margin.Left - margin.Right));
         var barcodeHeight = 60;
 
-        var barcodeImage = CreateBarcode(tenam, barcodeWidth, barcodeHeight);
+        var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
 
         stack.Children.Add(new System.Windows.Controls.Image
         {
@@ -95,52 +93,5 @@ public sealed class EndLabelDocumentBuilder
     private static double MillimetersToDip(double millimeters)
     {
         return (millimeters / 25.4) * 96.0;
-    }
-
-    private static BitmapSource CreateBarcode(string value, int width, int height)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Barcode value is required", nameof(value));
-        }
-
-        if (width <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(width));
-        }
-
-        if (height <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(height));
-        }
-
-        var writer = new BarcodeWriterPixelData
-        {
-            Format = BarcodeFormat.CODE_128,
-            Options = new ZXing.Common.EncodingOptions
-            {
-                Width = width,
-                Height = height,
-                Margin = 0,
-                PureBarcode = true
-            }
-        };
-
-        var pixelData = writer.Write(value);
-        var stride = pixelData.Width * 4;
-
-        var bitmap = BitmapSource.Create(
-            pixelData.Width,
-            pixelData.Height,
-            96,
-            96,
-            PixelFormats.Bgra32,
-            null,
-            pixelData.Pixels,
-            stride
-        );
-
-        bitmap.Freeze();
-        return bitmap;
     }
 }

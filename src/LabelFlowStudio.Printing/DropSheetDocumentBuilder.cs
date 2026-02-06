@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 
@@ -28,6 +29,19 @@ public static class DropSheetDocumentBuilder
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 8)
         });
+
+        var barcodeWidth = 420;
+        var barcodeHeight = 80;
+
+        var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
+
+        document.Blocks.Add(new BlockUIContainer(new Image
+        {
+            Source = barcodeImage,
+            Height = barcodeHeight,
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(0, 0, 0, 10)
+        }));
 
         if (response.Records.Count > 0)
         {
@@ -69,6 +83,19 @@ public static class DropSheetDocumentBuilder
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 12)
         });
+
+        var barcodeWidth = 420;
+        var barcodeHeight = 80;
+
+        var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
+
+        document.Blocks.Add(new BlockUIContainer(new Image
+        {
+            Source = barcodeImage,
+            Height = barcodeHeight,
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(0, 0, 0, 12)
+        }));
 
         document.Blocks.Add(new Paragraph(new Run("Вес отсутствует"))
         {
