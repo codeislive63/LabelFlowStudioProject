@@ -173,7 +173,7 @@ public sealed class ComPortBoxScanner : IBoxScanner
                 return;
             }
 
-            var line = bufferText.Substring(0, separatorIndex);
+            var line = bufferText[..separatorIndex];
             _buffer.Remove(0, separatorIndex + separator.Length);
 
             var boxNumber = (line ?? string.Empty).Trim();
