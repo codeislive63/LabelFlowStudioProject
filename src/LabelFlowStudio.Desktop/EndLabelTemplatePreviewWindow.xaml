@@ -7,8 +7,7 @@
         Width="900">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="12">
-            <Button Content="Обновить" Click="OnReloadClick" Padding="12,6" Margin="0,0,8,0"/>
-
+            
             <Button x:Name="PrintButton"
                     Content="Печать"
                     Click="OnPrintClick"
