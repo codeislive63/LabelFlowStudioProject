@@ -25,10 +25,24 @@ public static class EndLabelHtmlTemplateRenderer
             ? $"Вес {weight.Value:0.###}"
             : "Вес отсутствует";
 
+        var encodedTenam = WebUtility.HtmlEncode(tenam);
+        var encodedWeightText = WebUtility.HtmlEncode(weightText);
+        var bruttoValue = weight.HasValue ? weight.Value.ToString("0.###") : string.Empty;
+
         return template
-            .Replace("{{TENAM}}", WebUtility.HtmlEncode(tenam), StringComparison.Ordinal)
-            .Replace("{{WEIGHT_TEXT}}", WebUtility.HtmlEncode(weightText), StringComparison.Ordinal)
-            .Replace("{{BARCODE_DATA_URL}}", barcodeDataUrl, StringComparison.Ordinal);
+            // TENAM
+            .Replace("{{TENAM}}", encodedTenam, StringComparison.Ordinal)
+            .Replace("{{Tenam}}", encodedTenam, StringComparison.Ordinal)
+
+            // weight text + numeric
+            .Replace("{{WEIGHT_TEXT}}", encodedWeightText, StringComparison.Ordinal)
+            .Replace("{{Brutto}}", WebUtility.HtmlEncode(bruttoValue), StringComparison.Ordinal)
+
+            // barcode
+            .Replace("{{BARCODE_DATA_URL}}", barcodeDataUrl, StringComparison.Ordinal)
+            .Replace("{{BARCODE_DATA_URI}}", barcodeDataUrl, StringComparison.Ordinal)
+            .Replace("{{BarcodeDataUrl}}", barcodeDataUrl, StringComparison.Ordinal)
+            .Replace("{{BarcodeDataUri}}", barcodeDataUrl, StringComparison.Ordinal);
     }
 
     private static string CreateBarcodeDataUrl(string tenam)
