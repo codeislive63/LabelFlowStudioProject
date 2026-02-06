@@ -6,7 +6,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}"
         mc:Ignorable="d"
-        Title="LabelFlowStudio" Height="700" Width="1200">
+        Title="LabelFlowStudio"
+        Height="700"
+        Width="1200"
+        MinHeight="600"
+        MinWidth="900">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,10 +18,22 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Top">
-            <TextBlock Text="TENAM:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        <!-- Верхняя панель -->
+        <Grid Grid.Row="0" VerticalAlignment="Top">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <TextBox Width="220"
+            <TextBlock Grid.Column="0"
+                       Text="TENAM:"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0"/>
+
+            <TextBox Grid.Column="1"
                      Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
                      Margin="0,0,8,0">
                 <TextBox.InputBindings>
@@ -25,34 +41,24 @@
                 </TextBox.InputBindings>
             </TextBox>
 
-            <Button Content="Загрузить"
+            <Button Grid.Column="2"
+                    Content="Загрузить"
                     Command="{Binding LoadRecordsCommand}"
                     Padding="12,6"
                     Margin="0,0,12,0"/>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
-                <RadioButton Content="Ручной"
-                             IsChecked="{Binding IsManual}"
-                             Margin="0,0,8,0"/>
-                <RadioButton Content="Авто"
-                             IsChecked="{Binding IsAutomatic}"/>
-            </StackPanel>
-
-            <CheckBox Content="Печатать торцевые"
-                      IsChecked="{Binding ShouldPrintEndLabels}"
-                      VerticalAlignment="Center"/>
-
-            <Button Content="Предпросмотр торцевой"
+            <Button Grid.Column="3"
+                    Content="Торцевая этикетка"
                     Command="{Binding OpenEndLabelPreviewCommand}"
-                    Padding="12,6"
-                    Margin="12,0,0,0"
-                    VerticalAlignment="Center"/>
-        </StackPanel>
+                    Padding="12,6"/>
+        </Grid>
 
+        <!-- Статус -->
         <TextBlock Grid.Row="1"
                    Text="{Binding StatusMessage}"
                    Margin="0,10,0,10"/>
 
+        <!-- Таблица -->
         <DataGrid Grid.Row="2"
                   ItemsSource="{Binding Records}"
                   AutoGenerateColumns="True"
