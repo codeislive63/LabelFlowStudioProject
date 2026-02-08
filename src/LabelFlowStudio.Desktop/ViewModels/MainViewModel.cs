@@ -19,6 +19,9 @@ public sealed class MainViewModel : ViewModelBase
     private BoxProcessingResponse? _lastSuccessfulResponse;
     private string _lastSuccessfulTenam = string.Empty;
 
+    private BoxProcessingResponse? _lastLoadedResponse;
+    private string _lastLoadedTenam = string.Empty;
+
     private WorkMode _nextRequestMode = WorkMode.Manual;
 
     private string _tenam = string.Empty;
@@ -39,6 +42,7 @@ public sealed class MainViewModel : ViewModelBase
 
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
+        OpenStuffingSheetPreviewCommand = new AsyncCommand(OpenStuffingSheetPreviewAsync, CanOpenStuffingSheetPreview, HandleCommandException);
 
         StatusMessage = "Введите или отсканируйте TENAM и нажмите Enter";
 
@@ -49,6 +53,7 @@ public sealed class MainViewModel : ViewModelBase
 
     public AsyncCommand LoadRecordsCommand { get; }
     public AsyncCommand OpenEndLabelPreviewCommand { get; }
+    public AsyncCommand OpenStuffingSheetPreviewCommand { get; }
 
     public string Tenam
     {
@@ -77,6 +82,7 @@ public sealed class MainViewModel : ViewModelBase
             {
                 LoadRecordsCommand.RaiseCanExecuteChanged();
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+                OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -124,6 +130,17 @@ public sealed class MainViewModel : ViewModelBase
 
                 StatusMessage = response.Message;
 
+                if (response.Records.Count > 0)
+                {
+                    _lastLoadedResponse = response;
+                    _lastLoadedTenam = tenamSnapshot;
+                }
+                else
+                {
+                    _lastLoadedResponse = null;
+                    _lastLoadedTenam = string.Empty;
+                }
+
                 if (response.Status == BoxProcessingStatus.Success)
                 {
                     _lastSuccessfulResponse = response;
@@ -138,6 +155,7 @@ public sealed class MainViewModel : ViewModelBase
                 }
 
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+                OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
             });
         }
         finally
@@ -178,6 +196,43 @@ public sealed class MainViewModel : ViewModelBase
         return RunOnUiThreadAsync(() =>
         {
             var window = new EndLabelTemplatePreviewWindow(response, tenam)
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+
+            window.ShowDialog();
+        });
+    }
+
+    private bool CanOpenStuffingSheetPreview()
+    {
+        if (IsBusy)
+        {
+            return false;
+        }
+
+        if (_lastLoadedResponse is null)
+        {
+            return false;
+        }
+
+        return !string.IsNullOrWhiteSpace(_lastLoadedTenam);
+    }
+
+    private Task OpenStuffingSheetPreviewAsync()
+    {
+        var response = _lastLoadedResponse;
+
+        if (response is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var tenam = _lastLoadedTenam;
+
+        return RunOnUiThreadAsync(() =>
+        {
+            var window = new StuffingSheetTemplatePreviewWindow(response, tenam)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };

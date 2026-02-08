@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stuffing sheet</title>
+    <style>
+        body {
+            font-size: 14pt; /* например, уменьшить до 10pt */
+            /*font-family: Arial, sans-serif; !* можно задать шрифт *!*/
+        }
+
+        .hr-line {
+            width: 95%;
+            height: 2px;
+            background-color: black;
+            border: none;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body style='width: 210mm;margin: 0 auto;overflow: hidden;box-sizing: border-box;'>
+<div style="margin-top: 30px;">
+    <div style="width: 48%; display: inline; text-align: left; margin: 0; font-size: 20pt;">{{
+        country }}
+    </div>
+    <div style="width: 4%; display: inline; text-align: center; margin: 0; font-weight: bold; font-size: 20pt; margin-left: 160px">
+        {{ te }}
+    </div>
+    <div style="width: 4%; display: inline; float: right;margin-left: 5px;padding-right: 40px;"><img
+            alt="PP"
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAnCAQAAADEdoLHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfoCA8NIA4kNPIuAAACZUlEQVRIx93WX2jWVRgH8M+7XGwyF4wCzdQNRBm78KLFEMLNXaQMrClqguuim3bhVYgRQuRFEc1AKZO18MYCzS6UQmahOGzY1CCmg3UR/dOoQLYmrdrfx5s13vPu3ds7u8rnXD3fc77f8zvPOed7fvzvI1Owd6V6XHPzXqTLdJkUwqROZQsX+EBkteMLpbcIYch++w0JoWUh9FLfCOEZ0CqEQaXFC+wVwvnZvFsILxYv0KjfhLrZvM6EMOyR4iUe8GSSvy2EzuLIWxydg1W5LUw6pL0wudY5oTtPz56ZDd2bwiVJ1uGGTXmFK23NP2Mq8K6peb7sjn0u/bvAcx7EnSxko4GZMV9r9LTvC61/uT+Ev622bhbrsT0ZU27N/AIfCuGNLKTJdQ0eS0ZVOOBYPvp608KvKrOwz72vxyvJ9e8Xpq3PrUGJwzJ4OalAn2nL1GQh4TAyjuRUzzYhXM2F0ZQIUOKqELnbekoIG4o6qRuE8FEK9grjeeaHRXO2flz4Iq3Bdyi1ew653KsO5mC7lc4wsky12QWEr4yALh/L2KnDSj8bzKI/pF4GzS6mum8lHrjPImcSJG0d+da6S6+RWQGqvGNiDnVEr2eLN5a1znrvvz4+KwpbVxqPG/MXlmuwwu/GPKpWtT+NWmudGqv8UEjwS5vBC37yqV+s8bxbzrjtCZ0GnHaqkB9kx2VbfGIHrmj1mY04qU1bsQIwpALNBjQ5jZd867XCxzSNZQZxRbtbpvC6NwtbGhzS5wie0q/RCYz6ccYr9+j75w7M939QbTFGDXvYtJumLLHYb2CpKkRysO+HuAt6ddLriw8qKAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNC0wOC0xNVQxMzozMjoxMyswMDowMOTz36UAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjQtMDgtMTVUMTM6MzI6MTMrMDA6MDCVrmcZAAAAAElFTkSuQmCC">
+    </div>
+    <div style="width: 4%; display: inline;float: right;margin-left: 5px;"><img
+            alt="LDPE"
+            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAnCAQAAADEdoLHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfoCQwTCCyVZBVEAAACJUlEQVRIx93VTYiNYRQH8N9gNL5rJEVmJBEWLGYzJVNSavKdr0gxkoWVpikfC3Y0lCIaygYpbFhoLHyESfnOR1FCQijNNJORZq45NuO67713xr2sOM/mPf/n/f+fc55z3vPyz1tJv7sVqnDX2z+RLnNMSggpTcqKFzgpMtaJYum1Qmi1ww6tQqgthl7quRAWgyVCeKa0cIF6IVxO+81C2Fq4QI1Hus1I+zN0C23GFC4x0OyEf1AITYWRFzqSg5X7LKQcsLl/8jSXhOY8O1t6C1qfhAckvEZPzM8rPNLS/CcmBQ773kdkHRrc+L3AOoPRkfb3+uSlneChGou87i//8b4I30w2My2wNaOYMMSUvgVOCWFPBrLXU49tSrw13G7H89Gr9QgfjczAKo22xunE5/9I6FGdexe3hbA+gW533VXbEtgGIdzPuj3LhHAnCx5kheUGZh11R4jssp4VwpyCOnWOEM4kwRahKzusdBzZ6XYJN5N98Aql1uaQh9hlXxa2VmkvI2OoznUF4Z52cMw5JVZqVOG9Zxn0UaqUYK5rSd39iRnYYJDzCSS5GvPlulqL9rQA5Q7pzqG2a7Gq8MEy1UVH//bnM6H/0ZXfhqkxSYk240wz0VedxZ063VfnfLBRnbcu+KyquAjGWK5ayjwvDLXMLGVuFRdBlwfaLFCn1VPvTC42hY8mKUOdZpV9RprT578s9bNZdXpTfOkGq+h9GmGs/9t+AIyhv8kCAPoeAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI0LTA5LTEyVDE5OjA4OjQ0KzAwOjAw9zAHjAAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNC0wOS0xMlQxOTowODo0NCswMDowMIZtvzAAAAAASUVORK5CYII=">
+    </div>
+    <div style="width: 40%; display: inline;float: right;margin-left: 5px;">
+        <p style="text-align: center;margin-top: 0; margin-left: 90px; font-size: 12pt">
+            Знаки маркировки материалов<br/>
+            упаковки продукции
+        </p>
+    </div>
+</div>
+<hr class="hr-line" style="width: 95%; height: 2px; background-color: black; border: none; margin: 10px 0;">
+
+<table style="width: 100%; table-layout: fixed;">
+    <tr style="vertical-align: top;">
+        <!-- Левая колонка: Штрихкод -->
+        <td style="width: 20%;">
+            <img alt="barcode" src="{{ barcode }}" style="height: 100px;"/>
+        </td>
+
+        <!-- Центр: Адрес ближе к штрихкоду -->
+        <td style="width: 50%; padding-left: 10px; font-size: 12pt; text-align: left">
+            <p style="margin: 0;">
+                {{ index }}<br/>
+                {{ place }}<br/>
+                {{ city }}<br/>
+                {{ street }}
+            </p>
+        </td>
+
+        <!-- Правая колонка: TE, пустые строки, дата + AUFID -->
+        <td style="width: 30%; text-align: right; padding-right: 50px; font-size: 12pt;">
+            <p style="margin: 3px 0;">&nbsp;</p> <!-- Пустое пространство -->
+            <p style="margin: 0;">{{ current_date }}</p>
+            <p style="margin: 0;">{{ current_time }}</p>
+            <p style="margin: 0;">{{ aufid }}</p>
+        </td>
+    </tr>
+</table>
+
+<hr class="hr-line" style="width: 95%; height: 2px; background-color: black; border: none; margin: 10px 0;">
+
+
+<div>
+    <table style="width: 210mm; text-align: center">
+        {% for product in products %}
+        <tr>
+            <td>{{ product.ROWNUM }}</td>
+            <td>{{ product.ARTNR }}</td>
+            <td style="text-align: left;">{{ product.ARTBEZ }}</td>
+            <td style="text-align: right; padding-right: 50px;">{{ product.BSTMG }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+</div>
+<hr class="hr-line" style="width: 95%;height: 2px;background-color: black;border: none;margin: 10px 0;">
+<div>
+    <p>
+    </p>
+    <table style="width: 210mm;">
+        <tr>
+            <td style="padding-left: 50px">Итого штук в коробе №: {{te}}</td>
+            <td style="text-align: right; padding-right: 50px;">{{sum}}</td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
