@@ -20,11 +20,10 @@
 </head>
 <body style='width: 210mm;margin: 0 auto;overflow: hidden;box-sizing: border-box;'>
 <div style="margin-top: 30px;">
-    <div style="width: 48%; display: inline; text-align: left; margin: 0; font-size: 20pt;">{{
-        country }}
+    <div style="width: 48%; display: inline; text-align: left; margin: 0; font-size: 20pt;">{{Lndnam}}
     </div>
     <div style="width: 4%; display: inline; text-align: center; margin: 0; font-weight: bold; font-size: 20pt; margin-left: 160px">
-        {{ te }}
+        {{Tenam}}
     </div>
     <div style="width: 4%; display: inline; float: right;margin-left: 5px;padding-right: 40px;"><img
             alt="PP"
@@ -47,25 +46,25 @@
     <tr style="vertical-align: top;">
         <!-- Левая колонка: Штрихкод -->
         <td style="width: 20%;">
-            <img alt="barcode" src="{{ barcode }}" style="height: 100px;"/>
+            <img alt="barcode" src="{{BarcodeDataUri}}" style="height: 100px;"/>
         </td>
 
         <!-- Центр: Адрес ближе к штрихкоду -->
         <td style="width: 50%; padding-left: 10px; font-size: 12pt; text-align: left">
             <p style="margin: 0;">
-                {{ index }}<br/>
-                {{ place }}<br/>
-                {{ city }}<br/>
-                {{ street }}
+                {{Gpplz}}<br/>
+                {{Gpbez}}<br/>
+                {{Gport1}}<br/>
+                {{Gpstrasse}}
             </p>
         </td>
 
         <!-- Правая колонка: TE, пустые строки, дата + AUFID -->
         <td style="width: 30%; text-align: right; padding-right: 50px; font-size: 12pt;">
             <p style="margin: 3px 0;">&nbsp;</p> <!-- Пустое пространство -->
-            <p style="margin: 0;">{{ current_date }}</p>
-            <p style="margin: 0;">{{ current_time }}</p>
-            <p style="margin: 0;">{{ aufid }}</p>
+            <p style="margin: 0;">{{CurrentDate}}</p>
+            <p style="margin: 0;">{{CurrentTime}}</p>
+            <p style="margin: 0;">{{Aufid}}</p>
         </td>
     </tr>
 </table>
@@ -75,12 +74,12 @@
 
 <div>
     <table style="width: 210mm; text-align: center">
-        {% for product in products %}
+        {% for record in Records %}
         <tr>
-            <td>{{ product.ROWNUM }}</td>
-            <td>{{ product.ARTNR }}</td>
-            <td style="text-align: left;">{{ product.ARTBEZ }}</td>
-            <td style="text-align: right; padding-right: 50px;">{{ product.BSTMG }}</td>
+            <td>{{RowNumber}}</td>
+            <td>{{Artnr}}</td>
+            <td style="text-align: left;">{{Artbez}}</td>
+            <td style="text-align: right; padding-right: 50px;">{{Bstmg}}</td>
         </tr>
         {% endfor %}
 
@@ -92,8 +91,8 @@
     </p>
     <table style="width: 210mm;">
         <tr>
-            <td style="padding-left: 50px">Итого штук в коробе №: {{te}}</td>
-            <td style="text-align: right; padding-right: 50px;">{{sum}}</td>
+            <td style="padding-left: 50px">Итого штук в коробе №: {{Tenam}}</td>
+            <td style="text-align: right; padding-right: 50px;">{{SumBst}}</td>
         </tr>
     </table>
 </div>

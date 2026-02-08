@@ -1,8 +1,8 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Printing;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,8 +12,11 @@ namespace LabelFlowStudio.Desktop.Templates;
 
 public static class StuffingSheetHtmlTemplateRenderer
 {
-    private static readonly Regex ProductsLoopRegex = new(
-        @"\{%\s*for\s+product\s+in\s+products\s*%\}(?<body>.*?)\{%\s*endfor\s*%\}",
+    // Supports both:
+    //   {% for product in products %}...{% endfor %} (legacy)
+    //   {% for record in Records %}...{% endfor %} (unified)
+    private static readonly Regex LoopRegex = new(
+        @"\{%\s*for\s+(?<var>\w+)\s+in\s+(?<list>\w+)\s*%\}(?<body>.*?)\{%\s*endfor\s*%\}",
         RegexOptions.Singleline | RegexOptions.CultureInvariant
     );
 
@@ -40,61 +43,99 @@ public static class StuffingSheetHtmlTemplateRenderer
         var currentDate = now.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture);
         var currentTime = now.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
 
-        var products = response.Records
+        var records = response.Records
             .OrderBy(record => record.Artbez, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        var sum = products.Sum(record => record.Bstmg ?? 0m);
-        var sumText = sum.ToString("0.###", CultureInfo.CurrentCulture);
+        // Итого штук: предпочитаем поле из view (SumBst), иначе суммируем BSTMG
+        var sumBstText = FormatQuantity(header?.SumBst);
+
+        if (string.IsNullOrWhiteSpace(sumBstText))
+        {
+            decimal sum = records.Sum(record => record.Bstmg ?? 0m);
+            sumBstText = sum.ToString("0.###", CultureInfo.CurrentCulture);
+        }
 
         var barcodeDataUrl = CreateBarcodeDataUrl(tenam);
 
         var result = template;
 
+        // Unified tokens (field names from LabelRecord / app context)
+        result = ReplaceEncodedToken(result, "Lndnam", header?.Lndnam);
+        result = ReplaceEncodedToken(result, "Tenam", tenam);
+        result = ReplaceEncodedToken(result, "Gpplz", header?.Gpplz);
+        result = ReplaceEncodedToken(result, "Gpbez", header?.Gpbez);
+        result = ReplaceEncodedToken(result, "Gport1", header?.Gport1);
+        result = ReplaceEncodedToken(result, "Gpstrasse", header?.Gpstrasse);
+        result = ReplaceEncodedToken(result, "Aufid", header?.Aufid);
+
+        result = ReplaceEncodedToken(result, "CurrentDate", currentDate);
+        result = ReplaceEncodedToken(result, "CurrentTime", currentTime);
+
+        result = ReplaceEncodedToken(result, "SumBst", sumBstText);
+
+        // Barcode must be raw (not HTML-encoded)
+        result = ReplaceRawToken(result, "BarcodeDataUri", barcodeDataUrl);
+
+        // Backward-compatible aliases (python/Jinja names)
         result = ReplaceEncodedToken(result, "country", header?.Lndnam);
         result = ReplaceEncodedToken(result, "te", tenam);
-
         result = ReplaceEncodedToken(result, "index", header?.Gpplz);
         result = ReplaceEncodedToken(result, "place", header?.Gpbez);
         result = ReplaceEncodedToken(result, "city", header?.Gport1);
         result = ReplaceEncodedToken(result, "street", header?.Gpstrasse);
+        result = ReplaceEncodedToken(result, "aufid", header?.Aufid);
 
         result = ReplaceEncodedToken(result, "current_date", currentDate);
         result = ReplaceEncodedToken(result, "current_time", currentTime);
 
-        result = ReplaceEncodedToken(result, "aufid", header?.Aufid);
-        result = ReplaceEncodedToken(result, "sum", sumText);
-
+        result = ReplaceEncodedToken(result, "sum", sumBstText);
         result = ReplaceRawToken(result, "barcode", barcodeDataUrl);
 
-        result = RenderProductsLoop(result, products);
+        result = RenderLoop(result, records);
 
         return result;
     }
 
-    private static string RenderProductsLoop(string html, IReadOnlyList<LabelRecord> products)
+    private static string RenderLoop(string html, IReadOnlyList<LabelRecord> records)
     {
-        var match = ProductsLoopRegex.Match(html);
+        var match = LoopRegex.Match(html);
 
         if (!match.Success)
         {
             return html;
         }
 
+        var listName = match.Groups["list"].Value;
+
+        // Only handle our known list names (new + legacy)
+        if (!string.Equals(listName, "Records", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(listName, "products", StringComparison.OrdinalIgnoreCase))
+        {
+            return html;
+        }
+
+        var varName = match.Groups["var"].Value; // record/product
         var rowTemplate = match.Groups["body"].Value;
 
         var builder = new StringBuilder();
 
-        for (var index = 0; index < products.Count; index++)
+        for (var index = 0; index < records.Count; index++)
         {
-            var record = products[index];
-
+            var record = records[index];
             var row = rowTemplate;
 
-            row = ReplaceEncodedToken(row, "product.ROWNUM", (index + 1).ToString(CultureInfo.InvariantCulture));
-            row = ReplaceEncodedToken(row, "product.ARTNR", record.Artnr);
-            row = ReplaceEncodedToken(row, "product.ARTBEZ", record.Artbez);
-            row = ReplaceEncodedToken(row, "product.BSTMG", FormatQuantity(record.Bstmg));
+            // Unified row tokens
+            row = ReplaceEncodedToken(row, "RowNumber", (index + 1).ToString(CultureInfo.InvariantCulture));
+            row = ReplaceEncodedToken(row, "Artnr", record.Artnr);
+            row = ReplaceEncodedToken(row, "Artbez", record.Artbez);
+            row = ReplaceEncodedToken(row, "Bstmg", FormatQuantity(record.Bstmg));
+
+            // Legacy row tokens (keep working)
+            row = ReplaceEncodedToken(row, $"{varName}.ROWNUM", (index + 1).ToString(CultureInfo.InvariantCulture));
+            row = ReplaceEncodedToken(row, $"{varName}.ARTNR", record.Artnr);
+            row = ReplaceEncodedToken(row, $"{varName}.ARTBEZ", record.Artbez);
+            row = ReplaceEncodedToken(row, $"{varName}.BSTMG", FormatQuantity(record.Bstmg));
 
             builder.Append(row);
         }
@@ -130,6 +171,7 @@ public static class StuffingSheetHtmlTemplateRenderer
     {
         var escaped = Regex.Escape(tokenName);
 
+        // {{ token }} with any whitespace/newlines
         var regex = new Regex(@"\{\{\s*" + escaped + @"\s*\}\}", RegexOptions.Singleline | RegexOptions.CultureInvariant);
         return regex.Replace(html, replacement);
     }
