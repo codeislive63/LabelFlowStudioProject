@@ -8,6 +8,8 @@
 
   <ItemGroup>
 	  <EmbeddedResource Include="EndLabel\EndLabel.html" />
+	  <EmbeddedResource Include="EmptyPage\EmptyPage.html" />
+	  <EmbeddedResource Include="StuffingSheet\StuffingSheet.html" />
   </ItemGroup>
 
 </Project>
