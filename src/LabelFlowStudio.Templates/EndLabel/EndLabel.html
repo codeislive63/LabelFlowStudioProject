@@ -224,6 +224,39 @@
             font-weight: 400;
             margin-left: 2mm;
         }
+
+        .bottom-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3mm; /* расстояние от "Код заказа" */
+        }
+
+            .bottom-grid td {
+                font-size: 12px;
+                padding: 1.2mm 0; /* вертикальный шаг строк — ровный */
+                vertical-align: middle;
+                white-space: nowrap;
+            }
+
+        .bottom-left {
+            width: calc(100% - 42mm); /* всё что слева */
+            text-align: left;
+        }
+
+        .bottom-right {
+            width: 42mm; /* как твой .right */
+            text-align: right;
+        }
+
+        .bottom-label {
+            font-weight: 700;
+        }
+
+        .bottom-value {
+            font-weight: 400;
+            margin-left: 2mm;
+        }
+
     </style>
 </head>
 
@@ -268,14 +301,14 @@
                 <div class="cap mt">Код заказа</div>
                 <div class="small">{{Bstchgnam5}}</div>
 
-                <div class="cap mt">Вес брутто (кг): <span class="cap-value">{{Brutto}}</span></div>
+                <div class="cap mt">Дата упаковки: <span class="kpi-val" id="packDate"></span></div>
             </div>
 
             <div class="right">
                 <div class="kpi">
                     <div class="kpi-row">
                         <span>Короб в заказ:</span>
-                        <span class="kpi-val">{{CountBst}}</span>
+                        <span class="kpi-val">1</span>
                     </div>
                     <div class="kpi-row">
                         <span>Изделий в коробе:</span>
@@ -285,9 +318,24 @@
                         <span>Объём (м.куб):</span>
                         <span class="kpi-val">06</span>
                     </div>
+                    <div class="kpi-row">
+                        <span>Вес брутто (кг):</span>
+                        <span class="kpi-val">{{Brutto}}</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            var d = new Date();
+            var dd = String(d.getDate()).padStart(2, '0');
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var yy = String(d.getFullYear()).slice(-2);
+
+            document.getElementById('packDate').textContent = dd + '.' + mm + '.' + yy;
+        })();
+    </script>
 </body>
 </html>
