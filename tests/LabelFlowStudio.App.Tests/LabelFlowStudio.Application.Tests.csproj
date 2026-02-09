@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -19,10 +19,21 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LabelFlowStudio.Application\LabelFlowStudio.Application.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Core\LabelFlowStudio.Core.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Data\LabelFlowStudio.Data.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Desktop\LabelFlowStudio.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Templates\LabelFlowStudio.Templates.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+	    <None Update="TestData\*.json">
+		    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    </None>
+	</ItemGroup>
 </Project>
