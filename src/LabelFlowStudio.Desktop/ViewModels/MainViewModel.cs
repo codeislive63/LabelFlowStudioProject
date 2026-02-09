@@ -64,7 +64,11 @@ public sealed class MainViewModel : ViewModelBase
         get => _tenam;
         set
         {
-            if (SetProperty(ref _tenam, value))
+            var digitsOnly = new string((value ?? string.Empty)
+                                .Where(char.IsDigit)
+                                .ToArray());
+
+            if (SetProperty(ref _tenam, digitsOnly))
             {
                 LoadRecordsCommand.RaiseCanExecuteChanged();
             }
