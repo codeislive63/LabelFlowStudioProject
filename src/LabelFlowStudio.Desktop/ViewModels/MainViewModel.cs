@@ -5,6 +5,7 @@ using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -23,6 +24,9 @@ public sealed class MainViewModel : ViewModelBase
     private string _lastLoadedTenam = string.Empty;
 
     private WorkMode _nextRequestMode = WorkMode.Manual;
+
+    private EndLabelTemplatePreviewWindow? _endLabelPreviewWindow;
+    private StuffingSheetTemplatePreviewWindow? _stuffingSheetPreviewWindow;
 
     private string _tenam = string.Empty;
     private string _statusMessage = string.Empty;
@@ -195,12 +199,22 @@ public sealed class MainViewModel : ViewModelBase
 
         return RunOnUiThreadAsync(() =>
         {
+            _endLabelPreviewWindow?.Close();
+            _endLabelPreviewWindow = null;
+
             var window = new EndLabelTemplatePreviewWindow(response, tenam)
             {
-                Owner = System.Windows.Application.Current?.MainWindow
+                Owner = System.Windows.Application.Current?.MainWindow,
+                ShowInTaskbar = true,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            window.ShowDialog();
+            window.Closed += (_, _) => _endLabelPreviewWindow = null;
+
+            _endLabelPreviewWindow = window;
+
+            window.Show();
+            window.Activate();
         });
     }
 
@@ -232,12 +246,22 @@ public sealed class MainViewModel : ViewModelBase
 
         return RunOnUiThreadAsync(() =>
         {
+            _stuffingSheetPreviewWindow?.Close();
+            _stuffingSheetPreviewWindow = null;
+
             var window = new StuffingSheetTemplatePreviewWindow(response, tenam)
             {
-                Owner = System.Windows.Application.Current?.MainWindow
+                Owner = System.Windows.Application.Current?.MainWindow,
+                ShowInTaskbar = true,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            window.ShowDialog();
+            window.Closed += (_, _) => _stuffingSheetPreviewWindow = null;
+
+            _stuffingSheetPreviewWindow = window;
+
+            window.Show();
+            window.Activate();
         });
     }
 
