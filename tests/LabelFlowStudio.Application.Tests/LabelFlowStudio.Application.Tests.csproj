@@ -28,6 +28,8 @@
     <ProjectReference Include="..\..\src\LabelFlowStudio.Core\LabelFlowStudio.Core.csproj" />
     <ProjectReference Include="..\..\src\LabelFlowStudio.Data\LabelFlowStudio.Data.csproj" />
     <ProjectReference Include="..\..\src\LabelFlowStudio.Desktop\LabelFlowStudio.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Devices\LabelFlowStudio.Devices.csproj" />
+    <ProjectReference Include="..\..\src\LabelFlowStudio.Printing\LabelFlowStudio.Printing.csproj" />
     <ProjectReference Include="..\..\src\LabelFlowStudio.Templates\LabelFlowStudio.Templates.csproj" />
   </ItemGroup>
 
