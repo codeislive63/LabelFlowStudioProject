@@ -4,25 +4,56 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Торцевая этикетка"
         Height="750"
-        Width="900">
-    <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="12">
-            
-            <Button x:Name="PrintButton"
-                    Content="Печать"
-                    Click="OnPrintClick"
-                    Padding="12,6"
-                    Margin="0,0,8,0"
-                    IsEnabled="False"/>
+        Width="900"
+        Background="{DynamicResource AppBackgroundBrush}"
+        FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="14">
+    <DockPanel Margin="16" LastChildFill="True">
+        <Border DockPanel.Dock="Top" Style="{StaticResource CardStyle}" Padding="12" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="StatusText"
-                       VerticalAlignment="Center"
-                       Margin="0,0,8,0"/>
+                <Button x:Name="PrintButton"
+                        Width="140"
+                        Grid.Column="0"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="OnPrintClick"
+                        IsEnabled="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE749;"
+                                   FontSize="16"
+                                   Margin="0,0,8,0"
+                                   Foreground="White"/>
+                        <TextBlock Text="Печать" Foreground="White"/>
+                    </StackPanel>
+                </Button>
 
-            <Button Content="Закрыть" Click="OnCloseClick" Padding="12,6"/>
-        </StackPanel>
+                <Border Grid.Column="1"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="10,7"
+                        Margin="12,0">
+                    <TextBlock x:Name="StatusText"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </Border>
 
-        <Border Margin="12" BorderBrush="Gray" BorderThickness="1">
+                <Button Grid.Column="2"
+                        Width="140"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="OnCloseClick"
+                        Content="Закрыть" />
+            </Grid>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}" Padding="0">
             <wv2:WebView2 x:Name="PreviewWebView"
                          NavigationCompleted="OnNavigationCompleted" />
         </Border>
