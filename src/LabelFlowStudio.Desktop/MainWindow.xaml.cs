@@ -1,18 +1,52 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 using LabelFlowStudio.Desktop.ViewModels;
 
 namespace LabelFlowStudio.Desktop;
 
 public partial class MainWindow : Window
 {
+    private const int ScanSequenceRestartThresholdMilliseconds = 250;
+    private const int ScanBufferTimeoutMilliseconds = 900;
+
+    private readonly DispatcherTimer _scanBufferTimer;
+
+    private string _scanBuffer = string.Empty;
+    private DateTime _lastScanCharUtc = DateTime.MinValue;
+
     public MainWindow(MainViewModel mainViewModel)
     {
         InitializeComponent();
         DataContext = mainViewModel;
+
+        _scanBufferTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(ScanBufferTimeoutMilliseconds)
+        };
+
+        _scanBufferTimer.Tick += ScanBufferTimer_Tick;
     }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs eventArgs)
+    {
+        TenamTextBox.Focus();
+        TenamTextBox.SelectAll();
+    }
+
+    private void TenamTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs eventArgs)
+    {
+        if (sender is TextBox textBox)
+        {
+            textBox.SelectAll();
+        }
+    }
+
+    // --- Ограничение TENAM (ручной ввод) ---
 
     private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
     {
@@ -48,6 +82,123 @@ public partial class MainWindow : Window
         return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
     }
 
+    // --- Глобальный ввод со сканера-клавиатуры (без фокуса в TENAM) ---
+
+    private void Window_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
+    {
+        if (ShouldIgnoreGlobalScannerInput())
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(eventArgs.Text))
+        {
+            return;
+        }
+
+        if (!IsDigitsOnly(eventArgs.Text))
+        {
+            return;
+        }
+
+        if (DataContext is MainViewModel viewModel && viewModel.IsBusy)
+        {
+            return;
+        }
+
+        AppendScanDigits(eventArgs.Text);
+
+        eventArgs.Handled = true;
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs eventArgs)
+    {
+        if (ShouldIgnoreGlobalScannerInput())
+        {
+            return;
+        }
+
+        if (eventArgs.Key != Key.Return && eventArgs.Key != Key.Enter)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_scanBuffer))
+        {
+            return;
+        }
+
+        if (DataContext is MainViewModel viewModel && !viewModel.IsBusy)
+        {
+            viewModel.ReceiveTenamFromScanner(_scanBuffer);
+        }
+
+        ClearScanBuffer();
+
+        eventArgs.Handled = true;
+    }
+
+    private bool ShouldIgnoreGlobalScannerInput()
+    {
+        // если фокус уже в любом TextBox – не перехватываем (иначе ломаем ручной ввод)
+        if (Keyboard.FocusedElement is TextBoxBase)
+        {
+            return true;
+        }
+
+        // если фокус именно в TENAM – тоже не перехватываем (там Enter уже привязан к команде)
+        if (ReferenceEquals(Keyboard.FocusedElement, TenamTextBox))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void AppendScanDigits(string digits)
+    {
+        var nowUtc = DateTime.UtcNow;
+
+        if ((nowUtc - _lastScanCharUtc) > TimeSpan.FromMilliseconds(ScanSequenceRestartThresholdMilliseconds))
+        {
+            _scanBuffer = string.Empty;
+        }
+
+        _lastScanCharUtc = nowUtc;
+
+        _scanBufferTimer.Stop();
+        _scanBufferTimer.Start();
+
+        _scanBuffer += digits;
+
+        if (DataContext is MainViewModel viewModel)
+        {
+            // чтобы в поле всегда отображалась собранная строка (без "частей" в разных контролах)
+            viewModel.Tenam = _scanBuffer;
+        }
+    }
+
+    private void ScanBufferTimer_Tick(object? sender, EventArgs eventArgs)
+    {
+        _scanBufferTimer.Stop();
+
+        // если скан не завершился Enter-ом – очищаем буфер и поле, чтобы не оставлять "полуTENAM"
+        if (DataContext is MainViewModel viewModel && viewModel.Tenam == _scanBuffer)
+        {
+            viewModel.Tenam = string.Empty;
+        }
+
+        ClearScanBuffer();
+    }
+
+    private void ClearScanBuffer()
+    {
+        _scanBuffer = string.Empty;
+        _lastScanCharUtc = DateTime.MinValue;
+    }
+
+    // --- Нумерация строк DataGrid ---
+
     private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs eventArgs)
     {
         eventArgs.Row.Header = (eventArgs.Row.GetIndex() + 1).ToString();
@@ -55,7 +206,7 @@ public partial class MainWindow : Window
 
     private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs eventArgs)
     {
-        var grid = (DataGrid) sender;
+        var grid = (DataGrid)sender;
 
         grid.Dispatcher.InvokeAsync(() =>
         {
