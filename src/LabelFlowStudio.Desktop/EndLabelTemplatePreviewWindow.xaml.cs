@@ -1,10 +1,11 @@
-﻿using System.IO;
-using System.Text;
-using System.Windows;
-using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using System.Drawing.Printing;
+using System.IO;
+using System.Text;
+using System.Windows;
 
 namespace LabelFlowStudio.Desktop;
 
@@ -17,6 +18,9 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private Task? _initializeWebViewTask;
     private bool _isPreviewReady;
+
+    private const string PreferredPrinterName = "zebra_torec";
+    private const int PreferredCopies = 2;
 
     public EndLabelTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
     {
@@ -129,7 +133,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
         SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
     }
 
-    private void OnPrintClick(object sender, RoutedEventArgs eventArgs)
+    private async void OnPrintClick(object sender, RoutedEventArgs eventArgs)
     {
         try
         {
@@ -144,12 +148,70 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 return;
             }
 
-            PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+            PrintButton.IsEnabled = false;
+            StatusText.Text = "Печать";
+            
+            var didPrint = await TryPrintToPreferredPrinterAsync(PreviewWebView, CancellationToken.None);
+            
+            if (!didPrint)
+            {
+                PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+            }
         }
         catch (Exception exception)
         {
             MessageBox.Show(this, exception.Message, "Ошибка печати", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        finally
+        {
+            PrintButton.IsEnabled = _isPreviewReady;
+            
+            if (_isPreviewReady)
+            {
+                StatusText.Text = string.Empty;
+            }
+        }
+    }
+
+    private static async Task<bool> TryPrintToPreferredPrinterAsync(WebView2 webView, CancellationToken cancellationToken)
+    {
+        if (webView.CoreWebView2 is null)
+        {
+            return false;
+        }
+
+        if (!IsPrinterInstalled(PreferredPrinterName))
+        {
+            return false;
+        }
+
+        for (var i = 0; i < PreferredCopies; i++)
+        {
+            var settings = webView.CoreWebView2.Environment.CreatePrintSettings();
+            settings.PrinterName = PreferredPrinterName;
+
+            var status = await webView.CoreWebView2.PrintAsync(settings);
+            if (status != CoreWebView2PrintStatus.Succeeded)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsPrinterInstalled(string printerName)
+    {
+        foreach (var installedPrinter in PrinterSettings.InstalledPrinters)
+        {
+            if (installedPrinter is string name
+                && string.Equals(name, printerName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs eventArgs)
