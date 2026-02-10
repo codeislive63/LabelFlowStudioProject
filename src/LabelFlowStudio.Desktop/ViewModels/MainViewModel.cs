@@ -33,6 +33,8 @@ public sealed class MainViewModel : ViewModelBase
     private bool _isBusy;
     private bool _isScannerSubscribed;
 
+    private string _lastProcessedTenam = string.Empty;
+
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
         IBoxScanner boxScanner,
@@ -65,8 +67,8 @@ public sealed class MainViewModel : ViewModelBase
         set
         {
             var digitsOnly = new string((value ?? string.Empty)
-                                .Where(char.IsDigit)
-                                .ToArray());
+                .Where(char.IsDigit)
+                .ToArray());
 
             if (SetProperty(ref _tenam, digitsOnly))
             {
@@ -95,6 +97,41 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    public string LastProcessedTenam
+    {
+        get => _lastProcessedTenam;
+        private set => SetProperty(ref _lastProcessedTenam, value);
+    }
+
+    // Единая точка входа для любого внешнего сканера: COM (IBoxScanner) или "сканер-клавиатура" из MainWindow
+    public void ReceiveTenamFromScanner(string boxNumber)
+    {
+        var digitsOnly = new string((boxNumber ?? string.Empty)
+            .Where(char.IsDigit)
+            .ToArray());
+
+        if (string.IsNullOrWhiteSpace(digitsOnly))
+        {
+            return;
+        }
+
+        _ = RunOnUiThreadAsync(() =>
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            _nextRequestMode = WorkMode.Automatic;
+            Tenam = digitsOnly;
+
+            if (LoadRecordsCommand.CanExecute(null))
+            {
+                LoadRecordsCommand.Execute(null);
+            }
+        });
+    }
+
     private bool CanLoadRecords()
     {
         if (IsBusy)
@@ -119,6 +156,9 @@ public sealed class MainViewModel : ViewModelBase
             Records.Clear();
         });
 
+        // даём UI шанс отрисовать overlay до тяжёлого запроса
+        await Task.Yield();
+
         try
         {
             var request = new BoxProcessingRequest(
@@ -127,7 +167,9 @@ public sealed class MainViewModel : ViewModelBase
                 ShouldPrintEndLabels: true
             );
 
-            var response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
+            // На некоторых провайдерах БД "async" может частично блокировать поток до первого await внутри драйвера
+            // Уводим вызов с UI-потока, чтобы интерфейс гарантированно не фризился
+            var response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
 
             await RunOnUiThreadAsync(() =>
             {
@@ -154,12 +196,16 @@ public sealed class MainViewModel : ViewModelBase
                     _lastSuccessfulResponse = response;
                     _lastSuccessfulTenam = tenamSnapshot;
 
+                    LastProcessedTenam = tenamSnapshot;
+
                     Tenam = string.Empty;
                 }
                 else
                 {
                     _lastSuccessfulResponse = null;
                     _lastSuccessfulTenam = string.Empty;
+
+                    LastProcessedTenam = string.Empty;
                 }
 
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
@@ -347,22 +393,7 @@ public sealed class MainViewModel : ViewModelBase
 
     private void OnBoxNumberReceived(object? sender, BoxNumberReceivedEventArgs eventArgs)
     {
-        _ = RunOnUiThreadAsync(() =>
-        {
-            if (IsBusy)
-            {
-                return;
-            }
-
-            _nextRequestMode = WorkMode.Automatic;
-
-            Tenam = eventArgs.BoxNumber;
-
-            if (LoadRecordsCommand.CanExecute(null))
-            {
-                LoadRecordsCommand.Execute(null);
-            }
-        });
+        ReceiveTenamFromScanner(eventArgs.BoxNumber);
     }
 
     private static Task RunOnUiThreadAsync(Action action)
