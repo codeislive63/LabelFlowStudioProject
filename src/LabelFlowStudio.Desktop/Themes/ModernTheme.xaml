@@ -212,16 +212,6 @@
         <Setter Property="GridLinesVisibility" Value="All" />
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
         <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
-        
-        <Setter Property="Resources">
-            <Setter.Value>
-                <ResourceDictionary>
-                    <!-- ВАЖНО: стиль применяется ТОЛЬКО к кнопке SelectAll -->
-                    <Style TargetType="Button"
-                   BasedOn="{StaticResource DataGridSelectAllButtonStyle}"/>
-                </ResourceDictionary>
-            </Setter.Value>
-        </Setter>
     </Style>
 
     <Style TargetType="DataGridColumnHeader">
