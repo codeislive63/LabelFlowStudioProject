@@ -212,37 +212,17 @@
         <Setter Property="GridLinesVisibility" Value="All" />
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
         <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
-    </Style>
-
-    <!-- Красивый верхний левый угол вместо пустоты (кнопка Select All) -->
-    <Style x:Key="{x:Static controls:DataGrid.SelectAllButtonStyleKey}"
-       TargetType="{x:Type Button}">
-        <Setter Property="Focusable" Value="False"/>
-        <Setter Property="IsHitTestVisible" Value="False"/>
-        <Setter Property="Cursor" Value="Arrow"/>
-        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="0,0,1,1"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Template">
+        
+        <Setter Property="Resources">
             <Setter.Value>
-                <ControlTemplate TargetType="{x:Type Button}">
-                    <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        SnapsToDevicePixels="True">
-                        <TextBlock Text="№"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontWeight="SemiBold"
-                               Opacity="0.85"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
-                    </Border>
-                </ControlTemplate>
+                <ResourceDictionary>
+                    <!-- ВАЖНО: стиль применяется ТОЛЬКО к кнопке SelectAll -->
+                    <Style TargetType="Button"
+                   BasedOn="{StaticResource DataGridSelectAllButtonStyle}"/>
+                </ResourceDictionary>
             </Setter.Value>
         </Setter>
     </Style>
-
 
     <Style TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
@@ -273,4 +253,30 @@
         <Setter Property="Height" Value="40" />
     </Style>
 
+    <Style TargetType="Button"
+       x:Key="DataGridSelectAllButtonStyle">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <TextBlock Text="№"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Opacity="0.85"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
