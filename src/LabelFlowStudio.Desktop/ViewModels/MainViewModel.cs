@@ -332,7 +332,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to initialize scanner");
+            _logger.LogWarning(exception, "Failed to initialize scanner");
         }
     }
 
@@ -349,31 +349,22 @@ public sealed class MainViewModel : ViewModelBase
             if (!_boxScanner.IsRunning)
             {
                 await _boxScanner.StartAsync(CancellationToken.None);
-
-                await RunOnUiThreadAsync(() =>
-                {
-                    StatusMessage = "Сканер запущен";
-                });
             }
         }
         catch (OptionsValidationException exception)
         {
-            _logger.LogError(exception, "Box scanner configuration is invalid");
+            _logger.LogInformation(exception, "Box scanner configuration is invalid, fallback to keyboard scanner");
             await FailScannerStartAsync();
         }
         catch (InvalidOperationException exception)
         {
-            _logger.LogError(exception, "Box scanner is not configured");
+            _logger.LogInformation(exception, "Box scanner is not configured, fallback to keyboard scanner");
             await FailScannerStartAsync();
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to start box scanner");
-
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = "Не удалось запустить сканер";
-            });
+            _logger.LogWarning(exception, "Failed to start box scanner, fallback to keyboard scanner");
+            await FailScannerStartAsync();
         }
     }
 
@@ -385,10 +376,7 @@ public sealed class MainViewModel : ViewModelBase
             _isScannerSubscribed = false;
         }
 
-        return RunOnUiThreadAsync(() =>
-        {
-            StatusMessage = "Сканер не настроен";
-        });
+        return Task.CompletedTask;
     }
 
     private void OnBoxNumberReceived(object? sender, BoxNumberReceivedEventArgs eventArgs)

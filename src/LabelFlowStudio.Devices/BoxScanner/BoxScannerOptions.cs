@@ -5,7 +5,8 @@ namespace LabelFlowStudio.Devices.BoxScanner;
 
 public sealed class BoxScannerOptions
 {
-    [Required]
+    public bool IsEnabled { get; set; }
+
     public string PortName { get; set; } = string.Empty;
 
     [Range(1200, 115200)]
