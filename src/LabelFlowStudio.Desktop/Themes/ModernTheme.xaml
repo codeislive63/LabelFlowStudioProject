@@ -1,6 +1,6 @@
-﻿<!-- AppTheme.xaml (или как у тебя называется словарь) -->
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:System.Windows.Controls;assembly=PresentationFramework">
 
     <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
 
@@ -97,16 +97,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="10"
-                        SnapsToDevicePixels="True"
-                        TextElement.Foreground="{TemplateBinding Foreground}">
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10"
+                            SnapsToDevicePixels="True"
+                            TextElement.Foreground="{TemplateBinding Foreground}">
                         <ContentPresenter
-                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                        RecognizesAccessKey="True" />
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            RecognizesAccessKey="True" />
                     </Border>
 
                     <ControlTemplate.Triggers>
@@ -145,16 +145,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="border"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="10"
-                        SnapsToDevicePixels="True"
-                        TextElement.Foreground="{TemplateBinding Foreground}">
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10"
+                            SnapsToDevicePixels="True"
+                            TextElement.Foreground="{TemplateBinding Foreground}">
                         <ContentPresenter
-                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                        RecognizesAccessKey="True" />
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            RecognizesAccessKey="True" />
                     </Border>
 
                     <ControlTemplate.Triggers>
@@ -213,6 +213,36 @@
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
         <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource SurfaceBorderBrush}" />
     </Style>
+
+    <!-- Красивый верхний левый угол вместо пустоты (кнопка Select All) -->
+    <Style x:Key="{x:Static controls:DataGrid.SelectAllButtonStyleKey}"
+       TargetType="{x:Type Button}">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        SnapsToDevicePixels="True">
+                        <TextBlock Text="№"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontWeight="SemiBold"
+                               Opacity="0.85"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 
     <Style TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
