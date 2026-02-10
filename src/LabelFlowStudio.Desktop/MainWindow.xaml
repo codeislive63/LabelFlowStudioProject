@@ -151,46 +151,110 @@
 
         <!-- Таблица -->
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
-            <DataGrid Style="{StaticResource AppDataGridStyle}"
-                      ItemsSource="{Binding Records}"
-                      AutoGenerateColumns="True"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserSortColumns="True"
-                      HeadersVisibility="All"
-                      RowHeaderWidth="44"
-                      LoadingRow="RecordsGrid_LoadingRow"
-                      Sorting="RecordsGrid_Sorting">
+            <Grid>
+                <DataGrid x:Name="RecordsGrid"
+                          ItemsSource="{Binding Records}"
+                          AutoGenerateColumns="True"
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          CanUserSortColumns="True"
+                          LoadingRow="RecordsGrid_LoadingRow"
+                          Sorting="RecordsGrid_Sorting">
 
-                <DataGrid.RowHeaderStyle>
-                    <Style TargetType="{x:Type DataGridRowHeader}">
-                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                        <Setter Property="VerticalContentAlignment" Value="Center"/>
-                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="Padding" Value="0"/>
-                        <Setter Property="SnapsToDevicePixels" Value="True"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="{x:Type DataGridRowHeader}">
-                                    <Border Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            SnapsToDevicePixels="True">
-                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                          Margin="0"/>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </DataGrid.RowHeaderStyle>
+                    <!-- Включаем/выключаем нумерацию строк в зависимости от наличия данных -->
+                    <DataGrid.Style>
+                        <Style TargetType="DataGrid" BasedOn="{StaticResource AppDataGridStyle}">
+                            <Setter Property="HeadersVisibility" Value="All"/>
+                            <Setter Property="ColumnHeaderHeight" Value="40"/>
+                            <Setter Property="RowHeaderWidth" Value="44"/>
 
-            </DataGrid>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                    <Setter Property="RowHeaderWidth" Value="0"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Style>
+
+                    <DataGrid.RowHeaderStyle>
+                        <Style TargetType="{x:Type DataGridRowHeader}">
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="SnapsToDevicePixels" Value="True"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type DataGridRowHeader}">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                SnapsToDevicePixels="True">
+                                            <TextBlock Text="{TemplateBinding Content}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       TextAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </DataGrid.RowHeaderStyle>
+                </DataGrid>
+
+                <!-- Empty state, когда данных нет -->
+                <Grid Panel.ZIndex="5" IsHitTestVisible="False">
+                    <Grid.Style>
+                        <Style TargetType="{x:Type Grid}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+
+                    <TextBlock Text="Ожидание сканирования TENAM"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Opacity="0.85"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Уголок "№" (показываем только когда есть строки) -->
+                <Border Panel.ZIndex="10"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Width="{Binding ElementName=RecordsGrid, Path=RowHeaderWidth}"
+                        Height="{Binding ElementName=RecordsGrid, Path=ColumnHeaderHeight}"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                        BorderThickness="0,0,1,1"
+                        IsHitTestVisible="False">
+
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+
+                    <TextBlock Text="№"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </Grid>
         </Border>
 
         <!-- Busy overlay -->
