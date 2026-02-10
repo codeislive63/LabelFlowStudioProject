@@ -76,28 +76,70 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0"
-                           Text="Статус"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           FontWeight="SemiBold"
-                           Margin="0,0,10,0"
-                           VerticalAlignment="Center"/>
+                        Text="Статус"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        FontWeight="SemiBold"
+                        Margin="0,0,10,0"
+                        VerticalAlignment="Center"/>
 
                 <TextBlock Grid.Column="1"
-                           Text="{Binding StatusMessage}"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center"/>
+                       Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"/>
+
+                <Border Grid.Column="2"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="10,6"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Записей:"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Records.Count}"
+                           Margin="8,0,0,0"
+                           FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
+
 
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
             <DataGrid Style="{StaticResource AppDataGridStyle}"
                       ItemsSource="{Binding Records}"
                       AutoGenerateColumns="True"
                       IsReadOnly="True"
-                      CanUserAddRows="False"/>
+                      CanUserAddRows="False"
+                      CanUserSortColumns="True"
+                      HeadersVisibility="All"
+                      RowHeaderWidth="44"
+                      LoadingRow="RecordsGrid_LoadingRow"
+                      Sorting="RecordsGrid_Sorting">
+
+                <DataGrid.RowHeaderStyle>
+                    <Style TargetType="{x:Type DataGridRowHeader}">
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="Padding" Value="0"/>
+                    </Style>
+                </DataGrid.RowHeaderStyle>
+
+            </DataGrid>
+
+
         </Border>
     </Grid>
 </Window>

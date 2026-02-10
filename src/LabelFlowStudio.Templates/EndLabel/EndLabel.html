@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -69,7 +69,7 @@
 
         .cap {
             font-weight: 700;
-            font-size: 12px;
+            font-size: 13px;
             margin-bottom: 2mm;
         }
 
@@ -80,6 +80,7 @@
 
         .small {
             font-size: 11px;
+            font-weight: 700;
             line-height: 1.25;
             opacity: 0.95;
         }
@@ -131,7 +132,8 @@
 
         .tenam {
             margin-top: 1.5mm;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 700;
             opacity: 0.9;
             width: 100%;
             text-align: center;
@@ -170,7 +172,7 @@
             display: flex;
             justify-content: space-between;
             gap: 8mm;
-            margin-right: -1mm;
+            margin-right: 5mm;
         }
 
         .left {
@@ -186,37 +188,34 @@
             height: 100%;
         }
 
+        /* KPI: ровные строки (лейбл + значение) */
         .kpi {
             margin-top: auto;
-            width: auto;
-            display: inline-flex;
+            display: flex;
             flex-direction: column;
-            align-items: flex-end;
-            text-align: right;
+            align-items: flex-start;
+            text-align: left;
             padding-bottom: 2mm;
+            gap: 3mm; /* ровный вертикальный шаг */
         }
 
         .kpi-row {
-            width: auto;
-            display: flex;
-            justify-content: flex-end;
-            gap: 3mm;
-            margin-top: 3mm;
-            font-size: 12px;
+            display: grid;
+            grid-template-columns: 36mm auto; /* лейбл | значение */
+            column-gap: 2.5mm;
+            font-size: 13px;
+            line-height: 1.2;
             white-space: nowrap;
-            align-items: center;
+            align-items: baseline;
         }
 
-            .kpi-row > span:first-child {
-                width: 28mm;
-                text-align: right;
-            }
+        .kpi-row > span:first-child {
+            font-weight: 700;
+        }
 
         .kpi-val {
             font-weight: 400;
-            font-size: 12px;
-            display: inline-block;
-            width: 10mm;
+            font-size: 14px;
             text-align: left;
         }
 
@@ -224,39 +223,6 @@
             font-weight: 400;
             margin-left: 2mm;
         }
-
-        .bottom-grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 3mm; /* расстояние от "Код заказа" */
-        }
-
-            .bottom-grid td {
-                font-size: 12px;
-                padding: 1.2mm 0; /* вертикальный шаг строк — ровный */
-                vertical-align: middle;
-                white-space: nowrap;
-            }
-
-        .bottom-left {
-            width: calc(100% - 42mm); /* всё что слева */
-            text-align: left;
-        }
-
-        .bottom-right {
-            width: 42mm; /* как твой .right */
-            text-align: right;
-        }
-
-        .bottom-label {
-            font-weight: 700;
-        }
-
-        .bottom-value {
-            font-weight: 400;
-            margin-left: 2mm;
-        }
-
     </style>
 </head>
 

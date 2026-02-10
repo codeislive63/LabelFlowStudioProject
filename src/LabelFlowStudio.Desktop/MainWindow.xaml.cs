@@ -47,4 +47,25 @@ public partial class MainWindow : Window
     {
         return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
     }
+
+    private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs eventArgs)
+    {
+        eventArgs.Row.Header = (eventArgs.Row.GetIndex() + 1).ToString();
+    }
+
+    private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs eventArgs)
+    {
+        var grid = (DataGrid) sender;
+
+        grid.Dispatcher.InvokeAsync(() =>
+        {
+            foreach (var item in grid.Items)
+            {
+                if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
+                {
+                    row.Header = (row.GetIndex() + 1).ToString();
+                }
+            }
+        });
+    }
 }
