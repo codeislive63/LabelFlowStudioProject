@@ -43,7 +43,16 @@ public partial class App : System.Windows.Application
             _host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((context, config) =>
                 {
+                    config.SetBasePath(AppContext.BaseDirectory);
+
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+                    config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+
+                    config.AddEnvironmentVariables();
+
+                #if DEBUG
                     config.AddUserSecrets<App>(optional: true);
+                #endif
                 })
                 .ConfigureServices((context, services) =>
                 {

@@ -30,4 +30,12 @@
 	  <ProjectReference Include="..\LabelFlowStudio.Printing\LabelFlowStudio.Printing.csproj" />
 	  <ProjectReference Include="..\LabelFlowStudio.Templates\LabelFlowStudio.Templates.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="appsettings*.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>
