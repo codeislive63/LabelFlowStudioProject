@@ -42,7 +42,7 @@
                         Margin="12,0">
                     <TextBlock x:Name="StatusText"
                                VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </Border>
 
                 <Button Grid.Column="2"

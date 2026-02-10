@@ -24,6 +24,9 @@ public partial class App : System.Windows.Application
 
         var logDirectory = LogPathResolver.GetLogDirectory();
         var logFilePath = Path.Combine(logDirectory, "LabelFlowStudio-.log");
+        var logTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}{NewLine}" 
+                            + "{Message:lj}{NewLine}" + "{Exception}" 
+                            + "──────────────────────────────────────────────────────────────{NewLine}";
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -35,7 +38,8 @@ public partial class App : System.Windows.Application
                 path: logFilePath,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
-                shared: true)
+                shared: true,
+                outputTemplate: logTemplate)
             .CreateLogger();
 
         try
