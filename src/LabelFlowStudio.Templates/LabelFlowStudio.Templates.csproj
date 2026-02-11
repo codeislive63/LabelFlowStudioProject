@@ -12,4 +12,11 @@
 	  <EmbeddedResource Include="StuffingSheet\StuffingSheet.html" />
   </ItemGroup>
 
+	<ItemGroup>
+		<Content Include="Editor\**\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>
