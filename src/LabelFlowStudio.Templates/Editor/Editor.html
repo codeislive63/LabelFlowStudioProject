@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #container {
+            height: 100%;
+            width: 100%;
+        }
+
+        #fallback {
+            height: 100%;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 12px;
+            box-sizing: border-box;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        #topHint {
+            position: fixed;
+            top: 10px;
+            right: 12px;
+            background: rgba(0,0,0,0.65);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-family: Segoe UI, sans-serif;
+            font-size: 12px;
+            z-index: 9999;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="topHint">Ctrl+S сохранить</div>
+    <div id="container"></div>
+
+    <script>
+    const state = {
+      ready: false,
+      tokens: [],
+      setValueSilently: false,
+      editor: null,
+      fallback: null
+    };
+
+    function post(msg) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(msg);
+      }
+    }
+
+    function debounce(fn, ms) {
+      let timerId;
+      return function () {
+        const args = arguments;
+        clearTimeout(timerId);
+        timerId = setTimeout(() => fn.apply(null, args), ms);
+      };
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load: " + src));
+        document.head.appendChild(script);
+      });
+    }
+
+    function ensureFallback() {
+      if (state.fallback) {
+        return;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.id = "fallback";
+      textarea.spellcheck = false;
+
+      textarea.addEventListener("input", debounce(() => {
+        if (state.setValueSilently) {
+          return;
+        }
+        post({ type: "contentChanged", value: textarea.value });
+      }, 250));
+
+      textarea.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          post({ type: "saveRequested" });
+        }
+      });
+
+      document.getElementById("container").appendChild(textarea);
+      state.fallback = textarea;
+    }
+
+    async function startMonaco() {
+      // 1) local
+      try {
+        await loadScript("https://app/Monaco/vs/loader.js");
+        window.require.config({ paths: { vs: "https://app/Monaco/vs" } });
+        return await createMonacoEditor();
+      } catch { }
+
+      // 2) CDN
+      try {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js");
+        window.require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs" } });
+        return await createMonacoEditor();
+      } catch { }
+
+      // 3) fallback
+      ensureFallback();
+      state.ready = true;
+      post({ type: "ready" });
+    }
+
+    function createMonacoEditor() {
+      return new Promise((resolve) => {
+        window.require(["vs/editor/editor.main"], function () {
+          state.editor = monaco.editor.create(document.getElementById("container"), {
+            value: "",
+            language: "html",
+            theme: "vs",
+            automaticLayout: true,
+            minimap: { enabled: true },
+            wordWrap: "on"
+          });
+
+          monaco.languages.registerCompletionItemProvider("html", {
+            triggerCharacters: ["{", "T", "B", "G", "L", "C", "S"],
+            provideCompletionItems: function () {
+              const suggestions = state.tokens.map(t => ({
+                label: t.label,
+                kind: monaco.languages.CompletionItemKind.Variable,
+                insertText: t.insertText,
+                detail: t.detail
+              }));
+
+              return { suggestions: suggestions };
+            }
+          });
+
+          state.editor.onDidChangeModelContent(debounce(() => {
+            if (state.setValueSilently) {
+              return;
+            }
+            post({ type: "contentChanged", value: state.editor.getValue() });
+          }, 250));
+
+          window.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+              e.preventDefault();
+              post({ type: "saveRequested" });
+            }
+          });
+
+          state.ready = true;
+          post({ type: "ready" });
+          resolve();
+        });
+      });
+    }
+
+    function setValue(value) {
+      const text = value || "";
+      state.setValueSilently = true;
+
+      if (state.editor) {
+        state.editor.setValue(text);
+      } else {
+        ensureFallback();
+        state.fallback.value = text;
+      }
+
+      state.setValueSilently = false;
+    }
+
+    function setTokens(tokens) {
+      state.tokens = Array.isArray(tokens) ? tokens : [];
+    }
+
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener("message", (ev) => {
+        const msg = ev.data;
+        if (!msg || !msg.type) {
+          return;
+        }
+
+        if (msg.type === "init") {
+          setTokens(msg.tokens || []);
+          setValue(msg.value || "");
+          return;
+        }
+
+        if (msg.type === "setValue") {
+          setValue(msg.value || "");
+          return;
+        }
+      });
+    }
+
+    startMonaco();
+    </script>
+</body>
+</html>
