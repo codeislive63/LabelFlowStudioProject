@@ -84,16 +84,13 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <RadioButton x:Name="ModeCode"
                                      Content="Код"
-                                     Margin="0,0,10,0"
-                                     Checked="OnModeChanged"
-                                     IsChecked="True"/>
+                                     Margin="0,0,10,0"/>
                         <RadioButton x:Name="ModeSplit"
                                      Content="Код + предпросмотр"
-                                     Margin="0,0,10,0"
-                                     Checked="OnModeChanged"/>
+                                     Margin="0,0,10,0"/>
                         <RadioButton x:Name="ModePreview"
                                      Content="Предпросмотр"
-                                     Checked="OnModeChanged"/>
+                                     IsChecked="True"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="20,0,0,0">

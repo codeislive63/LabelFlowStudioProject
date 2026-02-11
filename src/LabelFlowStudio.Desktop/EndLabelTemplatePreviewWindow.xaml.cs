@@ -61,9 +61,15 @@ public partial class EndLabelTemplatePreviewWindow : Window
         _tenam = tenam;
 
         InitializeComponent();
+
+        ModeCode.Checked += OnModeChanged;
+        ModeSplit.Checked += OnModeChanged;
+        ModePreview.Checked += OnModeChanged;
+
         Loaded += OnLoaded;
         Closed += OnClosed;
     }
+
 
     private async void OnLoaded(object sender, RoutedEventArgs eventArgs)
     {
@@ -148,20 +154,14 @@ public partial class EndLabelTemplatePreviewWindow : Window
         EditorWebView.CoreWebView2.WebMessageReceived -= OnEditorWebMessageReceived;
         EditorWebView.CoreWebView2.WebMessageReceived += OnEditorWebMessageReceived;
 
-        var assetsRoot = GetAssetsRoot();
-        if (Directory.Exists(assetsRoot))
-        {
-            EditorWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-                "app",
-                assetsRoot,
-                CoreWebView2HostResourceAccessKind.Allow
-            );
-        }
-    }
+        var contentRoot = AppContext.BaseDirectory;
 
-    private static string GetAssetsRoot()
-    {
-        return Path.Combine(AppContext.BaseDirectory, "Assets");
+        EditorWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            "app",
+            contentRoot,
+            CoreWebView2HostResourceAccessKind.Allow
+        );
+
     }
 
     private static string GetWebViewUserDataFolder()
@@ -175,7 +175,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
         _isEditorReady = false;
         UpdateSaveButtonState();
 
-        var editorUrl = "https://app/TemplateEditor/editor.html";
+        var editorUrl = "https://app/Editor/Editor.html";
         EditorWebView.Source = new Uri(editorUrl, UriKind.Absolute);
     }
 
@@ -265,6 +265,11 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private void ApplyModeLayout()
     {
+        if (EditorWebView is null || PreviewWebView is null)
+        {
+            return;
+        }
+
         if (ModeCode.IsChecked == true)
         {
             EditorWebView.Visibility = Visibility.Visible;
