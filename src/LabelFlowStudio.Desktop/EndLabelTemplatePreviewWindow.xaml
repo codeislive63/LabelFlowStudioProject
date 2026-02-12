@@ -247,7 +247,7 @@
                               Background="{DynamicResource SurfaceBorderBrush}"/>
 
                 <!-- Preview -->
-                <Grid x:Name="PreviewHost" Grid.Column="2" Background="{DynamicResource SurfaceBrush}">
+                <Grid x:Name="PreviewHost" Margin="0,0,12,0" Grid.Column="2" Background="{DynamicResource SurfaceBrush}">
                     <wv2:WebView2 x:Name="PreviewWebView"
                                   NavigationCompleted="OnPreviewNavigationCompleted"
                                   PreviewMouseWheel="OnPreviewMouseWheel"/>

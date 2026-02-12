@@ -33,7 +33,6 @@
                     <ColumnDefinition Width="260"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -60,20 +59,14 @@
 
                 <Button Grid.Column="2"
                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                        Content="Загрузить"
-                        Command="{Binding LoadRecordsCommand}"
-                        Margin="0,0,10,0" />
-
-                <Button Grid.Column="3"
-                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
                         Content="Торцевая этикетка"
                         Command="{Binding OpenEndLabelPreviewCommand}"
                         Margin="0,0,10,0"/>
 
-                <Button Grid.Column="4"
+                <Button Grid.Column="3"
                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
                         Content="Лист сброса"
-                        Command="{Binding OpenStuffingSheetPreviewCommand}"/>
+                        Command="{Binding OpenStuffingSheetPreviewCommand}" />
             </Grid>
         </Border>
 
