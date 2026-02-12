@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Editor</title>
 
-    <!-- Monaco styles -->
-    <link rel="stylesheet" href="monaco/vs/editor/editor.main.css" />
-
     <style>
         :root {
             --bg: #ffffff;
@@ -17,10 +14,11 @@
             --text: rgba(0,0,0,0.88);
             --muted: rgba(0,0,0,0.58);
             --accent: #2563eb;
-            --shadow: 0 10px 28px rgba(0,0,0,0.10);
             --radius: 12px;
+            --shadow: 0 10px 28px rgba(0,0,0,0.10);
             --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
             --code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace;
+            --tokensWidth: 360px;
         }
 
         html, body {
@@ -38,64 +36,39 @@
         .root {
             height: 100%;
             display: grid;
-            grid-template-columns: 1fr 340px;
+            grid-template-columns: 1fr var(--tokensWidth);
+            transition: grid-template-columns 180ms ease;
+            position: relative;
         }
 
             .root.tokensHidden {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 0px;
             }
 
         .editorPane {
             display: grid;
-            grid-template-rows: 40px 1fr 28px;
-            border-right: 1px solid var(--border);
+            grid-template-rows: 1fr 28px;
             min-width: 0;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 12px;
-            background: var(--panel);
-            border-bottom: 1px solid var(--border);
-            user-select: none;
-        }
-
-        .fileTag {
-            font-size: 13px;
-            color: var(--muted);
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            background: rgba(255,255,255,0.7);
-        }
-
-        .btn {
-            appearance: none;
-            border: 1px solid var(--border);
-            background: rgba(255,255,255,0.85);
-            color: var(--text);
-            border-radius: 999px;
-            padding: 6px 10px;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-            .btn:hover {
-                border-color: rgba(37,99,235,0.35);
-                box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
-            }
-
-        .hint {
-            margin-left: auto;
-            font-size: 12px;
-            color: var(--muted);
+            border-right: 1px solid var(--border);
         }
 
         #editor {
             min-width: 0;
             min-height: 0;
+        }
+
+        #fallback {
+            display: none;
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 12px;
+            box-sizing: border-box;
+            font-family: var(--code);
+            font-size: 13px;
+            line-height: 1.4;
         }
 
         .status {
@@ -110,29 +83,67 @@
             user-select: none;
         }
 
-        .side {
+        .tokensPanel {
             display: grid;
-            grid-template-rows: 40px 1fr;
+            grid-template-rows: 44px 1fr;
             min-width: 0;
+            overflow: hidden;
+            background: var(--bg);
+            border-left: 1px solid var(--border);
+            transition: opacity 140ms ease, transform 180ms ease;
+            opacity: 1;
+            transform: translateX(0);
         }
 
-        .sideHeader {
+        .root.tokensHidden .tokensPanel {
+            opacity: 0;
+            transform: translateX(10px);
+            pointer-events: none;
+        }
+
+        .tokensHeader {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             gap: 10px;
-            padding: 0 12px;
+            padding: 0 10px;
             background: var(--panel);
             border-bottom: 1px solid var(--border);
             user-select: none;
         }
 
-        .sideTitle {
+        .tokenSearch {
+            flex: 1;
+            height: 30px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.85);
             font-size: 13px;
-            color: var(--muted);
+            outline: none;
         }
 
-        .tokens {
+            .tokenSearch:focus {
+                border-color: rgba(37,99,235,0.35);
+                box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+            }
+
+        .iconBtn {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.85);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+        }
+
+            .iconBtn:hover {
+                border-color: rgba(37,99,235,0.35);
+                box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+            }
+
+        .tokensList {
             overflow: auto;
             padding: 10px;
             background: var(--bg);
@@ -169,11 +180,34 @@
                 line-height: 1.35;
             }
 
-        .hidden {
+        .tokensHandle {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 64px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.92);
+            box-shadow: var(--shadow);
+            cursor: pointer;
             display: none;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
         }
 
-        /* Scrollbars (не обязательны, но приятнее) */
+        .root.tokensHidden .tokensHandle {
+            display: flex;
+        }
+
+        .braceIcon {
+            font-family: var(--code);
+            font-size: 16px;
+            color: var(--muted);
+        }
+
         ::-webkit-scrollbar {
             width: 12px;
             height: 12px;
@@ -193,18 +227,10 @@
 </head>
 
 <body>
-    <div id="root" class="root">
+    <div id="root" class="root tokensHidden">
         <div class="editorPane">
-            <div class="topbar">
-                <div class="fileTag">endlabel.html</div>
-
-                <!-- CHANGE: кнопка скрыть/показать токены -->
-                <button id="toggleTokensBtn" class="btn" type="button">Токены</button>
-
-                <div class="hint">Ctrl+S</div>
-            </div>
-
             <div id="editor"></div>
+            <textarea id="fallback" spellcheck="false"></textarea>
 
             <div class="status">
                 <div id="leftStatus">Загрузка</div>
@@ -212,274 +238,446 @@
             </div>
         </div>
 
-        <div id="side" class="side">
-            <div class="sideHeader">
-                <div class="sideTitle">Tokens</div>
-                <button id="hideTokensBtn" class="btn" type="button">Скрыть</button>
+        <div id="tokensPanel" class="tokensPanel">
+            <div class="tokensHeader">
+                <input id="tokenSearch" class="tokenSearch" type="text" placeholder="Поиск" />
+                <button id="closeTokensBtn" class="iconBtn" type="button" title="Скрыть">
+                    ✕
+                </button>
             </div>
-            <div id="tokens" class="tokens"></div>
+
+            <div id="tokensList" class="tokensList"></div>
         </div>
+
+        <button id="tokensHandle" class="tokensHandle" type="button" title="Токены">
+            <span class="braceIcon">{ }</span>
+        </button>
     </div>
 
-    <!-- Monaco loader -->
-    <script src="monaco/vs/loader.js"></script>
-
     <script>
+        const state = {
+            editor: null,
+            fallback: document.getElementById('fallback'),
+            usingFallback: false,
+
+            tokens: [],
+            tokensHidden: true,
+            filter: '',
+
+            suppressChange: false,
+            pendingInit: null,
+
+            completionProviderDisposable: null,
+
+            vsBaseUrl: null
+        }
+
         const rootEl = document.getElementById('root')
-        const sideEl = document.getElementById('side')
-        const tokensEl = document.getElementById('tokens')
-        const leftStatus = document.getElementById('leftStatus')
+        const editorHostEl = document.getElementById('editor')
+        const tokensListEl = document.getElementById('tokensList')
+        const tokenSearchEl = document.getElementById('tokenSearch')
+        const tokensHandleEl = document.getElementById('tokensHandle')
+        const closeTokensBtnEl = document.getElementById('closeTokensBtn')
+        const leftStatusEl = document.getElementById('leftStatus')
 
-        const toggleTokensBtn = document.getElementById('toggleTokensBtn')
-        const hideTokensBtn = document.getElementById('hideTokensBtn')
-
-        // IMPORTANT: WebView2 virtual host is https://app (см. EndLabelTemplatePreviewWindow) :contentReference[oaicite:5]{index=5}
-        const vsBaseUrl = 'https://app/Editor/monaco/vs'
-
-        let editor = null
-        let tokens = []
-        let tokensHidden = false
-
-        let suppressChange = false
-        let pendingInit = null
-
-        let completionProviderDisposable = null
-
-        function post(msg) {
+        function post(message) {
             try {
-                if (window.chrome && chrome.webview) {
-                    chrome.webview.postMessage(msg)
+                if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(message)
                 }
-            } catch { }
-        }
-
-        function setTokensHidden(hidden, notifyHost) {
-            tokensHidden = !!hidden
-
-            if (tokensHidden) {
-                rootEl.classList.add('tokensHidden')
-                sideEl.classList.add('hidden')
-                toggleTokensBtn.textContent = 'Токены'
-            } else {
-                rootEl.classList.remove('tokensHidden')
-                sideEl.classList.remove('hidden')
-                toggleTokensBtn.textContent = 'Токены'
-            }
-
-            if (editor) {
-                editor.layout()
-                editor.focus()
-            }
-
-            if (notifyHost) {
-                post({ type: 'tokensPanelToggled', hidden: tokensHidden })
+            } catch {
+                // ignore
             }
         }
 
-        function escapeHtml(s) {
-            return (s || '')
+        function debounce(fn, delayMs) {
+            let timerId = null
+            return function () {
+                const args = arguments
+                if (timerId) {
+                    clearTimeout(timerId)
+                }
+                timerId = setTimeout(() => fn.apply(null, args), delayMs)
+            }
+        }
+
+        function escapeHtml(value) {
+            return (value || '')
                 .replaceAll('&', '&amp;')
                 .replaceAll('<', '&lt;')
                 .replaceAll('>', '&gt;')
         }
 
-        function insertTokenText(text) {
-            if (!editor) return
-            const selection = editor.getSelection()
-            if (!selection) return
+        function setTokensHidden(hidden, notifyHost) {
+            state.tokensHidden = !!hidden
 
-            editor.executeEdits('token', [{
-                range: selection,
-                text: text,
-                forceMoveMarkers: true
-            }])
+            if (state.tokensHidden) {
+                rootEl.classList.add('tokensHidden')
+            } else {
+                rootEl.classList.remove('tokensHidden')
+            }
 
-            editor.focus()
+            if (state.editor) {
+                state.editor.layout()
+                state.editor.focus()
+            }
+
+            if (notifyHost) {
+                post({ type: 'tokensPanelToggled', hidden: state.tokensHidden })
+            }
         }
 
         function renderTokens() {
-            tokensEl.innerHTML = ''
+            const filter = (state.filter || '').trim().toLowerCase()
 
-            for (const t of tokens) {
+            tokensListEl.innerHTML = ''
+
+            const list = Array.isArray(state.tokens) ? state.tokens : []
+            for (const t of list) {
+                const label = (t && (t.label || '')) || ''
+                const detail = (t && (t.detail || '')) || ''
+                const insertText = (t && (t.insertText || t.label || '')) || ''
+
+                if (filter) {
+                    const hay = (label + ' ' + detail).toLowerCase()
+                    if (!hay.includes(filter)) {
+                        continue
+                    }
+                }
+
                 const card = document.createElement('div')
                 card.className = 'token'
                 card.innerHTML =
-                    `<div class="label">${escapeHtml(t.label || '')}</div>` +
-                    `<div class="detail">${escapeHtml(t.detail || '')}</div>`
+                    `<div class="label">${escapeHtml(label)}</div>` +
+                    `<div class="detail">${escapeHtml(detail)}</div>`
 
                 card.addEventListener('click', () => {
-                    insertTokenText(t.insertText || t.label || '')
+                    insertTokenText(insertText)
                 })
 
-                tokensEl.appendChild(card)
+                tokensListEl.appendChild(card)
             }
         }
 
-        function setEditorValue(value, keepViewState) {
-            if (!editor) return
+        function insertTokenText(text) {
+            const value = text || ''
 
-            const viewState = keepViewState ? editor.saveViewState() : null
+            if (state.editor) {
+                const selection = state.editor.getSelection()
+                if (!selection) {
+                    return
+                }
 
-            suppressChange = true
-            editor.setValue(value || '')
-            suppressChange = false
+                state.editor.executeEdits('token', [{
+                    range: selection,
+                    text: value,
+                    forceMoveMarkers: true
+                }])
 
-            if (viewState) {
-                editor.restoreViewState(viewState)
+                state.editor.focus()
+                return
             }
 
-            editor.focus()
+            if (state.usingFallback && state.fallback) {
+                const el = state.fallback
+                const start = el.selectionStart || 0
+                const end = el.selectionEnd || 0
+                const before = el.value.substring(0, start)
+                const after = el.value.substring(end)
+
+                el.value = before + value + after
+                el.selectionStart = start + value.length
+                el.selectionEnd = start + value.length
+                el.focus()
+
+                post({ type: 'contentChanged', value: el.value })
+            }
+        }
+
+        function setValue(value, keepViewState) {
+            const text = value || ''
+
+            if (state.editor) {
+                const viewState = keepViewState ? state.editor.saveViewState() : null
+
+                state.suppressChange = true
+                state.editor.setValue(text)
+                state.suppressChange = false
+
+                if (viewState) {
+                    state.editor.restoreViewState(viewState)
+                }
+
+                state.editor.focus()
+                return
+            }
+
+            if (state.usingFallback && state.fallback) {
+                state.suppressChange = true
+                state.fallback.value = text
+                state.suppressChange = false
+            }
         }
 
         function registerTokenCompletionProvider() {
-            if (!window.monaco) return
-
-            if (completionProviderDisposable) {
-                completionProviderDisposable.dispose()
-                completionProviderDisposable = null
+            if (!window.monaco) {
+                return
             }
 
-            const suggestions = (tokens || [])
-                .filter(t => (t && (t.label || t.insertText)))
-                .map((t, idx) => {
-                    const insert = (t.insertText || t.label || '')
-                    return {
-                        label: t.label || insert,
-                        kind: monaco.languages.CompletionItemKind.Snippet,
-                        detail: t.detail || '',
-                        insertText: insert,
-                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                        sortText: String(idx).padStart(5, '0')
-                    }
-                })
+            if (state.completionProviderDisposable) {
+                state.completionProviderDisposable.dispose()
+                state.completionProviderDisposable = null
+            }
 
-            completionProviderDisposable = monaco.languages.registerCompletionItemProvider('html', {
+            state.completionProviderDisposable = monaco.languages.registerCompletionItemProvider('html', {
                 triggerCharacters: ['{'],
                 provideCompletionItems: function () {
-                    return { suggestions }
+                    const list = Array.isArray(state.tokens) ? state.tokens : []
+                    const suggestions = []
+                    let idx = 0
+
+                    for (const t of list) {
+                        if (!t) {
+                            continue
+                        }
+
+                        const insert = (t.insertText || t.label || '')
+                        const label = (t.label || insert)
+
+                        if (!label) {
+                            continue
+                        }
+
+                        suggestions.push({
+                            label: label,
+                            kind: monaco.languages.CompletionItemKind.Snippet,
+                            detail: t.detail || '',
+                            insertText: insert,
+                            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                            sortText: String(idx).padStart(5, '0')
+                        })
+
+                        idx++
+                    }
+
+                    return { suggestions: suggestions }
                 }
             })
         }
 
-        function applyInit(initMsg) {
-            tokens = initMsg.tokens || []
+        function applyInit(message) {
+            state.tokens = message.tokens || []
+            state.filter = ''
+            tokenSearchEl.value = ''
+
             renderTokens()
             registerTokenCompletionProvider()
 
-            setTokensHidden(!!initMsg.tokensHidden, false)
+            setTokensHidden(!!message.tokensHidden, false)
+            setValue(message.value || '', false)
 
-            setEditorValue(initMsg.value || '', false)
-            leftStatus.textContent = 'Готово'
+            leftStatusEl.textContent = 'Готово'
         }
 
-        function handleHostMessage(msg) {
-            if (!msg || !msg.type) return
+        function handleHostMessage(message) {
+            if (!message || !message.type) {
+                return
+            }
 
-            if (msg.type === 'init') {
-                if (!editor) {
-                    pendingInit = msg
+            if (message.type === 'init') {
+                if (!state.editor && !state.usingFallback) {
+                    state.pendingInit = message
                     return
                 }
-                applyInit(msg)
+
+                applyInit(message)
                 return
             }
 
-            if (msg.type === 'setValue') {
-                if (!editor) return
-                setEditorValue(msg.value || '', true)
-                leftStatus.textContent = 'Импорт выполнен'
+            if (message.type === 'setValue') {
+                setValue(message.value || '', true)
+                leftStatusEl.textContent = 'Импорт выполнен'
                 return
             }
         }
 
-        // Wire WebView2 messages early
-        if (window.chrome && chrome.webview) {
-            chrome.webview.addEventListener('message', (e) => handleHostMessage(e.data || {}))
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script')
+                script.src = src
+                script.async = true
+                script.onload = () => resolve()
+                script.onerror = () => reject(new Error('Failed to load script: ' + src))
+                document.head.appendChild(script)
+            })
         }
 
-        // UI buttons
-        toggleTokensBtn.addEventListener('click', () => setTokensHidden(!tokensHidden, true))
-        hideTokensBtn.addEventListener('click', () => setTokensHidden(true, true))
+        function loadCss(href) {
+            return new Promise((resolve, reject) => {
+                const link = document.createElement('link')
+                link.rel = 'stylesheet'
+                link.href = href
+                link.onload = () => resolve()
+                link.onerror = () => reject(new Error('Failed to load css: ' + href))
+                document.head.appendChild(link)
+            })
+        }
 
-        // Monaco worker config (оффлайн + WebView2)
-        window.MonacoEnvironment = {
-            getWorkerUrl: function () {
-                const workerMain = `${vsBaseUrl}/base/worker/workerMain.js`
-                const bootstrap = `
-                        self.MonacoEnvironment = { baseUrl: '${vsBaseUrl}' };
-                        importScripts('${workerMain}');
-                    `
-                return `data:text/javascript;charset=utf-8,${encodeURIComponent(bootstrap)}`
+        function ensureFallback() {
+            state.usingFallback = true
+
+            editorHostEl.style.display = 'none'
+            state.fallback.style.display = 'block'
+
+            state.fallback.addEventListener('input', debounce(() => {
+                if (state.suppressChange) {
+                    return
+                }
+                post({ type: 'contentChanged', value: state.fallback.value })
+                leftStatusEl.textContent = 'Изменения не сохранены'
+            }, 200))
+
+            state.fallback.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                    e.preventDefault()
+                    post({ type: 'saveRequested' })
+                    leftStatusEl.textContent = 'Сохранение'
+                }
+            })
+        }
+
+        async function tryStartMonaco(vsBaseUrl, loaderUrl, cssUrl) {
+            try {
+                await loadCss(cssUrl)
+                await loadScript(loaderUrl)
+
+                state.vsBaseUrl = vsBaseUrl
+
+                window.MonacoEnvironment = {
+                    getWorkerUrl: function () {
+                        const workerMain = `${state.vsBaseUrl}/base/worker/workerMain.js`
+                        const bootstrap =
+                            `self.MonacoEnvironment = { baseUrl: '${state.vsBaseUrl}' };` +
+                            `importScripts('${workerMain}');`
+
+                        return `data:text/javascript;charset=utf-8,${encodeURIComponent(bootstrap)}`
+                    }
+                }
+
+                window.require.config({ paths: { vs: state.vsBaseUrl } })
+
+                await new Promise((resolve) => {
+                    window.require(['vs/editor/editor.main'], function () {
+                        state.editor = monaco.editor.create(editorHostEl, {
+                            value: '',
+                            language: 'html',
+                            theme: 'vs',
+                            automaticLayout: true,
+
+                            minimap: { enabled: false },
+                            fontFamily: state.editor ? undefined : 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace',
+                            fontSize: 13,
+                            lineHeight: 20,
+
+                            wordWrap: 'on',
+                            wrappingIndent: 'same',
+                            scrollBeyondLastLine: false,
+                            smoothScrolling: true,
+
+                            tabSize: 2,
+                            insertSpaces: true,
+                            autoIndent: 'full',
+                            formatOnPaste: true,
+                            formatOnType: true,
+
+                            quickSuggestions: true,
+                            suggestOnTriggerCharacters: true,
+
+                            scrollbar: {
+                                verticalScrollbarSize: 12,
+                                horizontalScrollbarSize: 12
+                            },
+
+                            fixedOverflowWidgets: true
+                        })
+
+                        state.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                            post({ type: 'saveRequested' })
+                            leftStatusEl.textContent = 'Сохранение'
+                        })
+
+                        const pushChange = debounce(() => {
+                            post({ type: 'contentChanged', value: state.editor.getValue() })
+                            leftStatusEl.textContent = 'Изменения не сохранены'
+                        }, 180)
+
+                        state.editor.onDidChangeModelContent(() => {
+                            if (state.suppressChange) {
+                                return
+                            }
+                            pushChange()
+                        })
+
+                        resolve()
+                    })
+                })
+
+                return true
+            } catch {
+                return false
             }
         }
 
-        // Monaco init
-        require.config({ paths: { vs: vsBaseUrl } })
+        async function start() {
+            // WebView2 messages
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.addEventListener('message', (e) => handleHostMessage(e.data || {}))
+            }
 
-        require(['vs/editor/editor.main'], function () {
-            editor = monaco.editor.create(document.getElementById('editor'), {
-                value: '',
-                language: 'html',
-                theme: 'vs',                 // CHANGE: светлая тема
-                automaticLayout: true,
-
-                minimap: { enabled: false },
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace',
-                fontSize: 13,
-                lineHeight: 20,
-
-                wordWrap: 'on',               // CHANGE: перенос строк
-                wrappingIndent: 'same',
-                scrollBeyondLastLine: false,
-                smoothScrolling: true,
-
-                tabSize: 2,
-                insertSpaces: true,
-                autoIndent: 'full',           // CHANGE: авто-отступы
-                formatOnPaste: true,
-                formatOnType: true,
-
-                quickSuggestions: true,
-                suggestOnTriggerCharacters: true,
-                parameterHints: { enabled: true },
-
-                scrollbar: {
-                    verticalScrollbarSize: 12,
-                    horizontalScrollbarSize: 12,
-                },
-
-                fixedOverflowWidgets: true
+            // UI
+            tokenSearchEl.addEventListener('input', () => {
+                state.filter = tokenSearchEl.value || ''
+                renderTokens()
             })
 
-            // Ctrl+S -> host save
-            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                post({ type: 'saveRequested' })
-                leftStatus.textContent = 'Сохранение'
-            })
+            tokensHandleEl.addEventListener('click', () => setTokensHidden(false, true))
+            closeTokensBtnEl.addEventListener('click', () => setTokensHidden(true, true))
 
-            // Notify host on changes (debounce)
-            let debounce = null
-            editor.onDidChangeModelContent(() => {
-                if (suppressChange) return
+            // 1) local (если появится Monaco в папке Editor/monaco)
+            const localOk = await tryStartMonaco(
+                'https://app/Editor/monaco/vs',
+                'monaco/vs/loader.js',
+                'monaco/vs/editor/editor.main.css'
+            )
 
-                if (debounce) clearTimeout(debounce)
-                debounce = setTimeout(() => {
-                    post({ type: 'contentChanged', value: editor.getValue() })
-                    leftStatus.textContent = 'Изменения не сохранены'
-                }, 180)
-            })
+            // 2) CDN
+            const cdnOk = localOk ? true : await tryStartMonaco(
+                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs',
+                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.css'
+            )
 
-            // Ready handshake for host init :contentReference[oaicite:6]{index=6}
+            // 3) fallback
+            if (!cdnOk) {
+                ensureFallback()
+            }
+
+            // Ready handshake – хост пошлёт init только после этого
             post({ type: 'ready' })
 
-            // Apply pending init if it arrived early
-            if (pendingInit) {
-                applyInit(pendingInit)
-                pendingInit = null
+            if (state.pendingInit) {
+                applyInit(state.pendingInit)
+                state.pendingInit = null
             }
 
-            editor.focus()
-        })
+            if (state.editor) {
+                state.editor.focus()
+            } else if (state.usingFallback) {
+                state.fallback.focus()
+            }
+        }
+
+        start()
     </script>
 </body>
 </html>
