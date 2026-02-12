@@ -1,13 +1,16 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Desktop.Templates;
+using Microsoft.Win32;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace LabelFlowStudio.Desktop;
 
@@ -24,14 +27,20 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private bool _isPreviewReady;
     private bool _isEditorReady;
     private bool _isDirty;
+    private bool _isSaving;
+    private bool _pendingPreviewFlagsApply;
 
     private string _templateText = string.Empty;
 
-    private int _previewVersion;
     private double _zoomFactor = 1.0;
+
+    private DispatcherTimer? _toastTimer;
 
     private const string PreferredPrinterName = "zebra_torec";
     private const int PreferredCopies = 2;
+
+    // UI state (Tokens panel)
+    private bool _tokensHidden;
 
     private static readonly TemplateToken[] Tokens =
     {
@@ -49,6 +58,15 @@ public partial class EndLabelTemplatePreviewWindow : Window
         new("{{SumBst}}", "{{SumBst}}", "Изделий в коробе")
     };
 
+    private enum ViewMode
+    {
+        Preview,
+        Split,
+        Code
+    }
+
+    private ViewMode _mode = ViewMode.Preview;
+
     public EndLabelTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
@@ -62,14 +80,17 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
         InitializeComponent();
 
-        ModeCode.Checked += OnModeChanged;
-        ModeSplit.Checked += OnModeChanged;
-        ModePreview.Checked += OnModeChanged;
-
         Loaded += OnLoaded;
         Closed += OnClosed;
-    }
 
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Open, (_, _) => OnImportClick(this, new RoutedEventArgs())));
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs, (_, _) => OnExportClick(this, new RoutedEventArgs())));
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Print, async (_, _) => await PrintAsync()));
+
+        InputBindings.Add(new KeyBinding(ApplicationCommands.Open, new KeyGesture(Key.O, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, new KeyGesture(Key.E, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(ApplicationCommands.Print, new KeyGesture(Key.P, ModifierKeys.Control)));
+    }
 
     private async void OnLoaded(object sender, RoutedEventArgs eventArgs)
     {
@@ -77,7 +98,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
         try
         {
-            SetStatus("Загрузка шаблона");
+            _tokensHidden = LoadUiStateTokensHidden();
 
             _templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
 
@@ -85,20 +106,21 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
             NavigateEditor();
 
+            SetViewMode(ViewMode.Preview);
+
             ScheduleRenderPreview();
-            ApplyModeLayout();
             ApplyZoom(_zoomFactor);
 
-            SetStatus(string.Empty);
+            UpdateWindowTitle();
         }
         catch (TimeoutException exception)
         {
-            SetStatus("WebView2 не инициализировался");
+            ShowToast("WebView2 не инициализировался");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch (Exception exception)
         {
-            SetStatus("Ошибка загрузки");
+            ShowToast("Ошибка загрузки");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -108,7 +130,139 @@ public partial class EndLabelTemplatePreviewWindow : Window
         _renderDebounceCts?.Cancel();
         _renderDebounceCts?.Dispose();
         _renderDebounceCts = null;
+
+        _toastTimer?.Stop();
+        _toastTimer = null;
     }
+
+    // ===========================
+    // Window chrome handlers
+    // ===========================
+
+    private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs eventArgs)
+    {
+        if (eventArgs.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (eventArgs.ClickCount == 2)
+        {
+            OnMaximizeRestoreClick(sender, new RoutedEventArgs());
+            return;
+        }
+
+        try
+        {
+            DragMove();
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    private void OnMinimizeClick(object sender, RoutedEventArgs eventArgs) => WindowState = WindowState.Minimized;
+
+    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs eventArgs)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs eventArgs) => Close();
+
+    // ===========================
+    // View mode menu
+    // ===========================
+
+    private void OnViewModeMenuClick(object sender, RoutedEventArgs eventArgs)
+    {
+        if (sender == ViewPreviewMenuItem)
+        {
+            SetViewMode(ViewMode.Preview);
+            return;
+        }
+
+        if (sender == ViewSplitMenuItem)
+        {
+            SetViewMode(ViewMode.Split);
+            return;
+        }
+
+        SetViewMode(ViewMode.Code);
+    }
+
+    private void SetViewMode(ViewMode mode)
+    {
+        _mode = mode;
+
+        ViewPreviewMenuItem.IsChecked = mode == ViewMode.Preview;
+        ViewSplitMenuItem.IsChecked = mode == ViewMode.Split;
+        ViewCodeMenuItem.IsChecked = mode == ViewMode.Code;
+
+        ApplyModeLayout(mode);
+    }
+
+    private void ApplyModeLayout(ViewMode mode)
+    {
+        if (EditorWebView is null || PreviewWebView is null)
+        {
+            return;
+        }
+
+        if (mode == ViewMode.Code)
+        {
+            EditorWebView.Visibility = Visibility.Visible;
+            PreviewHost.Visibility = Visibility.Collapsed;
+
+            EditorColumn.Width = new GridLength(1, GridUnitType.Star);
+            SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
+            PreviewColumn.Width = new GridLength(0, GridUnitType.Pixel);
+
+            ToolsColumn.Width = new GridLength(0, GridUnitType.Pixel);
+            PreviewToolsPanel.Visibility = Visibility.Collapsed;
+
+            return;
+        }
+
+        if (mode == ViewMode.Preview)
+        {
+            EditorWebView.Visibility = Visibility.Collapsed;
+            PreviewHost.Visibility = Visibility.Visible;
+
+            EditorColumn.Width = new GridLength(0, GridUnitType.Pixel);
+            SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
+            PreviewColumn.Width = new GridLength(1, GridUnitType.Star);
+
+            ToolsColumn.Width = GridLength.Auto;
+            PreviewToolsPanel.Visibility = Visibility.Visible;
+
+            return;
+        }
+
+        // Split
+        EditorWebView.Visibility = Visibility.Visible;
+        PreviewHost.Visibility = Visibility.Visible;
+
+        EditorColumn.Width = new GridLength(1, GridUnitType.Star);
+        SplitterColumn.Width = new GridLength(6, GridUnitType.Pixel);
+        PreviewColumn.Width = new GridLength(1, GridUnitType.Star);
+
+        ToolsColumn.Width = GridLength.Auto;
+        PreviewToolsPanel.Visibility = Visibility.Visible;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            EditorWebView.Focus();
+            Keyboard.Focus(EditorWebView);
+        }, DispatcherPriority.Background);
+    }
+
+    // ===========================
+    // WebView init
+    // ===========================
 
     private async Task EnsureWebViewsReadyAsync()
     {
@@ -151,8 +305,18 @@ public partial class EndLabelTemplatePreviewWindow : Window
         await PreviewWebView.EnsureCoreWebView2Async();
         await EditorWebView.EnsureCoreWebView2Async();
 
+        // ВАЖНО: чтобы не было "прозрачных дыр" при снапе/полуэкране
+        PreviewWebView.DefaultBackgroundColor = Color.White;
+        EditorWebView.DefaultBackgroundColor = Color.White;
+
+        // Отключаем встроенный zoom Edge (он как раз зумит, но UI не знает)
+        PreviewWebView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+
         EditorWebView.CoreWebView2.WebMessageReceived -= OnEditorWebMessageReceived;
         EditorWebView.CoreWebView2.WebMessageReceived += OnEditorWebMessageReceived;
+
+        EditorWebView.CoreWebView2.NavigationCompleted -= OnEditorNavigationCompleted;
+        EditorWebView.CoreWebView2.NavigationCompleted += OnEditorNavigationCompleted;
 
         var contentRoot = AppContext.BaseDirectory;
 
@@ -162,6 +326,11 @@ public partial class EndLabelTemplatePreviewWindow : Window
             CoreWebView2HostResourceAccessKind.Allow
         );
 
+        PreviewWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            "app",
+            contentRoot,
+            CoreWebView2HostResourceAccessKind.Allow
+        );
     }
 
     private static string GetWebViewUserDataFolder()
@@ -173,10 +342,18 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private void NavigateEditor()
     {
         _isEditorReady = false;
-        UpdateSaveButtonState();
+        _isSaving = false;
 
         var editorUrl = "https://app/Editor/Editor.html";
         EditorWebView.Source = new Uri(editorUrl, UriKind.Absolute);
+    }
+
+    private void OnEditorNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
+    {
+        if (!eventArgs.IsSuccess)
+        {
+            ShowToast("Не удалось открыть редактор");
+        }
     }
 
     private void OnEditorWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs eventArgs)
@@ -210,13 +387,11 @@ public partial class EndLabelTemplatePreviewWindow : Window
                         label = token.Label,
                         insertText = token.InsertText,
                         detail = token.Detail
-                    })
+                    }),
+                    tokensHidden = _tokensHidden
                 };
 
-                var json = JsonSerializer.Serialize(initPayload);
-                EditorWebView.CoreWebView2.PostWebMessageAsJson(json);
-
-                UpdateSaveButtonState();
+                EditorWebView.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(initPayload));
                 return;
             }
 
@@ -228,9 +403,10 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 }
 
                 _templateText = valueElement.GetString() ?? string.Empty;
-                _isDirty = true;
 
-                UpdateSaveButtonState();
+                _isDirty = true;
+                UpdateWindowTitle();
+
                 ScheduleRenderPreview();
                 return;
             }
@@ -240,72 +416,135 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 _ = SaveTemplateAsync();
                 return;
             }
+
+            if (string.Equals(type, "tokensPanelToggled", StringComparison.Ordinal))
+            {
+                if (root.TryGetProperty("hidden", out var hiddenEl) && hiddenEl.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    _tokensHidden = hiddenEl.GetBoolean();
+                    SaveUiStateTokensHidden(_tokensHidden);
+                }
+
+                return;
+            }
         }
         catch
         {
-            // ignore editor message parsing errors
+            // ignore
         }
     }
 
-    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
+    // ===========================
+    // Menu actions
+    // ===========================
+
+    private async void OnImportClick(object sender, RoutedEventArgs eventArgs)
     {
-        if (eventArgs.IsSuccess)
+        var dialog = new OpenFileDialog
         {
-            SetPreviewState(isReady: true, status: string.Empty);
-            return;
-        }
+            Filter = "HTML (*.html;*.htm)|*.html;*.htm|Все файлы (*.*)|*.*",
+            Title = "Импорт шаблона"
+        };
 
-        SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
-    }
-
-    private void OnModeChanged(object sender, RoutedEventArgs eventArgs)
-    {
-        ApplyModeLayout();
-    }
-
-    private void ApplyModeLayout()
-    {
-        if (EditorWebView is null || PreviewWebView is null)
+        if (dialog.ShowDialog(this) != true)
         {
             return;
         }
 
-        if (ModeCode.IsChecked == true)
+        try
         {
-            EditorWebView.Visibility = Visibility.Visible;
-            PreviewWebView.Visibility = Visibility.Collapsed;
+            var text = await File.ReadAllTextAsync(dialog.FileName, Encoding.UTF8);
+            _templateText = text;
 
-            EditorColumn.Width = new GridLength(1, GridUnitType.Star);
-            SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
-            PreviewColumn.Width = new GridLength(0, GridUnitType.Pixel);
+            _isDirty = true;
+            UpdateWindowTitle();
 
-            return;
+            if (_isEditorReady && EditorWebView.CoreWebView2 is not null)
+            {
+                var payload = new { type = "setValue", value = _templateText };
+                EditorWebView.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(payload));
+            }
+
+            ScheduleRenderPreview();
+            ShowToast("Импорт выполнен");
         }
-
-        if (ModePreview.IsChecked == true)
+        catch (Exception exception)
         {
-            EditorWebView.Visibility = Visibility.Collapsed;
-            PreviewWebView.Visibility = Visibility.Visible;
-
-            EditorColumn.Width = new GridLength(0, GridUnitType.Pixel);
-            SplitterColumn.Width = new GridLength(0, GridUnitType.Pixel);
-            PreviewColumn.Width = new GridLength(1, GridUnitType.Star);
-
-            return;
+            ShowToast("Ошибка импорта");
+            MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-
-        EditorWebView.Visibility = Visibility.Visible;
-        PreviewWebView.Visibility = Visibility.Visible;
-
-        EditorColumn.Width = new GridLength(1, GridUnitType.Star);
-        SplitterColumn.Width = new GridLength(6, GridUnitType.Pixel);
-        PreviewColumn.Width = new GridLength(1, GridUnitType.Star);
     }
 
-    private void OnPreviewFlagsChanged(object sender, RoutedEventArgs eventArgs)
+    private async void OnExportClick(object sender, RoutedEventArgs eventArgs)
     {
-        ScheduleRenderPreview();
+        var dialog = new SaveFileDialog
+        {
+            Filter = "HTML (*.html)|*.html|Все файлы (*.*)|*.*",
+            Title = "Экспорт шаблона",
+            FileName = "endlabel.html"
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await File.WriteAllTextAsync(dialog.FileName, _templateText, new UTF8Encoding(false));
+            ShowToast("Экспорт выполнен");
+        }
+        catch (Exception exception)
+        {
+            ShowToast("Ошибка экспорта");
+            MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
+
+    private void OnPrintClick(object sender, RoutedEventArgs eventArgs) => _ = PrintAsync();
+
+    private void OnEditorFlagsChanged(object sender, RoutedEventArgs eventArgs)
+    {
+        if (!_isPreviewReady)
+        {
+            _pendingPreviewFlagsApply = true;
+            return;
+        }
+
+        _ = UpdatePreviewFlagsAsync();
+    }
+
+    private async Task UpdatePreviewFlagsAsync()
+    {
+        if (PreviewWebView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        var showGrid = ShowGridMenuItem.IsChecked;
+        var showBounds = ShowBoundsMenuItem.IsChecked;
+
+        var script =
+            "(function () {" +
+            "  const body = document.body;" +
+            "  if (!body) return;" +
+            "  body.classList.toggle('lf-grid', " + (showGrid ? "true" : "false") + ");" +
+            "  body.classList.toggle('lf-hide-bounds', " + (showBounds ? "false" : "true") + ");" +
+            "})();";
+
+        try
+        {
+            await PreviewWebView.CoreWebView2.ExecuteScriptAsync(script);
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    // ===========================
+    // Preview zoom (мы владеем зумом полностью)
+    // ===========================
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs eventArgs)
     {
@@ -317,20 +556,9 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
     }
 
-    private void OnZoomInClick(object sender, RoutedEventArgs eventArgs)
-    {
-        SetZoom(_zoomFactor + 0.1);
-    }
-
-    private void OnZoomOutClick(object sender, RoutedEventArgs eventArgs)
-    {
-        SetZoom(_zoomFactor - 0.1);
-    }
-
-    private void OnZoomResetClick(object sender, RoutedEventArgs eventArgs)
-    {
-        SetZoom(1.0);
-    }
+    private void OnZoomInClick(object sender, RoutedEventArgs eventArgs) => SetZoom(_zoomFactor + 0.1);
+    private void OnZoomOutClick(object sender, RoutedEventArgs eventArgs) => SetZoom(_zoomFactor - 0.1);
+    private void OnZoomResetClick(object sender, RoutedEventArgs eventArgs) => SetZoom(1.0);
 
     private void SetZoom(double zoomFactor)
     {
@@ -346,6 +574,29 @@ public partial class EndLabelTemplatePreviewWindow : Window
         var percent = (int)Math.Round(zoomFactor * 100, MidpointRounding.AwayFromZero);
         ZoomText.Text = $"{percent}%";
     }
+
+    private void OnPreviewNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
+    {
+        _isPreviewReady = eventArgs.IsSuccess;
+
+        if (!_isPreviewReady)
+        {
+            ShowToast("Ошибка загрузки предпросмотра");
+            return;
+        }
+
+        if (_pendingPreviewFlagsApply)
+        {
+            _pendingPreviewFlagsApply = false;
+            _ = UpdatePreviewFlagsAsync();
+        }
+
+        ApplyZoom(_zoomFactor);
+    }
+
+    // ===========================
+    // Render preview
+    // ===========================
 
     private void ScheduleRenderPreview()
     {
@@ -377,24 +628,18 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
         try
         {
-            SetPreviewState(isReady: false, status: "Обновление предпросмотра");
-
             await EnsureWebViewsReadyAsync();
 
             var html = EndLabelHtmlTemplateRenderer.Render(_templateText, _response, _tenam);
             html = InjectPreviewCss(html);
 
-            var previewFilePath = await SavePreviewHtmlAsync(html, cancellationToken);
-
-            var baseUri = new Uri(previewFilePath, UriKind.Absolute);
-            var builder = new UriBuilder(baseUri)
+            if (PreviewWebView.CoreWebView2 is null)
             {
-                Query = $"v={Interlocked.Increment(ref _previewVersion)}"
-            };
+                return;
+            }
 
-            PreviewWebView.Source = builder.Uri;
-
-            ApplyZoom(_zoomFactor);
+            _pendingPreviewFlagsApply = true;
+            PreviewWebView.CoreWebView2.NavigateToString(html);
         }
         catch (OperationCanceledException)
         {
@@ -402,7 +647,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
         catch
         {
-            SetPreviewState(isReady: false, status: "Ошибка предпросмотра");
+            ShowToast("Ошибка предпросмотра");
         }
         finally
         {
@@ -410,69 +655,39 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
     }
 
-    private string InjectPreviewCss(string html)
+    private static string InjectPreviewCss(string html)
     {
-        var showGrid = ShowGridCheckBox.IsChecked == true;
-        var showBounds = ShowBoundsCheckBox.IsChecked == true;
-
-        var bodyClass = "lf-preview";
-        if (showGrid)
-        {
-            bodyClass += " lf-grid";
-        }
-
-        if (!showBounds)
-        {
-            bodyClass += " lf-hide-bounds";
-        }
-
-        var css = $@"
-<style>
-@media screen {{
-    html, body {{
-        height: 100%;
-    }}
-
-    body {{
-        margin: 0;
-        padding: 24px;
-        background: #ffffff;
-        overflow: auto;
-    }}
-
-    body.lf-grid {{
-        background-image:
-            repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 16px),
-            repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 16px);
-    }}
-
-    .label {{
-        margin: 24px auto;
-        background: #ffffff;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.14);
-    }}
-
-    body.lf-hide-bounds .label {{
-        outline: none !important;
-    }}
-
-    body:not(.lf-hide-bounds) .label {{
-        outline: 2px solid rgba(0,0,0,0.85);
-        outline-offset: 0;
-    }}
-}}
-
-@media print {{
-    body {{
-        background: #ffffff !important;
-    }}
-
-    body.lf-grid {{
-        background-image: none !important;
-    }}
-}}
-</style>
-";
+        var css =
+            "<style>\r\n" +
+            "@media screen {\r\n" +
+            "  html, body { height: 100%; }\r\n" +
+            "  body {\r\n" +
+            "    margin: 0;\r\n" +
+            "    padding: 24px;\r\n" +
+            "    background: #ffffff;\r\n" +
+            "    overflow: auto;\r\n" +
+            "  }\r\n" +
+            "  body.lf-grid {\r\n" +
+            "    background-image:\r\n" +
+            "      repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 16px),\r\n" +
+            "      repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 16px);\r\n" +
+            "  }\r\n" +
+            "  .label {\r\n" +
+            "    margin: 24px auto;\r\n" +
+            "    background: #ffffff;\r\n" +
+            "    box-shadow: 0 10px 28px rgba(0,0,0,0.14);\r\n" +
+            "  }\r\n" +
+            "  body.lf-hide-bounds .label { outline: none !important; }\r\n" +
+            "  body:not(.lf-hide-bounds) .label {\r\n" +
+            "    outline: 2px solid rgba(0,0,0,0.85);\r\n" +
+            "    outline-offset: 0;\r\n" +
+            "  }\r\n" +
+            "}\r\n" +
+            "@media print {\r\n" +
+            "  body { background: #ffffff !important; }\r\n" +
+            "  body.lf-grid { background-image: none !important; }\r\n" +
+            "}\r\n" +
+            "</style>\r\n";
 
         var result = html;
 
@@ -487,7 +702,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
         if (result.Contains("<body", StringComparison.OrdinalIgnoreCase))
         {
-            result = AddBodyClass(result, bodyClass);
+            result = AddBodyClass(result, "lf-preview");
         }
 
         return result;
@@ -547,10 +762,9 @@ public partial class EndLabelTemplatePreviewWindow : Window
         return html.Substring(0, bodyIndex) + updated + html.Substring(tagEndIndex + 1);
     }
 
-    private async void OnSaveClick(object sender, RoutedEventArgs eventArgs)
-    {
-        await SaveTemplateAsync();
-    }
+    // ===========================
+    // Save + title
+    // ===========================
 
     private async Task SaveTemplateAsync()
     {
@@ -559,11 +773,15 @@ public partial class EndLabelTemplatePreviewWindow : Window
             return;
         }
 
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
         try
         {
-            SaveButton.IsEnabled = false;
-            SetStatus("Сохранение");
-
             var templatePath = EndLabelTemplateStore.GetTemplatePath();
             var directory = Path.GetDirectoryName(templatePath);
 
@@ -580,43 +798,29 @@ public partial class EndLabelTemplatePreviewWindow : Window
             );
 
             _isDirty = false;
-            UpdateSaveButtonState();
+            UpdateWindowTitle();
 
-            SetStatus("Сохранено");
-            _ = ClearStatusLaterAsync();
+            ShowToast("Сохранено");
         }
         catch (Exception exception)
         {
-            SetStatus("Ошибка сохранения");
+            ShowToast("Ошибка сохранения");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private async Task ClearStatusLaterAsync()
-    {
-        try
+        finally
         {
-            await Task.Delay(1500);
-            if (!_isDirty)
-            {
-                SetStatus(string.Empty);
-            }
-        }
-        catch
-        {
-            // ignore
+            _isSaving = false;
         }
     }
 
-    private void UpdateSaveButtonState()
+    private void UpdateWindowTitle()
     {
-        SaveButton.IsEnabled = _isEditorReady && _isDirty;
+        Title = _isDirty ? "Торцевая этикетка *" : "Торцевая этикетка";
     }
 
-    private void OnPrintClick(object sender, RoutedEventArgs eventArgs)
-    {
-        _ = PrintAsync();
-    }
+    // ===========================
+    // Print
+    // ===========================
 
     private async Task PrintAsync()
     {
@@ -624,7 +828,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
         {
             if (!_isPreviewReady)
             {
-                SetStatus("Предпросмотр загружается");
+                ShowToast("Предпросмотр ещё загружается");
                 return;
             }
 
@@ -633,28 +837,21 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 return;
             }
 
-            PrintButton.IsEnabled = false;
-            SetStatus("Печать");
-
             var didPrint = await TryPrintToPreferredPrinterAsync(PreviewWebView, CancellationToken.None);
 
             if (!didPrint)
             {
                 PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+                ShowToast("Открыто окно печати");
+                return;
             }
+
+            ShowToast("Печать отправлена");
         }
         catch (Exception exception)
         {
+            ShowToast("Ошибка печати");
             MessageBox.Show(this, exception.Message, "Ошибка печати", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            PrintButton.IsEnabled = _isPreviewReady;
-
-            if (_isPreviewReady && string.Equals(StatusText.Text, "Печать", StringComparison.Ordinal))
-            {
-                SetStatus(string.Empty);
-            }
         }
     }
 
@@ -689,8 +886,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
     {
         foreach (var installedPrinter in PrinterSettings.InstalledPrinters)
         {
-            if (installedPrinter is string name
-                && string.Equals(name, printerName, StringComparison.OrdinalIgnoreCase))
+            if (installedPrinter is string name && string.Equals(name, printerName, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -699,38 +895,80 @@ public partial class EndLabelTemplatePreviewWindow : Window
         return false;
     }
 
-    private void OnCloseClick(object sender, RoutedEventArgs eventArgs)
+    // ===========================
+    // UI state persistence
+    // ===========================
+
+    private static string GetUiStatePath()
     {
-        Close();
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dir = Path.Combine(localAppData, "LabelFlowStudio");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "endlabel-editor-state.json");
     }
 
-    private static async Task<string> SavePreviewHtmlAsync(string html, CancellationToken cancellationToken)
+    private static bool LoadUiStateTokensHidden()
     {
-        var folder = Path.Combine(Path.GetTempPath(), "LabelFlowStudio");
-        Directory.CreateDirectory(folder);
+        try
+        {
+            var path = GetUiStatePath();
+            if (!File.Exists(path))
+            {
+                return false;
+            }
 
-        var filePath = Path.Combine(folder, "end-label-preview.html");
+            var json = File.ReadAllText(path, Encoding.UTF8);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("tokensHidden", out var el) && el.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                return el.GetBoolean();
+            }
 
-        await File.WriteAllTextAsync(
-            filePath,
-            html,
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-            cancellationToken
-        );
-
-        return filePath;
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
-    private void SetPreviewState(bool isReady, string status)
+    private static void SaveUiStateTokensHidden(bool hidden)
     {
-        _isPreviewReady = isReady;
-        PrintButton.IsEnabled = isReady;
-        SetStatus(status);
+        try
+        {
+            var path = GetUiStatePath();
+            var payload = JsonSerializer.Serialize(new { tokensHidden = hidden });
+            File.WriteAllText(path, payload, new UTF8Encoding(false));
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
-    private void SetStatus(string status)
+    // ===========================
+    // Toast
+    // ===========================
+
+    private void ShowToast(string message, int milliseconds = 1600)
     {
-        StatusText.Text = status;
+        ToastText.Text = message;
+        ToastPanel.Visibility = Visibility.Visible;
+
+        _toastTimer?.Stop();
+
+        _toastTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(milliseconds)
+        };
+
+        _toastTimer.Tick += (_, _) =>
+        {
+            _toastTimer?.Stop();
+            ToastPanel.Visibility = Visibility.Collapsed;
+        };
+
+        _toastTimer.Start();
     }
 
     private sealed record TemplateToken(string Label, string InsertText, string Detail);
