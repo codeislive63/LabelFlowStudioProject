@@ -4,16 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Editor</title>
+
+    <!-- Monaco styles -->
+    <link rel="stylesheet" href="monaco/vs/editor/editor.main.css" />
+
     <style>
         :root {
-            --bg: #1f2126;
-            --panel: #2b2d33;
-            --panel2: #26282e;
-            --border: rgba(255,255,255,0.10);
-            --text: rgba(255,255,255,0.88);
-            --muted: rgba(255,255,255,0.55);
-            --accent: #4c8dff;
-            --line: rgba(255,255,255,0.08);
+            --bg: #ffffff;
+            --panel: #f6f7f9;
+            --panel2: #eef0f3;
+            --border: rgba(0,0,0,0.12);
+            --text: rgba(0,0,0,0.88);
+            --muted: rgba(0,0,0,0.58);
+            --accent: #2563eb;
+            --shadow: 0 10px 28px rgba(0,0,0,0.10);
+            --radius: 12px;
+            --font: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
             --code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace;
         }
 
@@ -25,90 +31,79 @@
             margin: 0;
             background: var(--bg);
             color: var(--text);
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            font-family: var(--font);
             overflow: hidden;
         }
 
         .root {
             height: 100%;
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: 1fr 340px;
         }
+
+            .root.tokensHidden {
+                grid-template-columns: 1fr;
+            }
 
         .editorPane {
             display: grid;
-            grid-template-rows: 34px 1fr 26px;
+            grid-template-rows: 40px 1fr 28px;
             border-right: 1px solid var(--border);
+            min-width: 0;
         }
 
-        .tabs {
+        .topbar {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             padding: 0 12px;
-            background: var(--panel2);
+            background: var(--panel);
             border-bottom: 1px solid var(--border);
+            user-select: none;
         }
 
-        .tab {
+        .fileTag {
             font-size: 13px;
             color: var(--muted);
-            padding: 8px 2px;
-            border-bottom: 2px solid transparent;
-            user-select: none;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.7);
         }
 
-            .tab.active {
-                color: var(--text);
-                border-bottom-color: var(--accent);
-            }
-
-        .editorArea {
-            display: grid;
-            grid-template-columns: 56px 1fr;
-            overflow: hidden;
-        }
-
-        .gutter {
-            background: var(--panel);
-            border-right: 1px solid var(--border);
-            padding: 10px 0;
-            font-family: var(--code);
+        .btn {
+            appearance: none;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.85);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 6px 10px;
             font-size: 13px;
-            line-height: 20px;
-            color: rgba(255,255,255,0.35);
-            text-align: right;
-            overflow: hidden;
-            user-select: none;
+            cursor: pointer;
         }
 
-            .gutter div {
-                padding: 0 10px;
+            .btn:hover {
+                border-color: rgba(37,99,235,0.35);
+                box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
             }
 
-        .code {
-            position: relative;
-            background: var(--bg);
-            padding: 10px 12px;
-            overflow: auto;
-            font-family: var(--code);
-            font-size: 13px;
-            line-height: 20px;
-            outline: none;
-            white-space: pre;
-            tab-size: 2;
+        .hint {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--muted);
         }
 
-            .code:focus {
-                box-shadow: inset 0 0 0 1px rgba(76,141,255,0.25);
-            }
+        #editor {
+            min-width: 0;
+            min-height: 0;
+        }
 
         .status {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 10px;
-            background: var(--panel2);
+            background: var(--panel);
             border-top: 1px solid var(--border);
             font-size: 12px;
             color: var(--muted);
@@ -117,15 +112,22 @@
 
         .side {
             display: grid;
-            grid-template-rows: 34px 1fr;
+            grid-template-rows: 40px 1fr;
+            min-width: 0;
         }
 
         .sideHeader {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 10px;
             padding: 0 12px;
-            background: var(--panel2);
+            background: var(--panel);
             border-bottom: 1px solid var(--border);
+            user-select: none;
+        }
+
+        .sideTitle {
             font-size: 13px;
             color: var(--muted);
         }
@@ -138,15 +140,17 @@
 
         .token {
             border: 1px solid var(--border);
-            background: rgba(255,255,255,0.03);
-            border-radius: 10px;
+            background: rgba(0,0,0,0.02);
+            border-radius: var(--radius);
             padding: 10px;
             margin-bottom: 10px;
             cursor: pointer;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.03);
         }
 
             .token:hover {
-                border-color: rgba(76,141,255,0.45);
+                border-color: rgba(37,99,235,0.35);
+                box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
             }
 
             .token .label {
@@ -154,20 +158,29 @@
                 color: var(--text);
                 font-size: 13px;
                 margin-bottom: 6px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .token .detail {
                 font-size: 12px;
                 color: var(--muted);
+                line-height: 1.35;
             }
 
+        .hidden {
+            display: none;
+        }
+
+        /* Scrollbars (не обязательны, но приятнее) */
         ::-webkit-scrollbar {
             width: 12px;
             height: 12px;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.14);
+            background: rgba(0,0,0,0.18);
             border-radius: 999px;
             border: 3px solid transparent;
             background-clip: content-box;
@@ -178,39 +191,59 @@
         }
     </style>
 </head>
+
 <body>
-    <div class="root">
+    <div id="root" class="root">
         <div class="editorPane">
-            <div class="tabs">
-                <div class="tab active">endlabel.html</div>
+            <div class="topbar">
+                <div class="fileTag">endlabel.html</div>
+
+                <!-- CHANGE: кнопка скрыть/показать токены -->
+                <button id="toggleTokensBtn" class="btn" type="button">Токены</button>
+
+                <div class="hint">Ctrl+S</div>
             </div>
 
-            <div class="editorArea">
-                <div id="gutter" class="gutter"></div>
-                <div id="code" class="code" contenteditable="true" spellcheck="false"></div>
-            </div>
+            <div id="editor"></div>
 
             <div class="status">
-                <div id="leftStatus">Готово</div>
-                <div id="rightStatus">Ctrl+S</div>
+                <div id="leftStatus">Загрузка</div>
+                <div id="rightStatus">HTML</div>
             </div>
         </div>
 
-        <div class="side">
-            <div class="sideHeader">Tokens</div>
+        <div id="side" class="side">
+            <div class="sideHeader">
+                <div class="sideTitle">Tokens</div>
+                <button id="hideTokensBtn" class="btn" type="button">Скрыть</button>
+            </div>
             <div id="tokens" class="tokens"></div>
         </div>
     </div>
 
+    <!-- Monaco loader -->
+    <script src="monaco/vs/loader.js"></script>
+
     <script>
-        const codeEl = document.getElementById('code')
-        const gutterEl = document.getElementById('gutter')
+        const rootEl = document.getElementById('root')
+        const sideEl = document.getElementById('side')
         const tokensEl = document.getElementById('tokens')
         const leftStatus = document.getElementById('leftStatus')
 
-        let suppress = false
-        let debounce = null
+        const toggleTokensBtn = document.getElementById('toggleTokensBtn')
+        const hideTokensBtn = document.getElementById('hideTokensBtn')
+
+        // IMPORTANT: WebView2 virtual host is https://app (см. EndLabelTemplatePreviewWindow) :contentReference[oaicite:5]{index=5}
+        const vsBaseUrl = 'https://app/Editor/monaco/vs'
+
+        let editor = null
         let tokens = []
+        let tokensHidden = false
+
+        let suppressChange = false
+        let pendingInit = null
+
+        let completionProviderDisposable = null
 
         function post(msg) {
             try {
@@ -220,110 +253,233 @@
             } catch { }
         }
 
-        function getText() {
-            // contenteditable keeps \n in textContent
-            return codeEl.textContent || ''
-        }
+        function setTokensHidden(hidden, notifyHost) {
+            tokensHidden = !!hidden
 
-        function setText(value) {
-            suppress = true
-            codeEl.textContent = value || ''
-            suppress = false
-            updateGutter()
-        }
-
-        function updateGutter() {
-            const text = getText()
-            const lines = Math.max(1, text.split('\n').length)
-            let html = ''
-            for (let i = 1; i <= lines; i++) {
-                html += `<div>${i}</div>`
+            if (tokensHidden) {
+                rootEl.classList.add('tokensHidden')
+                sideEl.classList.add('hidden')
+                toggleTokensBtn.textContent = 'Токены'
+            } else {
+                rootEl.classList.remove('tokensHidden')
+                sideEl.classList.remove('hidden')
+                toggleTokensBtn.textContent = 'Токены'
             }
-            gutterEl.innerHTML = html
-        }
 
-        function insertAtCursor(text) {
-            codeEl.focus()
-            const sel = window.getSelection()
-            if (!sel || sel.rangeCount === 0) {
-                document.execCommand('insertText', false, text)
-                return
+            if (editor) {
+                editor.layout()
+                editor.focus()
             }
-            const range = sel.getRangeAt(0)
-            range.deleteContents()
-            range.insertNode(document.createTextNode(text))
-            range.collapse(false)
-            sel.removeAllRanges()
-            sel.addRange(range)
-            updateGutter()
-            scheduleChanged()
-        }
 
-        function renderTokens() {
-            tokensEl.innerHTML = ''
-            for (const t of tokens) {
-                const card = document.createElement('div')
-                card.className = 'token'
-                card.innerHTML = `<div class="label">${escapeHtml(t.label)}</div><div class="detail">${escapeHtml(t.detail || '')}</div>`
-                card.addEventListener('click', () => insertAtCursor(t.insertText || t.label))
-                tokensEl.appendChild(card)
+            if (notifyHost) {
+                post({ type: 'tokensPanelToggled', hidden: tokensHidden })
             }
         }
 
         function escapeHtml(s) {
-            return (s || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+            return (s || '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
         }
 
-        function scheduleChanged() {
-            if (suppress) return
-            if (debounce) clearTimeout(debounce)
-            debounce = setTimeout(() => {
-                post({ type: 'contentChanged', value: getText() })
-                leftStatus.textContent = 'Изменения не сохранены'
-            }, 180)
+        function insertTokenText(text) {
+            if (!editor) return
+            const selection = editor.getSelection()
+            if (!selection) return
+
+            editor.executeEdits('token', [{
+                range: selection,
+                text: text,
+                forceMoveMarkers: true
+            }])
+
+            editor.focus()
         }
 
-        codeEl.addEventListener('input', () => {
-            updateGutter()
-            scheduleChanged()
-        })
+        function renderTokens() {
+            tokensEl.innerHTML = ''
 
-        codeEl.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                e.preventDefault()
-                post({ type: 'saveRequested' })
-                leftStatus.textContent = 'Сохранение'
-                return
+            for (const t of tokens) {
+                const card = document.createElement('div')
+                card.className = 'token'
+                card.innerHTML =
+                    `<div class="label">${escapeHtml(t.label || '')}</div>` +
+                    `<div class="detail">${escapeHtml(t.detail || '')}</div>`
+
+                card.addEventListener('click', () => {
+                    insertTokenText(t.insertText || t.label || '')
+                })
+
+                tokensEl.appendChild(card)
             }
-            if (e.key === 'Tab') {
-                e.preventDefault()
-                insertAtCursor('  ')
+        }
+
+        function setEditorValue(value, keepViewState) {
+            if (!editor) return
+
+            const viewState = keepViewState ? editor.saveViewState() : null
+
+            suppressChange = true
+            editor.setValue(value || '')
+            suppressChange = false
+
+            if (viewState) {
+                editor.restoreViewState(viewState)
             }
-        })
 
-        // init handshake
-        post({ type: 'ready' })
+            editor.focus()
+        }
 
-        // receive init / setValue
-        if (window.chrome && chrome.webview) {
-            chrome.webview.addEventListener('message', (e) => {
-                const msg = e.data || {}
-                if (msg.type === 'init') {
-                    tokens = msg.tokens || []
-                    renderTokens()
-                    setText(msg.value || '')
-                    leftStatus.textContent = 'Готово'
-                    return
-                }
-                if (msg.type === 'setValue') {
-                    setText(msg.value || '')
-                    leftStatus.textContent = 'Импорт выполнен'
-                    return
+        function registerTokenCompletionProvider() {
+            if (!window.monaco) return
+
+            if (completionProviderDisposable) {
+                completionProviderDisposable.dispose()
+                completionProviderDisposable = null
+            }
+
+            const suggestions = (tokens || [])
+                .filter(t => (t && (t.label || t.insertText)))
+                .map((t, idx) => {
+                    const insert = (t.insertText || t.label || '')
+                    return {
+                        label: t.label || insert,
+                        kind: monaco.languages.CompletionItemKind.Snippet,
+                        detail: t.detail || '',
+                        insertText: insert,
+                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                        sortText: String(idx).padStart(5, '0')
+                    }
+                })
+
+            completionProviderDisposable = monaco.languages.registerCompletionItemProvider('html', {
+                triggerCharacters: ['{'],
+                provideCompletionItems: function () {
+                    return { suggestions }
                 }
             })
         }
 
-        updateGutter()
+        function applyInit(initMsg) {
+            tokens = initMsg.tokens || []
+            renderTokens()
+            registerTokenCompletionProvider()
+
+            setTokensHidden(!!initMsg.tokensHidden, false)
+
+            setEditorValue(initMsg.value || '', false)
+            leftStatus.textContent = 'Готово'
+        }
+
+        function handleHostMessage(msg) {
+            if (!msg || !msg.type) return
+
+            if (msg.type === 'init') {
+                if (!editor) {
+                    pendingInit = msg
+                    return
+                }
+                applyInit(msg)
+                return
+            }
+
+            if (msg.type === 'setValue') {
+                if (!editor) return
+                setEditorValue(msg.value || '', true)
+                leftStatus.textContent = 'Импорт выполнен'
+                return
+            }
+        }
+
+        // Wire WebView2 messages early
+        if (window.chrome && chrome.webview) {
+            chrome.webview.addEventListener('message', (e) => handleHostMessage(e.data || {}))
+        }
+
+        // UI buttons
+        toggleTokensBtn.addEventListener('click', () => setTokensHidden(!tokensHidden, true))
+        hideTokensBtn.addEventListener('click', () => setTokensHidden(true, true))
+
+        // Monaco worker config (оффлайн + WebView2)
+        window.MonacoEnvironment = {
+            getWorkerUrl: function () {
+                const workerMain = `${vsBaseUrl}/base/worker/workerMain.js`
+                const bootstrap = `
+                        self.MonacoEnvironment = { baseUrl: '${vsBaseUrl}' };
+                        importScripts('${workerMain}');
+                    `
+                return `data:text/javascript;charset=utf-8,${encodeURIComponent(bootstrap)}`
+            }
+        }
+
+        // Monaco init
+        require.config({ paths: { vs: vsBaseUrl } })
+
+        require(['vs/editor/editor.main'], function () {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '',
+                language: 'html',
+                theme: 'vs',                 // CHANGE: светлая тема
+                automaticLayout: true,
+
+                minimap: { enabled: false },
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace',
+                fontSize: 13,
+                lineHeight: 20,
+
+                wordWrap: 'on',               // CHANGE: перенос строк
+                wrappingIndent: 'same',
+                scrollBeyondLastLine: false,
+                smoothScrolling: true,
+
+                tabSize: 2,
+                insertSpaces: true,
+                autoIndent: 'full',           // CHANGE: авто-отступы
+                formatOnPaste: true,
+                formatOnType: true,
+
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                parameterHints: { enabled: true },
+
+                scrollbar: {
+                    verticalScrollbarSize: 12,
+                    horizontalScrollbarSize: 12,
+                },
+
+                fixedOverflowWidgets: true
+            })
+
+            // Ctrl+S -> host save
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                post({ type: 'saveRequested' })
+                leftStatus.textContent = 'Сохранение'
+            })
+
+            // Notify host on changes (debounce)
+            let debounce = null
+            editor.onDidChangeModelContent(() => {
+                if (suppressChange) return
+
+                if (debounce) clearTimeout(debounce)
+                debounce = setTimeout(() => {
+                    post({ type: 'contentChanged', value: editor.getValue() })
+                    leftStatus.textContent = 'Изменения не сохранены'
+                }, 180)
+            })
+
+            // Ready handshake for host init :contentReference[oaicite:6]{index=6}
+            post({ type: 'ready' })
+
+            // Apply pending init if it arrived early
+            if (pendingInit) {
+                applyInit(pendingInit)
+                pendingInit = null
+            }
+
+            editor.focus()
+        })
     </script>
 </body>
 </html>
