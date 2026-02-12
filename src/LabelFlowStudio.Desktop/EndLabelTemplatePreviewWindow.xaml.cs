@@ -44,16 +44,18 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private static readonly TemplateToken[] Tokens =
     {
-        new("{{Tenam}}", "{{Tenam}}", "Код магазина"),
         new("{{BarcodeDataUri}}", "{{BarcodeDataUri}}", "Штрихкод (data:image/png;base64,...)"),
-        new("{{Lfakdnr}}", "{{Lfakdnr}}", "Код заказа"),
-        new("{{Gpbez}}", "{{Gpbez}}", "Адрес доставки строка 1"),
-        new("{{Gport1}}", "{{Gport1}}", "Адрес доставки строка 2"),
-        new("{{Gpstrasse}}", "{{Gpstrasse}}", "Адрес доставки строка 3"),
         new("{{Bstchgnam5}}", "{{Bstchgnam5}}", "Грузополучатель"),
         new("{{Brutto}}", "{{Brutto}}", "Вес брутто (кг)"),
         new("{{CountBst}}", "{{CountBst}}", "Короб в заказ"),
-        new("{{SumBst}}", "{{SumBst}}", "Изделий в коробе")
+        new("{{Gpbez}}", "{{Gpbez}}", "Адрес доставки строка 1"),
+        new("{{Gport1}}", "{{Gport1}}", "Адрес доставки строка 2"),
+        new("{{Gpstrasse}}", "{{Gpstrasse}}", "Адрес доставки строка 3"),
+        new("{{Lfakdnr}}", "{{Lfakdnr}}", "Код заказа"),
+        new("{{Lfaempfkdnr}}", "{{Lfaempfkdnr}}", "Код магазина (LFAEMPFKDNR)"),
+        new("{{SumBst}}", "{{SumBst}}", "Изделий в коробе"),
+        new("{{Tenam}}", "{{Tenam}}", "Код магазина"),
+        new("{{Tesortnr}}", "{{Tesortnr}}", "Короб в заказе (TESORTNR)"),
     };
 
     private enum ViewMode

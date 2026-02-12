@@ -43,15 +43,17 @@ public static class EndLabelHtmlTemplateRenderer
             ? header.SumBst.Value.ToString("0.###", CultureInfo.CurrentCulture)
             : string.Empty;
 
+        var tesortnrText = header?.Tesortnr.HasValue == true
+            ? header.Tesortnr.Value.ToString("0.###", CultureInfo.CurrentCulture)
+            : string.Empty;
+
         var result = template;
 
         // Tenam
         result = ReplaceEncoded(result, "{{Tenam}}", tenam);
-        result = ReplaceEncoded(result, "{{TENAM}}", tenam);
 
         // Barcode
         result = result.Replace("{{BarcodeDataUri}}", barcodeDataUrl, StringComparison.Ordinal);
-        result = result.Replace("{{BARCODE_DATA_URL}}", barcodeDataUrl, StringComparison.Ordinal);
 
         // Поля из header (LabelRecord)
         result = ReplaceEncoded(result, "{{Lfakdnr}}", header?.Lfakdnr);
@@ -60,11 +62,12 @@ public static class EndLabelHtmlTemplateRenderer
         result = ReplaceEncoded(result, "{{Gpstrasse}}", header?.Gpstrasse);
         result = ReplaceEncoded(result, "{{Bstchgnam5}}", header?.Bstchgnam5);
 
+        result = ReplaceEncoded(result, "{{Lfaempfkdnr}}", header?.Lfaempfkdnr);
+
+        result = ReplaceEncoded(result, "{{Tesortnr}}", tesortnrText);
+
         // Вес и KPI
         result = ReplaceEncoded(result, "{{Brutto}}", bruttoText);
-
-        // Короб в заказ
-        result = ReplaceEncoded(result, "{{CountBst}}", countBstText);
 
         // Изделий в коробе
         result = ReplaceEncoded(result, "{{SumBst}}", sumBstText);
