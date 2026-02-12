@@ -1,4 +1,5 @@
-﻿<!doctype html>
+﻿﻿
+<!doctype html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
@@ -202,10 +203,12 @@
             display: flex;
         }
 
-        .braceIcon {
-            font-family: var(--code);
-            font-size: 16px;
+        /* Было { } – теперь стрелка */
+        .chevronIcon {
+            font-family: var(--font);
+            font-size: 18px;
             color: var(--muted);
+            line-height: 1;
         }
 
         ::-webkit-scrollbar {
@@ -250,7 +253,7 @@
         </div>
 
         <button id="tokensHandle" class="tokensHandle" type="button" title="Токены">
-            <span class="braceIcon">{ }</span>
+            <span class="chevronIcon">‹</span>
         </button>
     </div>
 
@@ -419,6 +422,27 @@
             }
         }
 
+        function computeBraceReplaceRange(model, position) {
+            const lineNumber = position.lineNumber
+            const line = model.getLineContent(lineNumber)
+            const cursorIndex = position.column - 1
+
+            let braceCount = 0
+            while (braceCount < 2) {
+                const idx = cursorIndex - 1 - braceCount
+                if (idx < 0) {
+                    break
+                }
+                if (line[idx] !== '{') {
+                    break
+                }
+                braceCount++
+            }
+
+            const startColumn = position.column - braceCount
+            return new monaco.Range(lineNumber, startColumn, lineNumber, position.column)
+        }
+
         function registerTokenCompletionProvider() {
             if (!window.monaco) {
                 return
@@ -431,10 +455,12 @@
 
             state.completionProviderDisposable = monaco.languages.registerCompletionItemProvider('html', {
                 triggerCharacters: ['{'],
-                provideCompletionItems: function () {
+                provideCompletionItems: function (model, position) {
                     const list = Array.isArray(state.tokens) ? state.tokens : []
                     const suggestions = []
                     let idx = 0
+
+                    const range = computeBraceReplaceRange(model, position)
 
                     for (const t of list) {
                         if (!t) {
@@ -450,10 +476,10 @@
 
                         suggestions.push({
                             label: label,
-                            kind: monaco.languages.CompletionItemKind.Snippet,
+                            kind: monaco.languages.CompletionItemKind.Variable,
                             detail: t.detail || '',
                             insertText: insert,
-                            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                            range: range,
                             sortText: String(idx).padStart(5, '0')
                         })
 
@@ -546,6 +572,10 @@
             })
         }
 
+        function isSuggestWidgetVisible() {
+            return !!document.querySelector('.suggest-widget.visible')
+        }
+
         async function tryStartMonaco(vsBaseUrl, loaderUrl, cssUrl) {
             try {
                 await loadCss(cssUrl)
@@ -601,9 +631,41 @@
                             fixedOverflowWidgets: true
                         })
 
+                        // Ctrl+S
                         state.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
                             post({ type: 'saveRequested' })
                             leftStatusEl.textContent = 'Сохранение'
+                        })
+
+                        // QoL: фикс "Up прыгает на первую строку"
+                        state.editor.onKeyDown((e) => {
+                            if (e.keyCode !== monaco.KeyCode.UpArrow) {
+                                return
+                            }
+                            if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+                                return
+                            }
+                            if (isSuggestWidgetVisible()) {
+                                return
+                            }
+
+                            const model = state.editor.getModel()
+                            const pos = state.editor.getPosition()
+                            if (!model || !pos) {
+                                return
+                            }
+                            if (pos.lineNumber <= 1) {
+                                return
+                            }
+
+                            const newLine = pos.lineNumber - 1
+                            const newColumn = Math.min(pos.column, model.getLineMaxColumn(newLine))
+
+                            state.editor.setPosition({ lineNumber: newLine, column: newColumn })
+                            state.editor.revealPositionInCenterIfOutsideViewport({ lineNumber: newLine, column: newColumn })
+
+                            e.preventDefault()
+                            e.stopPropagation()
                         })
 
                         const pushChange = debounce(() => {
@@ -643,7 +705,7 @@
             tokensHandleEl.addEventListener('click', () => setTokensHidden(false, true))
             closeTokensBtnEl.addEventListener('click', () => setTokensHidden(true, true))
 
-            // 1) local (если появится Monaco в папке Editor/monaco)
+            // 1) local
             const localOk = await tryStartMonaco(
                 'https://app/Editor/monaco/vs',
                 'monaco/vs/loader.js',
@@ -662,7 +724,7 @@
                 ensureFallback()
             }
 
-            // Ready handshake – хост пошлёт init только после этого
+            // Ready handshake
             post({ type: 'ready' })
 
             if (state.pendingInit) {

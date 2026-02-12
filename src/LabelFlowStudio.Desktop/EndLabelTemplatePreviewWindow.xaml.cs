@@ -45,9 +45,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private static readonly TemplateToken[] Tokens =
     {
         new("{{Tenam}}", "{{Tenam}}", "Код магазина"),
-        new("{{TENAM}}", "{{TENAM}}", "Код магазина"),
         new("{{BarcodeDataUri}}", "{{BarcodeDataUri}}", "Штрихкод (data:image/png;base64,...)"),
-        new("{{BARCODE_DATA_URL}}", "{{BARCODE_DATA_URL}}", "Штрихкод (data:image/png;base64,...)"),
         new("{{Lfakdnr}}", "{{Lfakdnr}}", "Код заказа"),
         new("{{Gpbez}}", "{{Gpbez}}", "Адрес доставки строка 1"),
         new("{{Gport1}}", "{{Gport1}}", "Адрес доставки строка 2"),
