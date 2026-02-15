@@ -219,4 +219,24 @@ public partial class MainWindow : Window
             }
         });
     }
+
+    private void RecordsGrid_AutoGeneratingColumn(object? sender, DataGridAutoGeneratingColumnEventArgs e)
+    {
+        if (string.Equals(e.PropertyName, "DeliveryCityRaw", StringComparison.Ordinal) ||
+            string.Equals(e.PropertyName, "DeliveryStreetRaw", StringComparison.Ordinal) ||
+            string.Equals(e.PropertyName, "DeliveryCity", StringComparison.Ordinal) ||
+            string.Equals(e.PropertyName, "DeliveryStreet", StringComparison.Ordinal))
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        if (e.Column is DataGridTextColumn textColumn)
+        {
+            var elementStyle = new Style(typeof(TextBlock));
+            elementStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Left));
+            elementStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
+            textColumn.ElementStyle = elementStyle;
+        }
+    }
 }

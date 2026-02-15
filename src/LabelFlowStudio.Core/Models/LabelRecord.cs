@@ -21,4 +21,57 @@ public sealed class LabelRecord
     public string? Market { get; set; }
     public decimal? CountBst { get; set; }
     public decimal? SumBst { get; set; }
+
+    public string? Lfaempfort1 { get; set; }
+    public string? Lfaempfstrasse { get; set; }
+
+
+    public string? DeliveryCityRaw => !string.IsNullOrWhiteSpace(Lfaempfort1) ? Lfaempfort1 : Gport1;
+    public string? DeliveryStreetRaw => !string.IsNullOrWhiteSpace(Lfaempfstrasse) ? Lfaempfstrasse : Gpstrasse;
+
+    public string? DeliveryCity => NormalizeCity(DeliveryCityRaw);
+    public string? DeliveryStreet => NormalizeStreet(DeliveryStreetRaw);
+
+    private static string? NormalizeCity(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        var v = NormalizeSpaces(value);
+
+        v = System.Text.RegularExpressions.Regex.Replace(
+            v,
+            @"^\s*(город|г\.|г)\s",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        );
+
+        return v.Trim();
+    }
+
+    private static string? NormalizeStreet(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        var v = NormalizeSpaces(value);
+
+        while (v.Contains(",,"))
+        {
+            v = v.Replace(",,", ",");
+        }
+
+        v = v.Trim().TrimEnd(',').Trim();
+
+        return v;
+    }
+
+    private static string NormalizeSpaces(string input)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(input, @"\s", " ").Trim();
+    }
 }
