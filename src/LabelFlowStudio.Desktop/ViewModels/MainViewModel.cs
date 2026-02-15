@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Commands;
+using LabelFlowStudio.Desktop.Templates;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,8 @@ public sealed class MainViewModel : ViewModelBase
 
     private string _lastProcessedTenam = string.Empty;
 
+    private bool _isEndLabelQuickMode;
+
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
         IBoxScanner boxScanner,
@@ -60,6 +63,16 @@ public sealed class MainViewModel : ViewModelBase
     public AsyncCommand LoadRecordsCommand { get; }
     public AsyncCommand OpenEndLabelPreviewCommand { get; }
     public AsyncCommand OpenStuffingSheetPreviewCommand { get; }
+
+    /// <summary>
+    /// Если true — кнопка "Торцевая этикетка" печатает сразу на Zebra.
+    /// Если Zebra недоступна — открываем выбор принтера.
+    /// </summary>
+    public bool IsEndLabelQuickMode
+    {
+        get => _isEndLabelQuickMode;
+        set => SetProperty(ref _isEndLabelQuickMode, value);
+    }
 
     public string Tenam
     {
@@ -236,18 +249,26 @@ public sealed class MainViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(_lastSuccessfulTenam);
     }
 
-    private Task OpenEndLabelPreviewAsync()
+    private async Task OpenEndLabelPreviewAsync()
     {
         var response = _lastSuccessfulResponse;
 
         if (response is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var tenam = _lastSuccessfulTenam;
 
-        return RunOnUiThreadAsync(() =>
+        // Быстрый режим: печатаем сразу (и только для торцевой этикетки)
+        if (IsEndLabelQuickMode)
+        {
+            await PrintEndLabelQuickAsync(response, tenam);
+            return;
+        }
+
+        // Обычный режим: открываем окно предпросмотра/редактора
+        await RunOnUiThreadAsync(() =>
         {
             _endLabelPreviewWindow?.Close();
             _endLabelPreviewWindow = null;
@@ -266,6 +287,52 @@ public sealed class MainViewModel : ViewModelBase
             window.Show();
             window.Activate();
         });
+    }
+
+    private async Task PrintEndLabelQuickAsync(BoxProcessingResponse response, string tenam)
+    {
+        // Команда уже блокируется флагом _isExecuting у AsyncCommand,
+        // но IsBusy дополнительно защищает от параллельной загрузки/сканирования.
+        await RunOnUiThreadAsync(() =>
+        {
+            IsBusy = true;
+            StatusMessage = "Подготовка торцевой этикетки к печати";
+        });
+
+        await Task.Yield();
+
+        try
+        {
+            // Шаблон торцевой этикетки
+            var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+
+            // Рендерим HTML так же, как в EndLabelTemplatePreviewWindow
+            var html = EndLabelHtmlTemplateRenderer.Render(templateText, response, tenam);
+
+            // Печать (сначала Zebra, иначе выбор принтера)
+            var result = await EndLabelQuickPrinter.PrintHtmlAsync(
+                html,
+                owner: System.Windows.Application.Current?.MainWindow,
+                cancellationToken: CancellationToken.None);
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = result switch
+                {
+                    EndLabelQuickPrintResult.PrintedToPreferred => "Торцевая этикетка отправлена на печать (Zebra)",
+                    EndLabelQuickPrintResult.PrintedToSelected => "Торцевая этикетка отправлена на печать",
+                    EndLabelQuickPrintResult.Cancelled => "Печать торцевой этикетки отменена",
+                    _ => "Не удалось напечатать торцевую этикетку"
+                };
+            });
+        }
+        finally
+        {
+            await RunOnUiThreadAsync(() =>
+            {
+                IsBusy = false;
+            });
+        }
     }
 
     private bool CanOpenStuffingSheetPreview()
