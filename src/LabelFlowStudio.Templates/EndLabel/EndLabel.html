@@ -14,7 +14,12 @@
             background: #fff;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            font-family: Segoe UI, Arial, sans-serif;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #000;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         img {
@@ -23,287 +28,300 @@
             display: block;
         }
 
+        /* top | line | address(auto) | line | bottom(растягиваем) */
         .label {
             width: 150mm;
             height: 100mm;
-            box-sizing: border-box;
-            background: #fff;
-            padding: 4mm 6mm 6mm;
+            padding: 4mm 5mm 4mm;
             overflow: hidden;
-            transform: translateY(-2mm);
+            display: grid;
+            grid-template-rows: auto auto auto auto 1fr;
+            row-gap: 0;
         }
 
         @media screen {
-            html, body {
-                width: 100%;
-                height: 100%;
-            }
-
             body {
                 display: flex;
-                justify-content: center;
                 align-items: center;
+                justify-content: center;
+                height: 100vh;
             }
 
             .label {
                 outline: 2px solid #000;
-                outline-offset: 0;
             }
         }
 
-        @media print {
-            html, body {
-                width: 150mm;
-                height: 100mm;
-            }
-
-            body {
-                display: block;
-            }
-
-            .label {
-                outline: none !important;
-                border: none !important;
-            }
+        .line {
+            border-top: 1.2px solid #000;
         }
 
-        .cap {
-            font-weight: 700;
-            font-size: 13px;
-            margin-bottom: 2mm;
-        }
-
-        .text {
-            font-size: 12px;
-            line-height: 1.25;
-        }
-
-        .small {
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.25;
-            opacity: 0.95;
-        }
-
-        .mt {
-            margin-top: 3mm;
-        }
-
+        /* TOP */
         .top {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 6mm;
+            display: grid;
+            grid-template-columns: 58mm 16mm 1fr;
+            column-gap: 5mm;
+            align-items: start;
+            margin-bottom: 2.5mm;
         }
 
-        .shop {
-            min-width: 28mm;
+        .top-cap {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 1.2mm;
         }
 
         .shop-code {
-            font-size: 20px;
-            font-weight: 500;
-            margin-top: 1mm;
+            font-size: 30px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            margin-top: 3.2mm;
+            font-variant-numeric: tabular-nums;
         }
 
-        .barcode-block {
-            margin-left: auto;
-            flex: 0 0 60mm;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
+        .box-no {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+            margin-top: 8mm;
+            text-align: center;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
         }
 
         .barcode-wrap {
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
+            min-width: 0;
         }
 
         .barcode {
             width: 100%;
             height: 18mm;
-            background: #fff;
-            border: none;
-            outline: none;
             image-rendering: pixelated;
         }
 
         .tenam {
-            margin-top: 1.5mm;
-            font-size: 13px;
-            font-weight: 700;
-            opacity: 0.9;
-            width: 100%;
             text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 1.2mm;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
 
-        .section.address {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8mm;
+        /* ADDRESS: без растягивания */
+        .address {
+            display: grid;
+            grid-template-rows: auto auto; /* title + content, без 1fr */
+            padding: 1.6mm 0;
         }
 
-        .address-left {
-            flex: 1;
+        .section-title {
+            font-size: 13px;
+            padding-bottom: 1.5mm;
         }
 
-        .address-right {
-            width: 42mm;
+        .address-row {
+            display: grid;
+            grid-template-columns: 1fr 18mm;
+            column-gap: 6mm;
+            align-items: start;
+        }
+
+        .addr-grid {
+            display: grid;
+            grid-template-columns: 20mm 1fr;
+            row-gap: 2mm;
+            column-gap: 2mm;
+            align-items: baseline;
+            font-size: 13px;
+            line-height: 1.15;
+        }
+
+        .lbl {
+            font-weight: 400;
+        }
+
+        .val {
+            font-weight: 400;
+        }
+
+        .eac-wrap {
             display: flex;
             justify-content: flex-end;
+            padding-top: 6mm; /* ползунок EAC */
         }
 
         .eac {
-            font-weight: 700;
-            font-size: 30px;
-            letter-spacing: 0.5px;
-            margin-top: 0;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            white-space: nowrap;
+            transform: translateY(-6.5mm);
         }
 
-        .mid {
-            display: flex;
-            justify-content: space-between;
-            gap: 8mm;
-            margin-right: 5mm;
-        }
-
-        .left {
-            flex: 1;
-        }
-
-        .right {
-            margin-left: auto;
-            width: 42mm;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            height: 100%;
-        }
-
-        /* KPI: ровные строки (лейбл + значение) */
-        .kpi {
-            margin-top: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            text-align: left;
-            padding-bottom: 2mm;
-            gap: 3mm; /* ровный вертикальный шаг */
-        }
-
-        .kpi-row {
+        /* BOTTOM: занимает весь остаток, код заказа всегда внизу */
+        .bottom-block {
+            min-height: 0;
+            padding: 2.2mm 0 0;
             display: grid;
-            grid-template-columns: 36mm auto; /* лейбл | значение */
-            column-gap: 2.5mm;
+            grid-template-rows: auto 1fr auto; /* gp | summary(fill) | order(bottom) */
+            row-gap: 1.5mm;
+            margin-top: 5mm;
+        }
+
+        .gp-row {
+            display: grid;
+            grid-template-columns: 28mm 1fr;
+            column-gap: 3mm;
             font-size: 13px;
+            line-height: 1.15;
+            margin: 0;
+        }
+
+        /* summary заполняет и распределяет место */
+        .summary {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 1fr 58mm;
+            column-gap: 10mm;
+            align-content: start; /* верх, чтобы не было “провала” */
+            padding-top: 0;
+            font-size: 12.5px;
+            line-height: 1.15;
+        }
+
+        /* если хочешь, чтобы таблица визуально занимала больше высоты — включи: */
+        /* .summary { align-content: space-between; } */
+
+        .summary-left {
+            display: grid;
+            grid-template-columns: 44mm 1fr;
+            column-gap: 3mm;
+            row-gap: 2.2mm;
+            min-width: 0;
+            align-content: start;
+        }
+
+        .summary-right {
+            display: grid;
+            grid-template-columns: 38mm 1fr;
+            column-gap: 3mm;
+            row-gap: 2.2mm;
+            white-space: nowrap;
+            align-content: start;
+        }
+
+        .summary-prefix,
+        .summary-label {
+            font-weight: 400;
+            white-space: nowrap;
+        }
+
+        .summary-value {
+            font-weight: 400;
+            min-width: 0;
+        }
+
+        .summary-right .summary-value {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Код заказа всегда внизу, не “подтягивается” */
+        .order-line {
+            font-size: 13.8px;
             line-height: 1.2;
-            white-space: nowrap;
-            align-items: baseline;
+            margin: 0;
+            white-space: normal;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
 
-            .kpi-row > span:first-child {
-                font-weight: 700;
-            }
-
-        .kpi-val {
-            font-weight: 400;
-            font-size: 14px;
-            text-align: left;
-        }
-
-        .cap .cap-value {
-            font-weight: 400;
-            margin-left: 2mm;
-        }
-
-        .box-no {
-            flex: 0 0 25mm;
-            text-align: center;
-            font-weight: 700;
-            font-size: 32px;
-            line-height: 1;
-            margin-top: 6mm; /* визуально как на фото */
-            white-space: nowrap;
-        }
-
-        .rule {
-            border-top: 2px solid #000;
-            margin: 4mm 0;
+        #packDate {
+            font-variant-numeric: tabular-nums;
         }
     </style>
 </head>
 
 <body>
     <div class="label">
+
         <div class="top">
-            <div class="shop">
-                <div class="cap">Код магазина</div>
+            <div>
+                <div class="top-cap">Код магазина:</div>
                 <div class="shop-code">{{Lfaempfkdnr}}</div>
             </div>
 
             <div class="box-no">{{Tesortnr}}</div>
 
-            <div class="barcode-block">
-                <div class="barcode-wrap">
-                    <img class="barcode" src="{{BarcodeDataUri}}" alt="barcode" />
-                    <div class="tenam">{{Tenam}}</div>
+            <div class="barcode-wrap">
+                <img class="barcode" src="{{BarcodeDataUri}}" alt="barcode" />
+                <div class="tenam">{{Tenam}}</div>
+            </div>
+        </div>
+
+        <div class="line"></div>
+
+        <div class="address">
+            <div class="section-title">Адрес доставки:</div>
+
+            <div class="address-row">
+                <div class="addr-grid">
+                    <div class="lbl">Город:</div>
+                    <div class="val">{{DeliveryCity}}</div>
+
+                    <div class="lbl">Улица:</div>
+                    <div class="val">{{DeliveryStreet}}</div>
+                </div>
+
+                <div class="eac-wrap">
+                    <div class="eac">EAC</div>
                 </div>
             </div>
         </div>
 
-        <div class="rule"></div>
+        <div class="line"></div>
 
-        <div class="section address">
-            <div class="address-left">
-                <div class="cap">Адрес доставки</div>
-                <div class="text">Город: {{Gport1}}</div>
-                <div class="text">Улица: {{Gpbez}}</div>
-
-                <div class="text">{{Gpstrasse}}</div>
+        <div class="bottom-block">
+            <div class="gp-row">
+                <div class="lbl">Грузополучатель:</div>
+                <div class="val">{{Gpbez}}</div>
             </div>
 
-            <div class="address-right">
-                <div class="eac">EAC</div>
-            </div>
-        </div>
+            <div class="summary">
+                <div class="summary-left">
+                    <div class="summary-prefix">Дополнительные сведения:</div>
+                    <div class="summary-value">{{Lfaempfkdnr}}</div>
 
-        <div class="rule"></div>
+                    <div class="summary-label">Дата упаковки:</div>
+                    <div class="summary-value"><span id="packDate"></span></div>
 
-        <div class="mid">
-            <div class="left">
-                <div class="cap">Грузополучатель</div>
-                <div class="text">{{Gpbez}}</div>
+                    <div class="summary-label">Вес брутто(кг):</div>
+                    <div class="summary-value">{{Brutto}}</div>
+                </div>
 
-                <div class="cap mt">Код заказа</div>
-                <div class="small">{{Bstchgnam5}}</div>
+                <div class="summary-right">
+                    <div class="summary-label">Короб в заказе:</div>
+                    <div class="summary-value">{{Tesortnr}}</div>
 
-                <div class="cap mt">Дата упаковки: <span class="kpi-val" id="packDate"></span></div>
-            </div>
+                    <div class="summary-label">Изделий в коробе:</div>
+                    <div class="summary-value">{{SumBst}}</div>
 
-            <div class="right">
-                <div class="kpi">
-                    <div class="kpi-row">
-                        <span>Короб в заказ:</span>
-                        <span class="kpi-val">{{Tesortnr}}</span>
-                    </div>
-                    <div class="kpi-row">
-                        <span>Изделий в коробе:</span>
-                        <span class="kpi-val">{{SumBst}}</span>
-                    </div>
-                    <div class="kpi-row">
-                        <span>Объём (м.куб):</span>
-                        <span class="kpi-val">06</span>
-                    </div>
-                    <div class="kpi-row">
-                        <span>Вес брутто (кг):</span>
-                        <span class="kpi-val">{{Brutto}}</span>
-                    </div>
+                    <div class="summary-label">Объём(м. куб):</div>
+                    <div class="summary-value">0.06</div>
                 </div>
             </div>
+
+            <div class="order-line">
+                Код заказа: {{Bstchgnam5}}
+            </div>
         </div>
+
     </div>
 
     <script>
@@ -312,7 +330,6 @@
             var dd = String(d.getDate()).padStart(2, '0');
             var mm = String(d.getMonth() + 1).padStart(2, '0');
             var yy = String(d.getFullYear()).slice(-2);
-
             document.getElementById('packDate').textContent = dd + '.' + mm + '.' + yy;
         })();
     </script>

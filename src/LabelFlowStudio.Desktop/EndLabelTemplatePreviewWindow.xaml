@@ -11,7 +11,7 @@
         Background="{DynamicResource AppBackgroundBrush}"
         FontFamily="{DynamicResource AppFontFamily}"
         FontSize="14"
-        WindowStyle="None"
+        WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True">

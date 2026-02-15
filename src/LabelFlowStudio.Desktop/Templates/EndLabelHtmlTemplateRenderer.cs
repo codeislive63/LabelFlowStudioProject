@@ -58,8 +58,10 @@ public static class EndLabelHtmlTemplateRenderer
         // Поля из header (LabelRecord)
         result = ReplaceEncoded(result, "{{Lfakdnr}}", header?.Lfakdnr);
         result = ReplaceEncoded(result, "{{Gpbez}}", header?.Gpbez);
-        result = ReplaceEncoded(result, "{{Gport1}}", header?.Gport1);
-        result = ReplaceEncoded(result, "{{Gpstrasse}}", header?.Gpstrasse);
+
+        // новые явные токены (можно использовать в будущем)
+        result = ReplaceEncoded(result, "{{DeliveryCity}}", header?.DeliveryCity);
+        result = ReplaceEncoded(result, "{{DeliveryStreet}}", header?.DeliveryStreet);
         result = ReplaceEncoded(result, "{{Bstchgnam5}}", header?.Bstchgnam5);
 
         result = ReplaceEncoded(result, "{{Lfaempfkdnr}}", header?.Lfaempfkdnr);

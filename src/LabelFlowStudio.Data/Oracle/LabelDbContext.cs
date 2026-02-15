@@ -40,6 +40,9 @@ public sealed class LabelDbContext : DbContext
             entity.Property(e => e.Market).HasColumnName("MARKET");
             entity.Property(e => e.CountBst).HasColumnName("COUNTBST").HasPrecision(18, 3);
             entity.Property(e => e.SumBst).HasColumnName("SUM_BST").HasPrecision(18, 3);
+
+            entity.Property(e => e.Lfaempfort1).HasColumnName("LFAEMPFORT1");
+            entity.Property(e => e.Lfaempfstrasse).HasColumnName("LFAEMPFSTRASSE");
         });
     }
 }

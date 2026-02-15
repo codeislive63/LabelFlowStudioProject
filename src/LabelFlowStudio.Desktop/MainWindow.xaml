@@ -146,55 +146,99 @@
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
             <Grid>
                 <DataGrid x:Name="RecordsGrid"
-                          ItemsSource="{Binding Records}"
-                          AutoGenerateColumns="True"
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          CanUserSortColumns="True"
-                          LoadingRow="RecordsGrid_LoadingRow"
-                          Sorting="RecordsGrid_Sorting">
+          ItemsSource="{Binding Records}"
+          AutoGenerateColumns="False"
+          IsReadOnly="True"
+          CanUserAddRows="False"
+          CanUserSortColumns="True"
+          LoadingRow="RecordsGrid_LoadingRow"
+          Sorting="RecordsGrid_Sorting"
+          HeadersVisibility="All"
+          ColumnHeaderHeight="40"
+          RowHeaderWidth="44"
+          RowHeight="34"
+          GridLinesVisibility="Horizontal"
+          HorizontalScrollBarVisibility="Auto"
+          VerticalScrollBarVisibility="Auto"
+          EnableRowVirtualization="True"
+          EnableColumnVirtualization="True">
 
-                    <!-- Включаем/выключаем нумерацию строк в зависимости от наличия данных -->
-                    <DataGrid.Style>
-                        <Style TargetType="DataGrid" BasedOn="{StaticResource AppDataGridStyle}">
-                            <Setter Property="HeadersVisibility" Value="All"/>
-                            <Setter Property="ColumnHeaderHeight" Value="40"/>
-                            <Setter Property="RowHeaderWidth" Value="44"/>
-
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
-                                    <Setter Property="RowHeaderWidth" Value="0"/>
-                                </DataTrigger>
-                            </Style.Triggers>
+                    <DataGrid.Resources>
+                        <Style x:Key="CellTextStyle" TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                            <Setter Property="Margin" Value="10,0,10,0"/>
+                            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
                         </Style>
-                    </DataGrid.Style>
+
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </Style>
+
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="10,0,10,0"/>
+                        </Style>
+
+                        <!-- ✅ Все DataGridTextColumn автоматически получают один стиль -->
+                        <Style TargetType="{x:Type DataGridTextColumn}">
+                            <Setter Property="ElementStyle" Value="{StaticResource CellTextStyle}"/>
+                        </Style>
+                    </DataGrid.Resources>
 
                     <DataGrid.RowHeaderStyle>
                         <Style TargetType="{x:Type DataGridRowHeader}">
-                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="0"/>
                             <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                            <Setter Property="Padding" Value="0"/>
-                            <Setter Property="SnapsToDevicePixels" Value="True"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type DataGridRowHeader}">
-                                        <Border Background="{TemplateBinding Background}"
-                                                BorderBrush="{TemplateBinding BorderBrush}"
-                                                BorderThickness="{TemplateBinding BorderThickness}"
-                                                SnapsToDevicePixels="True">
-                                            <TextBlock Text="{TemplateBinding Content}"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       TextAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
                         </Style>
                     </DataGrid.RowHeaderStyle>
+
+                    <DataGrid.Columns>
+                        <!-- Идентификаторы -->
+                        <DataGridTextColumn Header="TENAM" Binding="{Binding Tenam}" Width="110" />
+                        <DataGridTextColumn Header="Код магазина" Binding="{Binding Lfaempfkdnr}" Width="140" />
+                        <DataGridTextColumn Header="Короб в заказе" Binding="{Binding Tesortnr}" Width="80" />
+
+                        <!-- Товар -->
+                        <DataGridTextColumn Header="Артикул" Binding="{Binding Artnr}" Width="160" />
+                        <DataGridTextColumn Header="Наименование" Binding="{Binding Artbez}" Width="260" />
+                        <DataGridTextColumn Header="Кол-во в коробе" Binding="{Binding Bstmg}" Width="110" />
+
+                        <!-- Заказ -->
+                        <DataGridTextColumn Header="Код заказа" Binding="{Binding Bstchgnam5}" Width="320" />
+                        <DataGridTextColumn Header="AUFID" Binding="{Binding Aufid}" Width="190" />
+                        <DataGridTextColumn Header="Код заказа (LFAKDNR)" Binding="{Binding Lfakdnr}" Width="150" />
+
+                        <!-- Адрес доставки (что печатается как DeliveryCity/DeliveryStreet) -->
+                        <DataGridTextColumn Header="Город" Binding="{Binding Lfaempfort1}" Width="160" />
+                        <DataGridTextColumn Header="Улица" Binding="{Binding Lfaempfstrasse}" Width="220" />
+
+                        <!-- Грузополучатель (название/организация) -->
+                        <DataGridTextColumn Header="Грузополучатель" Binding="{Binding Gpbez}" Width="260" />
+
+                        <!-- Адрес грузополучателя (если нужно смотреть “как пришло из SAP/Oracle”) -->
+                        <DataGridTextColumn Header="Индекс" Binding="{Binding Gpplz}" Width="90" />
+                        <DataGridTextColumn Header="Страна" Binding="{Binding Lndnam}" Width="70" />
+                        <DataGridTextColumn Header="Город (GP)" Binding="{Binding Gport1}" Width="140" />
+                        <DataGridTextColumn Header="Улица (GP)" Binding="{Binding Gpstrasse}" Width="220" />
+                        <DataGridTextColumn Header="Адрес строкой" Binding="{Binding Adres}" Width="280" />
+
+                        <!-- KPI -->
+                        <DataGridTextColumn Header="Изделий в коробе" Binding="{Binding SumBst}" Width="140" />
+                        <DataGridTextColumn Header="Вес брутто, кг" Binding="{Binding Brutto}" Width="120" />
+                        <DataGridTextColumn Header="Маркет" Binding="{Binding Market}" Width="90" />
+                    </DataGrid.Columns>
                 </DataGrid>
 
                 <!-- Empty state, когда данных нет -->
