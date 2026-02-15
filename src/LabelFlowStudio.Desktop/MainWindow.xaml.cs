@@ -15,7 +15,6 @@ public partial class MainWindow : Window
     private const int ScanBufferTimeoutMilliseconds = 900;
 
     private readonly DispatcherTimer _scanBufferTimer;
-
     private string _scanBuffer = string.Empty;
     private DateTime _lastScanCharUtc = DateTime.MinValue;
 
@@ -28,7 +27,6 @@ public partial class MainWindow : Window
         {
             Interval = TimeSpan.FromMilliseconds(ScanBufferTimeoutMilliseconds)
         };
-
         _scanBufferTimer.Tick += ScanBufferTimer_Tick;
     }
 
@@ -47,7 +45,6 @@ public partial class MainWindow : Window
     }
 
     // --- Ограничение TENAM (ручной ввод) ---
-
     private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
     {
         eventArgs.Handled = !IsDigitsOnly(eventArgs.Text);
@@ -70,7 +67,6 @@ public partial class MainWindow : Window
         }
 
         var text = eventArgs.SourceDataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty;
-
         if (!IsDigitsOnly(text))
         {
             eventArgs.CancelCommand();
@@ -83,7 +79,6 @@ public partial class MainWindow : Window
     }
 
     // --- Глобальный ввод со сканера-клавиатуры (без фокуса в TENAM) ---
-
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
     {
         if (ShouldIgnoreGlobalScannerInput())
@@ -107,7 +102,6 @@ public partial class MainWindow : Window
         }
 
         AppendScanDigits(eventArgs.Text);
-
         eventArgs.Handled = true;
     }
 
@@ -134,7 +128,6 @@ public partial class MainWindow : Window
         }
 
         ClearScanBuffer();
-
         eventArgs.Handled = true;
     }
 
@@ -198,7 +191,6 @@ public partial class MainWindow : Window
     }
 
     // --- Нумерация строк DataGrid ---
-
     private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs eventArgs)
     {
         eventArgs.Row.Header = (eventArgs.Row.GetIndex() + 1).ToString();
@@ -238,5 +230,71 @@ public partial class MainWindow : Window
             elementStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
             textColumn.ElementStyle = elementStyle;
         }
+    }
+
+    // ===========================
+    // ✅ TitleBar handlers (NEW)
+    // ===========================
+
+    private void OnMinimizeClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e)
+    {
+        ToggleMaximizeRestore();
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        // double-click => maximize/restore
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximizeRestore();
+            return;
+        }
+
+        try
+        {
+            // Если окно было развернуто, при перетаскивании аккуратно восстанавливаем
+            if (WindowState == WindowState.Maximized)
+            {
+                var mousePos = e.GetPosition(this);
+                var screenPos = PointToScreen(mousePos);
+
+                var restoreWidth = RestoreBounds.Width;
+                var restoreHeight = RestoreBounds.Height;
+
+                WindowState = WindowState.Normal;
+
+                // позиционируем так, чтобы курсор оставался над окном
+                Left = screenPos.X - (mousePos.X / ActualWidth) * restoreWidth;
+                Top = screenPos.Y - (mousePos.Y / ActualHeight) * restoreHeight;
+            }
+
+            DragMove();
+        }
+        catch
+        {
+            // DragMove иногда кидает исключение, если поймать странный момент мыши — не критично
+        }
+    }
+
+    private void ToggleMaximizeRestore()
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
     }
 }
