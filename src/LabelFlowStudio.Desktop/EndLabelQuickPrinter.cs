@@ -1,6 +1,7 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System.Drawing.Printing;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -14,13 +15,6 @@ public enum EndLabelQuickPrintResult
     Failed
 }
 
-/// <summary>
-/// Быстрая печать HTML через WebView2.
-///
-/// Логика:
-/// 1) Пытаемся напечатать на Zebra (zebra_torec) в 2 экземплярах.
-/// 2) Если принтер не установлен / печать не удалась — предлагаем выбрать принтер.
-/// </summary>
 public static class EndLabelQuickPrinter
 {
     private const string PreferredPrinterName = "zebra_torec";
@@ -42,25 +36,20 @@ public static class EndLabelQuickPrinter
         {
             hostWindow = new WebView2PrintHostWindow
             {
-                Owner = owner,
+                Owner = owner
             };
 
-            // ВАЖНО: WebView2 нормально инициализируется только после создания HWND,
-            // поэтому окно нужно показать (мы его прячем за счёт Opacity/Position).
             hostWindow.Show();
 
             await hostWindow.EnsureInitializedAsync(cancellationToken);
             await hostWindow.NavigateToStringAsync(html, cancellationToken);
 
-            // 1) Печатаем на Zebra (если есть и печать проходит)
             if (await hostWindow.TryPrintToPrinterAsync(PreferredPrinterName, PreferredCopies, cancellationToken))
             {
                 return EndLabelQuickPrintResult.PrintedToPreferred;
             }
 
-            // 2) Фолбэк: выбор принтера
             var selection = ShowPrinterSelection(owner);
-
             if (selection is null)
             {
                 return EndLabelQuickPrintResult.Cancelled;
@@ -103,15 +92,13 @@ public static class EndLabelQuickPrinter
         };
 
         var ok = dialog.ShowDialog();
-
         if (ok != true)
         {
             return null;
         }
 
-        // Для WebView2 лучше использовать PrintQueue.Name (как в InstalledPrinters)
         var printerName = dialog.PrintQueue?.Name;
-       
+
         if (string.IsNullOrWhiteSpace(printerName))
         {
             printerName = dialog.PrintQueue?.FullName;
@@ -123,7 +110,6 @@ public static class EndLabelQuickPrinter
         }
 
         var copies = dialog.PrintTicket?.CopyCount ?? 1;
-        
         if (copies < 1)
         {
             copies = 1;
@@ -138,7 +124,6 @@ public static class EndLabelQuickPrinter
 
         public WebView2PrintHostWindow()
         {
-            // максимально незаметное окно
             Width = 1;
             Height = 1;
             WindowStyle = WindowStyle.None;
@@ -159,8 +144,28 @@ public static class EndLabelQuickPrinter
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // EnsureCoreWebView2Async должен быть вызван в UI-потоке
-            await _webView.EnsureCoreWebView2Async();
+            if (_webView.CoreWebView2 is not null)
+            {
+                return;
+            }
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var userDataFolder = Path.Combine(
+                localAppData,
+                "LabelFlowStudio",
+                "WebView2",
+                $"pid-{Environment.ProcessId}"
+            );
+
+            Directory.CreateDirectory(userDataFolder);
+
+            var environment = await CoreWebView2Environment.CreateAsync(
+                browserExecutableFolder: null,
+                userDataFolder: userDataFolder,
+                options: null
+            );
+
+            await _webView.EnsureCoreWebView2Async(environment);
 
             cancellationToken.ThrowIfCancellationRequested();
         }
@@ -191,13 +196,12 @@ public static class EndLabelQuickPrinter
             _webView.CoreWebView2.NavigateToString(html);
 
             var ok = await tcs.Task;
-            
+
             if (!ok)
             {
                 throw new InvalidOperationException("Не удалось отрендерить HTML в WebView2");
             }
 
-            // Небольшая пауза на раскладку/отрисовку перед печатью
             await Task.Delay(120, cancellationToken);
         }
 

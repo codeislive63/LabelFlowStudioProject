@@ -1,5 +1,6 @@
 using LabelFlowStudio.Templates;
 using System.IO;
+using System.Text;
 
 namespace LabelFlowStudio.Desktop.Templates;
 
@@ -10,13 +11,33 @@ public static class EmptyPageTemplateStore
 
     public static string GetTemplatePath()
     {
-        return Path.Combine(AppContext.BaseDirectory, TemplatesFolderName, EmptyPageFileName);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "LabelFlowStudio", TemplatesFolderName, EmptyPageFileName);
     }
 
-    public static Task<string> LoadOrCreateAsync(CancellationToken cancellationToken)
+    public static async Task<string> LoadOrCreateAsync(CancellationToken cancellationToken)
     {
-        return EditableTemplateFileManager.LoadOrCreateAsync(
-            GetTemplatePath(),
+        var path = GetTemplatePath();
+        var dir = Path.GetDirectoryName(path);
+
+        if (!string.IsNullOrWhiteSpace(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        if (!File.Exists(path))
+        {
+            var defaultPath = Path.Combine(AppContext.BaseDirectory, TemplatesFolderName, EmptyPageFileName);
+
+            if (File.Exists(defaultPath))
+            {
+                var defaultHtml = await File.ReadAllTextAsync(defaultPath, Encoding.UTF8, cancellationToken);
+                await File.WriteAllTextAsync(path, defaultHtml, new UTF8Encoding(false), cancellationToken);
+            }
+        }
+
+        return await EditableTemplateFileManager.LoadOrCreateAsync(
+            path,
             TemplateDefaults.GetEmptyPageHtml,
             cancellationToken
         );

@@ -11,17 +11,26 @@ namespace LabelFlowStudio.Desktop;
 
 public partial class MainWindow : Window
 {
-    private const int ScanSequenceRestartThresholdMilliseconds = 250;
     private const int ScanBufferTimeoutMilliseconds = 900;
 
     private readonly DispatcherTimer _scanBufferTimer;
     private string _scanBuffer = string.Empty;
-    private DateTime _lastScanCharUtc = DateTime.MinValue;
 
     public MainWindow(MainViewModel mainViewModel)
     {
         InitializeComponent();
         DataContext = mainViewModel;
+
+        mainViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.IsBusy) && !mainViewModel.IsBusy)
+            {
+                FocusTenamSoon();
+            }
+        };
+
+        // После клика по кнопкам – вернуть фокус на TENAM (сам клик не ломается)
+        AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, __) => FocusTenamSoon()), true);
 
         _scanBufferTimer = new DispatcherTimer
         {
@@ -30,13 +39,43 @@ public partial class MainWindow : Window
         _scanBufferTimer.Tick += ScanBufferTimer_Tick;
     }
 
-    private void MainWindow_Loaded(object sender, RoutedEventArgs eventArgs)
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        TenamTextBox.Focus();
-        TenamTextBox.SelectAll();
+        FocusTenamSoon();
     }
 
-    private void TenamTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs eventArgs)
+    private void MainWindow_Activated(object? sender, EventArgs e)
+    {
+        FocusTenamSoon();
+    }
+
+    private void FocusTenamSoon()
+    {
+        if (!IsActive)
+        {
+            return;
+        }
+
+        // Если пользователь работает в другом TextBox – не воюем
+        if (Keyboard.FocusedElement is TextBoxBase focused && !ReferenceEquals(focused, TenamTextBox))
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!IsActive)
+            {
+                return;
+            }
+
+            TenamTextBox.Focus();
+            Keyboard.Focus(TenamTextBox);
+            TenamTextBox.SelectAll();
+        }, DispatcherPriority.ContextIdle);
+    }
+
+    private void TenamTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         if (sender is TextBox textBox)
         {
@@ -44,31 +83,31 @@ public partial class MainWindow : Window
         }
     }
 
-    private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
+    private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        eventArgs.Handled = !IsDigitsOnly(eventArgs.Text);
+        e.Handled = !IsDigitsOnly(e.Text);
     }
 
-    private void TenamTextBox_PreviewKeyDown(object sender, KeyEventArgs eventArgs)
+    private void TenamTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (eventArgs.Key == Key.Space)
+        if (e.Key == Key.Space)
         {
-            eventArgs.Handled = true;
+            e.Handled = true;
         }
     }
 
-    private void TenamTextBox_Pasting(object sender, DataObjectPastingEventArgs eventArgs)
+    private void TenamTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
     {
-        if (!eventArgs.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
+        if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
         {
-            eventArgs.CancelCommand();
+            e.CancelCommand();
             return;
         }
 
-        var text = eventArgs.SourceDataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty;
+        var text = e.SourceDataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty;
         if (!IsDigitsOnly(text))
         {
-            eventArgs.CancelCommand();
+            e.CancelCommand();
         }
     }
 
@@ -77,19 +116,11 @@ public partial class MainWindow : Window
         return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
     }
 
-    private void Window_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
+    // Глобальный ввод от сканера:
+    // Работает ТОЛЬКО когда фокус НЕ в TextBox (чтобы не ломать ручной ввод)
+    private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         if (ShouldIgnoreGlobalScannerInput())
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(eventArgs.Text))
-        {
-            return;
-        }
-
-        if (!IsDigitsOnly(eventArgs.Text))
         {
             return;
         }
@@ -99,18 +130,28 @@ public partial class MainWindow : Window
             return;
         }
 
-        AppendScanDigits(eventArgs.Text);
-        eventArgs.Handled = true;
+        if (string.IsNullOrWhiteSpace(e.Text) || !IsDigitsOnly(e.Text))
+        {
+            return;
+        }
+
+        AppendScanDigits(e.Text);
+        e.Handled = true;
     }
 
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs eventArgs)
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (ShouldIgnoreGlobalScannerInput())
         {
             return;
         }
 
-        if (eventArgs.Key != Key.Return && eventArgs.Key != Key.Enter)
+        if (DataContext is MainViewModel viewModel && viewModel.IsBusy)
+        {
+            return;
+        }
+
+        if (e.Key != Key.Return && e.Key != Key.Enter)
         {
             return;
         }
@@ -120,41 +161,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (DataContext is MainViewModel viewModel && !viewModel.IsBusy)
+        if (DataContext is MainViewModel vm)
         {
-            viewModel.ReceiveTenamFromScanner(_scanBuffer);
+            vm.ReceiveTenamFromScanner(_scanBuffer);
         }
 
         ClearScanBuffer();
-        eventArgs.Handled = true;
+        e.Handled = true;
     }
 
-    private bool ShouldIgnoreGlobalScannerInput()
+    private static bool ShouldIgnoreGlobalScannerInput()
     {
-        if (Keyboard.FocusedElement is TextBoxBase)
-        {
-            return true;
-        }
-
-        if (ReferenceEquals(Keyboard.FocusedElement, TenamTextBox))
-        {
-            return true;
-        }
-
-        return false;
+        // Если пользователь печатает в любом TextBox (включая TENAM) – не перехватываем
+        return Keyboard.FocusedElement is TextBoxBase;
     }
 
     private void AppendScanDigits(string digits)
     {
-        var nowUtc = DateTime.UtcNow;
-
-        if ((nowUtc - _lastScanCharUtc) > TimeSpan.FromMilliseconds(ScanSequenceRestartThresholdMilliseconds))
-        {
-            _scanBuffer = string.Empty;
-        }
-
-        _lastScanCharUtc = nowUtc;
-
         _scanBufferTimer.Stop();
         _scanBufferTimer.Start();
 
@@ -166,30 +189,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ScanBufferTimer_Tick(object? sender, EventArgs eventArgs)
+    private void ScanBufferTimer_Tick(object? sender, EventArgs e)
     {
         _scanBufferTimer.Stop();
-
-        if (DataContext is MainViewModel viewModel && viewModel.Tenam == _scanBuffer)
-        {
-            viewModel.Tenam = string.Empty;
-        }
-
         ClearScanBuffer();
     }
 
     private void ClearScanBuffer()
     {
         _scanBuffer = string.Empty;
-        _lastScanCharUtc = DateTime.MinValue;
     }
 
-    private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs eventArgs)
+    private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        eventArgs.Row.Header = (eventArgs.Row.GetIndex() + 1).ToString();
+        e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
-    private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs eventArgs)
+    private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
     {
         var grid = (DataGrid)sender;
 
@@ -205,20 +221,11 @@ public partial class MainWindow : Window
         });
     }
 
-    private void OnMinimizeClick(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
+    private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
-    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e)
-    {
-        ToggleMaximizeRestore();
-    }
+    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e) => ToggleMaximizeRestore();
 
-    private void OnCloseClick(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
     private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
