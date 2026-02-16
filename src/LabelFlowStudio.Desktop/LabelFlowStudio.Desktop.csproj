@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <UserSecretsId>47f9910e-b490-4b13-9ded-33adef96a73a</UserSecretsId>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+	<AssemblyName>LabelFlowStudio</AssemblyName>
   </PropertyGroup>
 
 	<ItemGroup>

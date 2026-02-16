@@ -44,7 +44,6 @@ public partial class MainWindow : Window
         }
     }
 
-    // --- Ограничение TENAM (ручной ввод) ---
     private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
     {
         eventArgs.Handled = !IsDigitsOnly(eventArgs.Text);
@@ -78,7 +77,6 @@ public partial class MainWindow : Window
         return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
     }
 
-    // --- Глобальный ввод со сканера-клавиатуры (без фокуса в TENAM) ---
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs eventArgs)
     {
         if (ShouldIgnoreGlobalScannerInput())
@@ -133,13 +131,11 @@ public partial class MainWindow : Window
 
     private bool ShouldIgnoreGlobalScannerInput()
     {
-        // если фокус уже в любом TextBox – не перехватываем (иначе ломаем ручной ввод)
         if (Keyboard.FocusedElement is TextBoxBase)
         {
             return true;
         }
 
-        // если фокус именно в TENAM – тоже не перехватываем (там Enter уже привязан к команде)
         if (ReferenceEquals(Keyboard.FocusedElement, TenamTextBox))
         {
             return true;
@@ -166,7 +162,6 @@ public partial class MainWindow : Window
 
         if (DataContext is MainViewModel viewModel)
         {
-            // чтобы в поле всегда отображалась собранная строка (без "частей" в разных контролах)
             viewModel.Tenam = _scanBuffer;
         }
     }
@@ -175,7 +170,6 @@ public partial class MainWindow : Window
     {
         _scanBufferTimer.Stop();
 
-        // если скан не завершился Enter-ом – очищаем буфер и поле, чтобы не оставлять "полуTENAM"
         if (DataContext is MainViewModel viewModel && viewModel.Tenam == _scanBuffer)
         {
             viewModel.Tenam = string.Empty;
@@ -190,7 +184,6 @@ public partial class MainWindow : Window
         _lastScanCharUtc = DateTime.MinValue;
     }
 
-    // --- Нумерация строк DataGrid ---
     private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs eventArgs)
     {
         eventArgs.Row.Header = (eventArgs.Row.GetIndex() + 1).ToString();
@@ -211,30 +204,6 @@ public partial class MainWindow : Window
             }
         });
     }
-
-    private void RecordsGrid_AutoGeneratingColumn(object? sender, DataGridAutoGeneratingColumnEventArgs e)
-    {
-        if (string.Equals(e.PropertyName, "DeliveryCityRaw", StringComparison.Ordinal) ||
-            string.Equals(e.PropertyName, "DeliveryStreetRaw", StringComparison.Ordinal) ||
-            string.Equals(e.PropertyName, "DeliveryCity", StringComparison.Ordinal) ||
-            string.Equals(e.PropertyName, "DeliveryStreet", StringComparison.Ordinal))
-        {
-            e.Cancel = true;
-            return;
-        }
-
-        if (e.Column is DataGridTextColumn textColumn)
-        {
-            var elementStyle = new Style(typeof(TextBlock));
-            elementStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Left));
-            elementStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
-            textColumn.ElementStyle = elementStyle;
-        }
-    }
-
-    // ===========================
-    // ✅ TitleBar handlers (NEW)
-    // ===========================
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)
     {
@@ -258,7 +227,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        // double-click => maximize/restore
         if (e.ClickCount == 2)
         {
             ToggleMaximizeRestore();
@@ -267,7 +235,6 @@ public partial class MainWindow : Window
 
         try
         {
-            // Если окно было развернуто, при перетаскивании аккуратно восстанавливаем
             if (WindowState == WindowState.Maximized)
             {
                 var mousePos = e.GetPosition(this);
@@ -278,7 +245,6 @@ public partial class MainWindow : Window
 
                 WindowState = WindowState.Normal;
 
-                // позиционируем так, чтобы курсор оставался над окном
                 Left = screenPos.X - (mousePos.X / ActualWidth) * restoreWidth;
                 Top = screenPos.Y - (mousePos.Y / ActualHeight) * restoreHeight;
             }
@@ -287,7 +253,6 @@ public partial class MainWindow : Window
         }
         catch
         {
-            // DragMove иногда кидает исключение, если поймать странный момент мыши — не критично
         }
     }
 
