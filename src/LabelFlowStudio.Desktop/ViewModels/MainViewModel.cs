@@ -6,6 +6,7 @@ using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -176,6 +177,7 @@ public sealed class MainViewModel : ViewModelBase
             IsBusy = true;
             StatusMessage = "Загрузка";
             Records.Clear();
+            Tenam = string.Empty;
         });
 
         await Task.Yield();
@@ -216,8 +218,6 @@ public sealed class MainViewModel : ViewModelBase
                     _lastSuccessfulTenam = tenamSnapshot;
 
                     LastProcessedTenam = tenamSnapshot;
-
-                    Tenam = string.Empty;
                 }
                 else
                 {
@@ -226,6 +226,23 @@ public sealed class MainViewModel : ViewModelBase
 
                     LastProcessedTenam = string.Empty;
                 }
+
+                OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+                OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to load records");
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = exception.Message;
+                _lastLoadedResponse = null;
+                _lastLoadedTenam = string.Empty;
+                _lastSuccessfulResponse = null;
+                _lastSuccessfulTenam = string.Empty;
+                LastProcessedTenam = string.Empty;
 
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
                 OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();

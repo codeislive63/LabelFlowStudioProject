@@ -21,7 +21,8 @@
         UseLayoutRounding="True"
         Loaded="MainWindow_Loaded"
         PreviewTextInput="Window_PreviewTextInput"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Activated="MainWindow_Activated">
 
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="44"
@@ -316,22 +317,34 @@
             <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
                 <Grid>
                     <DataGrid x:Name="RecordsGrid"
-                              ItemsSource="{Binding Records}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              CanUserAddRows="False"
-                              CanUserSortColumns="True"
-                              LoadingRow="RecordsGrid_LoadingRow"
-                              Sorting="RecordsGrid_Sorting"
-                              HeadersVisibility="All"
-                              ColumnHeaderHeight="40"
-                              RowHeaderWidth="44"
-                              RowHeight="34"
-                              GridLinesVisibility="Horizontal"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True">
+          ItemsSource="{Binding Records}"
+          AutoGenerateColumns="False"
+          IsReadOnly="True"
+          CanUserAddRows="False"
+          CanUserSortColumns="True"
+          LoadingRow="RecordsGrid_LoadingRow"
+          Sorting="RecordsGrid_Sorting"
+          ColumnHeaderHeight="40"
+          RowHeight="34"
+          GridLinesVisibility="Horizontal"
+          HorizontalScrollBarVisibility="Auto"
+          VerticalScrollBarVisibility="Auto"
+          EnableRowVirtualization="True"
+          EnableColumnVirtualization="True">
+
+                        <!-- Управление row headers только стилем (без локальных RowHeaderWidth/HeadersVisibility) -->
+                        <DataGrid.Style>
+                            <Style TargetType="DataGrid">
+                                <Setter Property="RowHeaderWidth" Value="44"/>
+                                <Setter Property="HeadersVisibility" Value="All"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                        <Setter Property="RowHeaderWidth" Value="0"/>
+                                        <Setter Property="HeadersVisibility" Value="Column"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.Style>
 
                         <DataGrid.Resources>
                             <Style x:Key="CellTextStyle" TargetType="TextBlock">
@@ -354,44 +367,63 @@
                                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 <Setter Property="Padding" Value="10,0,10,0"/>
                             </Style>
-
-                            <!-- ✅ Вариант A: НЕТ стиля на DataGridTextColumn -->
                         </DataGrid.Resources>
 
+                        <!-- RowHeaderStyle: полностью скрываем row headers когда записей нет -->
                         <DataGrid.RowHeaderStyle>
                             <Style TargetType="{x:Type DataGridRowHeader}">
-                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 <Setter Property="Padding" Value="0"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
                                 <Setter Property="BorderThickness" Value="0,0,1,1"/>
                                 <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
+
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type DataGridRowHeader}">
+                                            <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                                                <ContentPresenter Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DataContext.Records.Count, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
                             </Style>
                         </DataGrid.RowHeaderStyle>
 
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="TENAM" Binding="{Binding Tenam}" Width="110"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Код магазина" Binding="{Binding Lfaempfkdnr}" Width="140"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Короб в заказе" Binding="{Binding Tesortnr}" Width="80"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
 
                             <DataGridTextColumn Header="Артикул" Binding="{Binding Artnr}" Width="160"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Наименование" Binding="{Binding Artbez}" Width="260"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Кол-во в коробе" Binding="{Binding Bstmg}" Width="110"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
 
                             <DataGridTextColumn Header="Код заказа" Binding="{Binding Bstchgnam5}" Width="320"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="AUFID" Binding="{Binding Aufid}" Width="190"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Код заказа (LFAKDNR)" Binding="{Binding Lfakdnr}" Width="150"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
+                            ElementStyle="{StaticResource CellTextStyle}" />
 
                             <DataGridTextColumn Header="Город" Binding="{Binding Lfaempfort1}" Width="160"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
@@ -426,11 +458,6 @@
                         <Grid.Style>
                             <Style TargetType="{x:Type Grid}">
                                 <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Records.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
                             </Style>
                         </Grid.Style>
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System.Drawing.Printing;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -14,13 +15,6 @@ public enum StuffingSheetQuickPrintResult
     Failed
 }
 
-/// <summary>
-/// Быстрая печать HTML через WebView2 для "Листа сброса".
-///
-/// Логика:
-/// 1) Пытаемся напечатать на Kyocera (Kyocera ECOSYS MA4500x111) в 1 экземпляре.
-/// 2) Если принтер не установлен / печать не удалась — предлагаем выбрать принтер.
-/// </summary>
 public static class StuffingSheetQuickPrinter
 {
     private const string PreferredPrinterName = "Kyocera ECOSYS MA4500x111";
@@ -42,7 +36,7 @@ public static class StuffingSheetQuickPrinter
         {
             hostWindow = new WebView2PrintHostWindow
             {
-                Owner = owner,
+                Owner = owner
             };
 
             hostWindow.Show();
@@ -56,7 +50,6 @@ public static class StuffingSheetQuickPrinter
             }
 
             var selection = ShowPrinterSelection(owner);
-
             if (selection is null)
             {
                 return StuffingSheetQuickPrintResult.Cancelled;
@@ -99,7 +92,6 @@ public static class StuffingSheetQuickPrinter
         };
 
         var ok = dialog.ShowDialog();
-
         if (ok != true)
         {
             return null;
@@ -118,7 +110,6 @@ public static class StuffingSheetQuickPrinter
         }
 
         var copies = dialog.PrintTicket?.CopyCount ?? 1;
-
         if (copies < 1)
         {
             copies = 1;
@@ -152,7 +143,30 @@ public static class StuffingSheetQuickPrinter
         public async Task EnsureInitializedAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await _webView.EnsureCoreWebView2Async();
+
+            if (_webView.CoreWebView2 is not null)
+            {
+                return;
+            }
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var userDataFolder = Path.Combine(
+                localAppData,
+                "LabelFlowStudio",
+                "WebView2",
+                $"pid-{Environment.ProcessId}"
+            );
+
+            Directory.CreateDirectory(userDataFolder);
+
+            var environment = await CoreWebView2Environment.CreateAsync(
+                browserExecutableFolder: null,
+                userDataFolder: userDataFolder,
+                options: null
+            );
+
+            await _webView.EnsureCoreWebView2Async(environment);
+
             cancellationToken.ThrowIfCancellationRequested();
         }
 
