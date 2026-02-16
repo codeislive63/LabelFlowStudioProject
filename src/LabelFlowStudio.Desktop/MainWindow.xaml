@@ -94,6 +94,20 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Кнопка "Лист сброса" показывает ⚡ когда быстрый режим включен -->
+        <Style x:Key="StuffingSheetButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
+            <Setter Property="Content" Value="Лист сброса" />
+            <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsStuffingSheetQuickMode}" Value="True">
+                    <Setter Property="Content" Value="Лист сброса ⚡" />
+                    <Setter Property="ToolTip" Value="Быстрый режим: печать сразу на Kyocera (Kyocera ECOSYS MA4500x111). Если недоступна — выбор принтера." />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -121,13 +135,23 @@
                 <Menu Grid.Column="0"
                       Style="{StaticResource VsMenuStyle}"
                       shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <MenuItem Header="Печать" Style="{StaticResource VsMenuItemStyle}">
+
+                    <MenuItem Header="Инструменты" Style="{StaticResource VsMenuItemStyle}">
+
                         <MenuItem Header="⚡ Быстрый режим (торцевая этикетка)"
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
                                   StaysOpenOnClick="True"
                                   IsChecked="{Binding IsEndLabelQuickMode, Mode=TwoWay}"
                                   ToolTip="Когда включено — кнопка 'Торцевая этикетка' печатает сразу на Zebra (zebra_torec). Если недоступна — откроется выбор принтера."/>
+
+                        <MenuItem Header="⚡ Быстрый режим (лист сброса)"
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  IsCheckable="True"
+                                  StaysOpenOnClick="True"
+                                  IsChecked="{Binding IsStuffingSheetQuickMode, Mode=TwoWay}"
+                                  ToolTip="Когда включено — кнопка 'Лист сброса' печатает сразу на Kyocera (Kyocera ECOSYS MA4500x111). Если недоступна — откроется выбор принтера."/>
+
                         <Separator/>
                     </MenuItem>
                 </Menu>
@@ -211,8 +235,7 @@
                             Margin="0,0,10,0"/>
 
                     <Button Grid.Column="3"
-                            Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                            Content="Лист сброса"
+                            Style="{StaticResource StuffingSheetButtonStyle}"
                             Command="{Binding OpenStuffingSheetPreviewCommand}" />
                 </Grid>
             </Border>
@@ -349,7 +372,6 @@
                         </DataGrid.RowHeaderStyle>
 
                         <DataGrid.Columns>
-                            <!-- Идентификаторы -->
                             <DataGridTextColumn Header="TENAM" Binding="{Binding Tenam}" Width="110"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Код магазина" Binding="{Binding Lfaempfkdnr}" Width="140"
@@ -357,7 +379,6 @@
                             <DataGridTextColumn Header="Короб в заказе" Binding="{Binding Tesortnr}" Width="80"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- Товар -->
                             <DataGridTextColumn Header="Артикул" Binding="{Binding Artnr}" Width="160"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Наименование" Binding="{Binding Artbez}" Width="260"
@@ -365,7 +386,6 @@
                             <DataGridTextColumn Header="Кол-во в коробе" Binding="{Binding Bstmg}" Width="110"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- Заказ -->
                             <DataGridTextColumn Header="Код заказа" Binding="{Binding Bstchgnam5}" Width="320"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="AUFID" Binding="{Binding Aufid}" Width="190"
@@ -373,17 +393,14 @@
                             <DataGridTextColumn Header="Код заказа (LFAKDNR)" Binding="{Binding Lfakdnr}" Width="150"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- Адрес доставки -->
                             <DataGridTextColumn Header="Город" Binding="{Binding Lfaempfort1}" Width="160"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Улица" Binding="{Binding Lfaempfstrasse}" Width="220"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- Грузополучатель -->
                             <DataGridTextColumn Header="Грузополучатель" Binding="{Binding Gpbez}" Width="260"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- Адрес грузополучателя -->
                             <DataGridTextColumn Header="Индекс" Binding="{Binding Gpplz}" Width="90"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Страна" Binding="{Binding Lndnam}" Width="70"
@@ -395,7 +412,6 @@
                             <DataGridTextColumn Header="Адрес строкой" Binding="{Binding Adres}" Width="280"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
 
-                            <!-- KPI -->
                             <DataGridTextColumn Header="Изделий в коробе" Binding="{Binding SumBst}" Width="140"
                                                 ElementStyle="{StaticResource CellTextStyle}" />
                             <DataGridTextColumn Header="Вес брутто, кг" Binding="{Binding Brutto}" Width="120"

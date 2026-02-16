@@ -6,7 +6,6 @@ using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
-using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -37,6 +36,7 @@ public sealed class MainViewModel : ViewModelBase
     private string _lastProcessedTenam = string.Empty;
 
     private bool _isEndLabelQuickMode;
+    private bool _isStuffingSheetQuickMode;
 
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
@@ -72,6 +72,16 @@ public sealed class MainViewModel : ViewModelBase
     {
         get => _isEndLabelQuickMode;
         set => SetProperty(ref _isEndLabelQuickMode, value);
+    }
+
+    /// <summary>
+    /// Если true — кнопка "Лист сброса" печатает сразу на Kyocera.
+    /// Если Kyocera недоступна — открываем выбор принтера.
+    /// </summary>
+    public bool IsStuffingSheetQuickMode
+    {
+        get => _isStuffingSheetQuickMode;
+        set => SetProperty(ref _isStuffingSheetQuickMode, value);
     }
 
     public string Tenam
@@ -116,7 +126,6 @@ public sealed class MainViewModel : ViewModelBase
         private set => SetProperty(ref _lastProcessedTenam, value);
     }
 
-    // Единая точка входа для любого внешнего сканера: COM (IBoxScanner) или "сканер-клавиатура" из MainWindow
     public void ReceiveTenamFromScanner(string boxNumber)
     {
         var digitsOnly = new string((boxNumber ?? string.Empty)
@@ -169,7 +178,6 @@ public sealed class MainViewModel : ViewModelBase
             Records.Clear();
         });
 
-        // даём UI шанс отрисовать overlay до тяжёлого запроса
         await Task.Yield();
 
         try
@@ -180,8 +188,6 @@ public sealed class MainViewModel : ViewModelBase
                 ShouldPrintEndLabels: true
             );
 
-            // На некоторых провайдерах БД "async" может частично блокировать поток до первого await внутри драйвера
-            // Уводим вызов с UI-потока, чтобы интерфейс гарантированно не фризился
             var response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
 
             await RunOnUiThreadAsync(() =>
@@ -252,7 +258,6 @@ public sealed class MainViewModel : ViewModelBase
     private async Task OpenEndLabelPreviewAsync()
     {
         var response = _lastSuccessfulResponse;
-
         if (response is null)
         {
             return;
@@ -260,14 +265,12 @@ public sealed class MainViewModel : ViewModelBase
 
         var tenam = _lastSuccessfulTenam;
 
-        // Быстрый режим: печатаем сразу (и только для торцевой этикетки)
         if (IsEndLabelQuickMode)
         {
             await PrintEndLabelQuickAsync(response, tenam);
             return;
         }
 
-        // Обычный режим: открываем окно предпросмотра/редактора
         await RunOnUiThreadAsync(() =>
         {
             _endLabelPreviewWindow?.Close();
@@ -277,7 +280,7 @@ public sealed class MainViewModel : ViewModelBase
             {
                 Owner = System.Windows.Application.Current?.MainWindow,
                 ShowInTaskbar = true,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
             };
 
             window.Closed += (_, _) => _endLabelPreviewWindow = null;
@@ -291,8 +294,6 @@ public sealed class MainViewModel : ViewModelBase
 
     private async Task PrintEndLabelQuickAsync(BoxProcessingResponse response, string tenam)
     {
-        // Команда уже блокируется флагом _isExecuting у AsyncCommand,
-        // но IsBusy дополнительно защищает от параллельной загрузки/сканирования.
         await RunOnUiThreadAsync(() =>
         {
             IsBusy = true;
@@ -303,13 +304,9 @@ public sealed class MainViewModel : ViewModelBase
 
         try
         {
-            // Шаблон торцевой этикетки
             var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
-
-            // Рендерим HTML так же, как в EndLabelTemplatePreviewWindow
             var html = EndLabelHtmlTemplateRenderer.Render(templateText, response, tenam);
 
-            // Печать (сначала Zebra, иначе выбор принтера)
             var result = await EndLabelQuickPrinter.PrintHtmlAsync(
                 html,
                 owner: System.Windows.Application.Current?.MainWindow,
@@ -350,18 +347,23 @@ public sealed class MainViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(_lastLoadedTenam);
     }
 
-    private Task OpenStuffingSheetPreviewAsync()
+    private async Task OpenStuffingSheetPreviewAsync()
     {
         var response = _lastLoadedResponse;
-
         if (response is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var tenam = _lastLoadedTenam;
 
-        return RunOnUiThreadAsync(() =>
+        if (IsStuffingSheetQuickMode)
+        {
+            await PrintStuffingSheetQuickAsync(response, tenam);
+            return;
+        }
+
+        await RunOnUiThreadAsync(() =>
         {
             _stuffingSheetPreviewWindow?.Close();
             _stuffingSheetPreviewWindow = null;
@@ -370,7 +372,7 @@ public sealed class MainViewModel : ViewModelBase
             {
                 Owner = System.Windows.Application.Current?.MainWindow,
                 ShowInTaskbar = true,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
             };
 
             window.Closed += (_, _) => _stuffingSheetPreviewWindow = null;
@@ -380,6 +382,71 @@ public sealed class MainViewModel : ViewModelBase
             window.Show();
             window.Activate();
         });
+    }
+
+    private async Task PrintStuffingSheetQuickAsync(BoxProcessingResponse response, string tenam)
+    {
+        await RunOnUiThreadAsync(() =>
+        {
+            IsBusy = true;
+            StatusMessage = "Подготовка листа сброса к печати";
+        });
+
+        await Task.Yield();
+
+        try
+        {
+            string html;
+
+            if (!HasWeight(response))
+            {
+                html = await EmptyPageTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+            }
+            else
+            {
+                var template = await StuffingSheetTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+                html = StuffingSheetHtmlTemplateRenderer.Render(template, response, tenam);
+            }
+
+            var result = await StuffingSheetQuickPrinter.PrintHtmlAsync(
+                html,
+                owner: System.Windows.Application.Current?.MainWindow,
+                cancellationToken: CancellationToken.None);
+
+            await RunOnUiThreadAsync(() =>
+            {
+                StatusMessage = result switch
+                {
+                    StuffingSheetQuickPrintResult.PrintedToPreferred => "Лист сброса отправлен на печать (Kyocera)",
+                    StuffingSheetQuickPrintResult.PrintedToSelected => "Лист сброса отправлен на печать",
+                    StuffingSheetQuickPrintResult.Cancelled => "Печать листа сброса отменена",
+                    _ => "Не удалось напечатать лист сброса"
+                };
+            });
+        }
+        finally
+        {
+            await RunOnUiThreadAsync(() =>
+            {
+                IsBusy = false;
+            });
+        }
+    }
+
+    private static bool HasWeight(BoxProcessingResponse response)
+    {
+        if (response.Weight.HasValue && response.Weight.Value > 0)
+        {
+            return true;
+        }
+
+        if (response.Records.Count == 0)
+        {
+            return false;
+        }
+
+        var brutto = response.Records[0].Brutto;
+        return brutto.HasValue && brutto.Value > 0;
     }
 
     private async Task InitializeScannerAsync()

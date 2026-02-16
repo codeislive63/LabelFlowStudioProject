@@ -366,3 +366,4 @@ FodyWeavers.xsd
 CoverageReport/
 /tests/LabelFlowStudio.Application.Tests/TestData/label_records_4340558.json
 /tests/LabelFlowStudio.Application.Tests/TestData/label_records_4340559.json
+/_publish
