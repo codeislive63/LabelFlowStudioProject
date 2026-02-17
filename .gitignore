@@ -369,3 +369,4 @@ CoverageReport/
 /_publish
 /LabelFlowStudio.iss
 /Output
+/src/LabelFlowStudio.Desktop/appsettings.json
