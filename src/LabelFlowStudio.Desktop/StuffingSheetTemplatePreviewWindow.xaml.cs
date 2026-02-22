@@ -1,4 +1,5 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -155,7 +156,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
     }
 
-    private void OnPrintClick(object sender, RoutedEventArgs eventArgs)
+    private async void OnPrintClick(object sender, RoutedEventArgs eventArgs)
     {
         try
         {
@@ -170,7 +171,40 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
                 return;
             }
 
-            PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+            var settings = PrintSettingsStore.TryLoad();
+            var printerName = settings?.StuffingSheetPrinterName ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(printerName) || !PrinterDiscovery.IsPrinterInstalled(printerName))
+            {
+                // Настроек/принтера нет — оставляем старое поведение
+                PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+                return;
+            }
+
+            var copies = settings?.StuffingSheetCopies ?? 1;
+            if (copies < 1)
+            {
+                copies = 1;
+            }
+
+            for (var i = 0; i < copies; i++)
+            {
+                var printSettings = PreviewWebView.CoreWebView2.Environment.CreatePrintSettings();
+                printSettings.PrinterName = printerName;
+                printSettings.ShouldPrintBackgrounds = true;
+                printSettings.ShouldPrintHeaderAndFooter = false;
+
+                var status = await PreviewWebView.CoreWebView2.PrintAsync(printSettings);
+                if (status != CoreWebView2PrintStatus.Succeeded)
+                {
+                    MessageBox.Show(this, "Не удалось отправить задание на принтер", "Печать", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                await Task.Delay(120);
+            }
+
+            MessageBox.Show(this, $"Отправлено на принтер: {printerName}", "Печать", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception exception)
         {

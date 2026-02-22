@@ -54,8 +54,7 @@
         </Border>
 
         <Border Style="{StaticResource CardStyle}" Padding="0">
-            <wv2:WebView2 x:Name="PreviewWebView"
-                         NavigationCompleted="OnNavigationCompleted" />
+            <wv2:WebView2 x:Name="PreviewWebView" />
         </Border>
     </DockPanel>
 </Window>

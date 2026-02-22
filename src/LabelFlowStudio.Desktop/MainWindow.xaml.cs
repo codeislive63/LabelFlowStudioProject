@@ -1,11 +1,10 @@
-﻿using System;
-using System.Linq;
+﻿using LabelFlowStudio.Desktop.Printing;
+using LabelFlowStudio.Desktop.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using LabelFlowStudio.Desktop.ViewModels;
 
 namespace LabelFlowStudio.Desktop;
 
@@ -29,24 +28,30 @@ public partial class MainWindow : Window
             }
         };
 
-        // После клика по кнопкам – вернуть фокус на TENAM (сам клик не ломается)
         AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, __) => FocusTenamSoon()), true);
 
         _scanBufferTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(ScanBufferTimeoutMilliseconds)
         };
+
         _scanBufferTimer.Tick += ScanBufferTimer_Tick;
     }
 
-    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
         FocusTenamSoon();
     }
 
     private void MainWindow_Activated(object? sender, EventArgs e)
     {
         FocusTenamSoon();
+    }
+
+    private async void OnOpenPrintSettingsClick(object sender, RoutedEventArgs e)
+    {
+        await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
     }
 
     private void FocusTenamSoon()
@@ -56,7 +61,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Если пользователь работает в другом TextBox – не воюем
         if (Keyboard.FocusedElement is TextBoxBase focused && !ReferenceEquals(focused, TenamTextBox))
         {
             return;
@@ -116,8 +120,6 @@ public partial class MainWindow : Window
         return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
     }
 
-    // Глобальный ввод от сканера:
-    // Работает ТОЛЬКО когда фокус НЕ в TextBox (чтобы не ломать ручной ввод)
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         if (ShouldIgnoreGlobalScannerInput())
@@ -172,7 +174,6 @@ public partial class MainWindow : Window
 
     private static bool ShouldIgnoreGlobalScannerInput()
     {
-        // Если пользователь печатает в любом TextBox (включая TENAM) – не перехватываем
         return Keyboard.FocusedElement is TextBoxBase;
     }
 
@@ -207,7 +208,7 @@ public partial class MainWindow : Window
 
     private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
     {
-        var grid = (DataGrid)sender;
+        var grid = (DataGrid) sender;
 
         grid.Dispatcher.InvokeAsync(() =>
         {
