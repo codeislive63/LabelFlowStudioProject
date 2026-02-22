@@ -11,7 +11,10 @@ public sealed class DevicesServiceCollectionExtensionsTests
     public void AddLabelFlowDevices_WhenDisabled_RegistersNullScanner()
     {
         var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>())
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Devices:Scanner:IsEnabled"] = "false"
+            })
             .Build();
 
         var services = new ServiceCollection();
@@ -49,4 +52,28 @@ public sealed class DevicesServiceCollectionExtensionsTests
         Assert.NotNull(scanner);
         Assert.IsType<ComPortBoxScanner>(scanner);
     }
+
+    [Fact]
+    public void AddLabelFlowDevices_WhenFlagMissing_RegistersComPortScannerByDefault()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Devices:Scanner:PortName"] = "COM8",
+                ["Devices:Scanner:LineSeparator"] = "\n"
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+
+        services.AddLogging();
+        services.AddLabelFlowDevices(config);
+
+        var provider = services.BuildServiceProvider();
+        var scanner = provider.GetService<IBoxScanner>();
+
+        Assert.NotNull(scanner);
+        Assert.IsType<ComPortBoxScanner>(scanner);
+    }
+
 }

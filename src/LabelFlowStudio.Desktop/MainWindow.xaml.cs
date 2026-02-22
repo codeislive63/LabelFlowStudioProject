@@ -97,6 +97,17 @@ public partial class MainWindow : Window
         if (e.Key == Key.Space)
         {
             e.Handled = true;
+            return;
+        }
+
+        if ((e.Key == Key.Return || e.Key == Key.Enter) && DataContext is MainViewModel viewModel)
+        {
+            var tenamFromInput = TenamTextBox.Text;
+            if (!string.IsNullOrWhiteSpace(tenamFromInput))
+            {
+                viewModel.ReceiveTenamFromScanner(tenamFromInput);
+                e.Handled = true;
+            }
         }
     }
 
