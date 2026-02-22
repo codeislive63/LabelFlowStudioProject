@@ -1,0 +1,127 @@
+﻿using System.Windows;
+
+namespace LabelFlowStudio.Desktop.Printing;
+
+public partial class PrinterSetupWindow : Window
+{
+    private readonly string[] _printers;
+    private readonly PrintSettings _settings;
+    private int _stepIndex;
+
+    public PrinterSetupWindow(PrintSettings settings)
+    {
+        InitializeComponent();
+
+        _settings = settings;
+        _printers = PrinterDiscovery.GetInstalledPrinters().ToArray();
+
+        PrintersComboBox.ItemsSource = _printers;
+
+        if (_printers.Length > 0)
+        {
+            PrintersComboBox.SelectedIndex = 0;
+        }
+
+        BackButton.IsEnabled = false;
+        UpdateStepUi();
+    }
+
+    public PrintSettings ResultSettings => _settings;
+
+    public static async Task<bool> EnsureConfiguredAsync(Window owner, CancellationToken cancellationToken)
+    {
+        var settings = PrintSettingsStore.TryLoad();
+        if (settings is not null && settings.IsComplete)
+        {
+            return true;
+        }
+
+        var window = new PrinterSetupWindow(settings ?? new PrintSettings())
+        {
+            Owner = owner
+        };
+
+        var dialogResult = window.ShowDialog();
+        if (dialogResult != true)
+        {
+            return false;
+        }
+
+        await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
+        return true;
+    }
+
+    private void OnBackClick(object sender, RoutedEventArgs e)
+    {
+        if (_stepIndex <= 0)
+        {
+            return;
+        }
+
+        _stepIndex--;
+        UpdateStepUi();
+    }
+
+    private void OnNextClick(object sender, RoutedEventArgs e)
+    {
+        ValidationText.Visibility = Visibility.Collapsed;
+
+        var selected = PrintersComboBox.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(selected))
+        {
+            ValidationText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        if (_stepIndex == 0)
+        {
+            _settings.EndLabelPrinterName = selected;
+            _stepIndex = 1;
+            UpdateStepUi();
+            return;
+        }
+
+        _settings.StuffingSheetPrinterName = selected;
+
+        if (_settings.EndLabelCopies <= 0)
+        {
+            _settings.EndLabelCopies = 2;
+        }
+
+        if (_settings.StuffingSheetCopies <= 0)
+        {
+            _settings.StuffingSheetCopies = 1;
+        }
+
+        DialogResult = true;
+        Close();
+    }
+
+    private void UpdateStepUi()
+    {
+        if (_stepIndex == 0)
+        {
+            StepText.Text = "Шаг 1 из 2";
+            TitleText.Text = "Выбери принтер для торцевых этикеток";
+            BackButton.IsEnabled = false;
+            NextButton.Content = "Далее";
+
+            if (!string.IsNullOrWhiteSpace(_settings.EndLabelPrinterName))
+            {
+                PrintersComboBox.SelectedItem = _settings.EndLabelPrinterName;
+            }
+
+            return;
+        }
+
+        StepText.Text = "Шаг 2 из 2";
+        TitleText.Text = "Выбери принтер для листов сброса";
+        BackButton.IsEnabled = true;
+        NextButton.Content = "Готово";
+
+        if (!string.IsNullOrWhiteSpace(_settings.StuffingSheetPrinterName))
+        {
+            PrintersComboBox.SelectedItem = _settings.StuffingSheetPrinterName;
+        }
+    }
+}

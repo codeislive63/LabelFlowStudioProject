@@ -1,12 +1,19 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Commands;
+using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using System.Collections.ObjectModel;
-using System.Windows.Threading;
+using System.Drawing.Printing;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -36,8 +43,9 @@ public sealed class MainViewModel : ViewModelBase
 
     private string _lastProcessedTenam = string.Empty;
 
-    private bool _isEndLabelQuickMode;
-    private bool _isStuffingSheetQuickMode;
+    // Защита от двойного скана одного и того же TENAM подряд
+    private string _lastScannedTenam = string.Empty;
+    private DateTime _lastScannedAtUtc;
 
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
@@ -64,26 +72,6 @@ public sealed class MainViewModel : ViewModelBase
     public AsyncCommand LoadRecordsCommand { get; }
     public AsyncCommand OpenEndLabelPreviewCommand { get; }
     public AsyncCommand OpenStuffingSheetPreviewCommand { get; }
-
-    /// <summary>
-    /// Если true — кнопка "Торцевая этикетка" печатает сразу на Zebra.
-    /// Если Zebra недоступна — открываем выбор принтера.
-    /// </summary>
-    public bool IsEndLabelQuickMode
-    {
-        get => _isEndLabelQuickMode;
-        set => SetProperty(ref _isEndLabelQuickMode, value);
-    }
-
-    /// <summary>
-    /// Если true — кнопка "Лист сброса" печатает сразу на Kyocera.
-    /// Если Kyocera недоступна — открываем выбор принтера.
-    /// </summary>
-    public bool IsStuffingSheetQuickMode
-    {
-        get => _isStuffingSheetQuickMode;
-        set => SetProperty(ref _isStuffingSheetQuickMode, value);
-    }
 
     public string Tenam
     {
@@ -138,6 +126,16 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
+        // Если тот же TENAM пришёл подряд (часто бывает двойной Enter/дребезг сканера) – игнорируем
+        var nowUtc = DateTime.UtcNow;
+        if (digitsOnly == _lastScannedTenam && (nowUtc - _lastScannedAtUtc) < TimeSpan.FromSeconds(2))
+        {
+            return;
+        }
+
+        _lastScannedTenam = digitsOnly;
+        _lastScannedAtUtc = nowUtc;
+
         _ = RunOnUiThreadAsync(() =>
         {
             if (IsBusy)
@@ -182,6 +180,8 @@ public sealed class MainViewModel : ViewModelBase
 
         await Task.Yield();
 
+        BoxProcessingResponse? response = null;
+
         try
         {
             var request = new BoxProcessingRequest(
@@ -190,7 +190,7 @@ public sealed class MainViewModel : ViewModelBase
                 ShouldPrintEndLabels: true
             );
 
-            var response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
+            response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
 
             await RunOnUiThreadAsync(() =>
             {
@@ -230,6 +230,15 @@ public sealed class MainViewModel : ViewModelBase
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
                 OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
             });
+
+            // Быстрая печать теперь только в режиме Automatic (скан + Enter)
+            if (requestMode == WorkMode.Automatic && response is not null)
+            {
+                await RunOnUiThreadAsync(async () =>
+                {
+                    await TryAutoPrintAsync(response, tenamSnapshot);
+                });
+            }
         }
         catch (Exception exception)
         {
@@ -257,6 +266,44 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam)
+    {
+        // В fast-режиме никаких попапов, только статус
+        var settings = Printing.PrintSettingsStore.LoadOrDefault();
+
+        if (!settings.IsComplete)
+        {
+            StatusMessage = "Не настроены принтеры для быстрой печати";
+            return;
+        }
+
+        // Торцевая этикетка печатается только при Success
+        if (response.Status == BoxProcessingStatus.Success)
+        {
+            StatusMessage = "Печать торцевой этикетки";
+            var okEndLabel = await PrintEndLabelSilentAsync(response, tenam, settings.EndLabelPrinterName, settings.EndLabelCopies);
+            if (!okEndLabel)
+            {
+                StatusMessage = "Не удалось напечатать торцевую этикетку";
+                return;
+            }
+        }
+
+        // Лист сброса печатаем если вообще есть записи (как и превью-логика)
+        if (response.Records.Count > 0)
+        {
+            StatusMessage = "Печать листа сброса";
+            var okSheet = await PrintStuffingSheetSilentAsync(response, tenam, settings.StuffingSheetPrinterName, settings.StuffingSheetCopies);
+            if (!okSheet)
+            {
+                StatusMessage = "Не удалось напечатать лист сброса";
+                return;
+            }
+        }
+
+        StatusMessage = "Отправлено на печать";
+    }
+
     private bool CanOpenEndLabelPreview()
     {
         if (IsBusy)
@@ -275,18 +322,13 @@ public sealed class MainViewModel : ViewModelBase
     private async Task OpenEndLabelPreviewAsync()
     {
         var response = _lastSuccessfulResponse;
+
         if (response is null)
         {
             return;
         }
 
         var tenam = _lastSuccessfulTenam;
-
-        if (IsEndLabelQuickMode)
-        {
-            await PrintEndLabelQuickAsync(response, tenam);
-            return;
-        }
 
         await RunOnUiThreadAsync(() =>
         {
@@ -297,7 +339,7 @@ public sealed class MainViewModel : ViewModelBase
             {
                 Owner = System.Windows.Application.Current?.MainWindow,
                 ShowInTaskbar = true,
-                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
             window.Closed += (_, _) => _endLabelPreviewWindow = null;
@@ -307,46 +349,6 @@ public sealed class MainViewModel : ViewModelBase
             window.Show();
             window.Activate();
         });
-    }
-
-    private async Task PrintEndLabelQuickAsync(BoxProcessingResponse response, string tenam)
-    {
-        await RunOnUiThreadAsync(() =>
-        {
-            IsBusy = true;
-            StatusMessage = "Подготовка торцевой этикетки к печати";
-        });
-
-        await Task.Yield();
-
-        try
-        {
-            var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
-            var html = EndLabelHtmlTemplateRenderer.Render(templateText, response, tenam);
-
-            var result = await EndLabelQuickPrinter.PrintHtmlAsync(
-                html,
-                owner: System.Windows.Application.Current?.MainWindow,
-                cancellationToken: CancellationToken.None);
-
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = result switch
-                {
-                    EndLabelQuickPrintResult.PrintedToPreferred => "Торцевая этикетка отправлена на печать (Zebra)",
-                    EndLabelQuickPrintResult.PrintedToSelected => "Торцевая этикетка отправлена на печать",
-                    EndLabelQuickPrintResult.Cancelled => "Печать торцевой этикетки отменена",
-                    _ => "Не удалось напечатать торцевую этикетку"
-                };
-            });
-        }
-        finally
-        {
-            await RunOnUiThreadAsync(() =>
-            {
-                IsBusy = false;
-            });
-        }
     }
 
     private bool CanOpenStuffingSheetPreview()
@@ -367,18 +369,13 @@ public sealed class MainViewModel : ViewModelBase
     private async Task OpenStuffingSheetPreviewAsync()
     {
         var response = _lastLoadedResponse;
+
         if (response is null)
         {
             return;
         }
 
         var tenam = _lastLoadedTenam;
-
-        if (IsStuffingSheetQuickMode)
-        {
-            await PrintStuffingSheetQuickAsync(response, tenam);
-            return;
-        }
 
         await RunOnUiThreadAsync(() =>
         {
@@ -389,7 +386,7 @@ public sealed class MainViewModel : ViewModelBase
             {
                 Owner = System.Windows.Application.Current?.MainWindow,
                 ShowInTaskbar = true,
-                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
             window.Closed += (_, _) => _stuffingSheetPreviewWindow = null;
@@ -401,53 +398,77 @@ public sealed class MainViewModel : ViewModelBase
         });
     }
 
-    private async Task PrintStuffingSheetQuickAsync(BoxProcessingResponse response, string tenam)
+    private static async Task<bool> PrintEndLabelSilentAsync(
+        BoxProcessingResponse response,
+        string tenam,
+        string printerName,
+        int copies)
     {
-        await RunOnUiThreadAsync(() =>
+        if (string.IsNullOrWhiteSpace(printerName))
         {
-            IsBusy = true;
-            StatusMessage = "Подготовка листа сброса к печати";
-        });
-
-        await Task.Yield();
-
-        try
-        {
-            string html;
-
-            if (!HasWeight(response))
-            {
-                html = await EmptyPageTemplateStore.LoadOrCreateAsync(CancellationToken.None);
-            }
-            else
-            {
-                var template = await StuffingSheetTemplateStore.LoadOrCreateAsync(CancellationToken.None);
-                html = StuffingSheetHtmlTemplateRenderer.Render(template, response, tenam);
-            }
-
-            var result = await StuffingSheetQuickPrinter.PrintHtmlAsync(
-                html,
-                owner: System.Windows.Application.Current?.MainWindow,
-                cancellationToken: CancellationToken.None);
-
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = result switch
-                {
-                    StuffingSheetQuickPrintResult.PrintedToPreferred => "Лист сброса отправлен на печать (Kyocera)",
-                    StuffingSheetQuickPrintResult.PrintedToSelected => "Лист сброса отправлен на печать",
-                    StuffingSheetQuickPrintResult.Cancelled => "Печать листа сброса отменена",
-                    _ => "Не удалось напечатать лист сброса"
-                };
-            });
+            return false;
         }
-        finally
+
+        if (!Printing.PrinterDiscovery.IsPrinterInstalled(printerName))
         {
-            await RunOnUiThreadAsync(() =>
-            {
-                IsBusy = false;
-            });
+            return false;
         }
+
+        if (copies <= 0)
+        {
+            copies = 1;
+        }
+
+        var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+        var html = EndLabelHtmlTemplateRenderer.Render(templateText, response, tenam);
+
+        return await SilentHtmlPrinter.PrintHtmlAsync(
+            html: html,
+            printerName: printerName,
+            copies: copies,
+            owner: System.Windows.Application.Current?.MainWindow,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private static async Task<bool> PrintStuffingSheetSilentAsync(
+        BoxProcessingResponse response,
+        string tenam,
+        string printerName,
+        int copies)
+    {
+        if (string.IsNullOrWhiteSpace(printerName))
+        {
+            return false;
+        }
+
+        if (!Printing.PrinterDiscovery.IsPrinterInstalled(printerName))
+        {
+            return false;
+        }
+
+        if (copies <= 0)
+        {
+            copies = 1;
+        }
+
+        string html;
+
+        if (!HasWeight(response))
+        {
+            html = await EmptyPageTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+        }
+        else
+        {
+            var template = await StuffingSheetTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+            html = StuffingSheetHtmlTemplateRenderer.Render(template, response, tenam);
+        }
+
+        return await SilentHtmlPrinter.PrintHtmlAsync(
+            html: html,
+            printerName: printerName,
+            copies: copies,
+            owner: System.Windows.Application.Current?.MainWindow,
+            cancellationToken: CancellationToken.None);
     }
 
     private static bool HasWeight(BoxProcessingResponse response)
@@ -548,11 +569,203 @@ public sealed class MainViewModel : ViewModelBase
         return dispatcher.InvokeAsync(action).Task;
     }
 
+    private static Task RunOnUiThreadAsync(Func<Task> action)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            return action();
+        }
+
+        return dispatcher.InvokeAsync(action).Task.Unwrap();
+    }
+
     private void HandleCommandException(Exception exception)
     {
         _ = RunOnUiThreadAsync(() =>
         {
             StatusMessage = exception.Message;
         });
+    }
+}
+
+internal static class SilentHtmlPrinter
+{
+    public static async Task<bool> PrintHtmlAsync(
+        string html,
+        string printerName,
+        int copies,
+        Window? owner,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(printerName))
+        {
+            return false;
+        }
+
+        if (copies <= 0)
+        {
+            copies = 1;
+        }
+
+        WebView2PrintHostWindow? hostWindow = null;
+
+        try
+        {
+            hostWindow = new WebView2PrintHostWindow
+            {
+                Owner = owner
+            };
+
+            hostWindow.Show();
+
+            await hostWindow.EnsureInitializedAsync(cancellationToken);
+            await hostWindow.NavigateToStringAsync(html, cancellationToken);
+
+            return await hostWindow.TryPrintToPrinterAsync(printerName, copies, cancellationToken);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                hostWindow?.Close();
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private sealed class WebView2PrintHostWindow : Window
+    {
+        private readonly WebView2 _webView;
+
+        public WebView2PrintHostWindow()
+        {
+            Width = 1;
+            Height = 1;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            ShowInTaskbar = false;
+            ShowActivated = false;
+            AllowsTransparency = true;
+            Opacity = 0;
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = -10000;
+            Top = -10000;
+
+            _webView = new WebView2();
+            Content = _webView;
+        }
+
+        public async Task EnsureInitializedAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_webView.CoreWebView2 is not null)
+            {
+                return;
+            }
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var userDataFolder = Path.Combine(
+                localAppData,
+                "LabelFlowStudio",
+                "WebView2",
+                $"pid-{Environment.ProcessId}"
+            );
+
+            Directory.CreateDirectory(userDataFolder);
+
+            var environment = await CoreWebView2Environment.CreateAsync(
+                browserExecutableFolder: null,
+                userDataFolder: userDataFolder,
+                options: null
+            );
+
+            await _webView.EnsureCoreWebView2Async(environment);
+
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        public async Task NavigateToStringAsync(string html, CancellationToken cancellationToken)
+        {
+            if (_webView.CoreWebView2 is null)
+            {
+                throw new InvalidOperationException("WebView2 is not initialized");
+            }
+
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            void Handler(object? sender, CoreWebView2NavigationCompletedEventArgs args)
+            {
+                _webView.NavigationCompleted -= Handler;
+                tcs.TrySetResult(args.IsSuccess);
+            }
+
+            _webView.NavigationCompleted += Handler;
+
+            using var reg = cancellationToken.Register(() =>
+            {
+                _webView.NavigationCompleted -= Handler;
+                tcs.TrySetCanceled(cancellationToken);
+            });
+
+            _webView.CoreWebView2.NavigateToString(html);
+
+            var ok = await tcs.Task;
+            if (!ok)
+            {
+                throw new InvalidOperationException("Не удалось отрендерить HTML в WebView2");
+            }
+
+            await Task.Delay(120, cancellationToken);
+        }
+
+        public async Task<bool> TryPrintToPrinterAsync(string printerName, int copies, CancellationToken cancellationToken)
+        {
+            if (_webView.CoreWebView2 is null)
+            {
+                return false;
+            }
+
+            if (!PrinterDiscovery.IsPrinterInstalled(printerName))
+            {
+                return false;
+            }
+
+            if (copies < 1)
+            {
+                copies = 1;
+            }
+
+            for (var i = 0; i < copies; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var settings = _webView.CoreWebView2.Environment.CreatePrintSettings();
+                settings.PrinterName = printerName;
+                settings.ShouldPrintBackgrounds = true;
+                settings.ShouldPrintHeaderAndFooter = false;
+
+                var status = await _webView.CoreWebView2.PrintAsync(settings);
+                if (status != CoreWebView2PrintStatus.Succeeded)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

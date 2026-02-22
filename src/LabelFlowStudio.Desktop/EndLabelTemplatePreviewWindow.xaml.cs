@@ -1,8 +1,9 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
-using Microsoft.Win32;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
+using Microsoft.Win32;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
@@ -836,16 +837,16 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 return;
             }
 
-            var didPrint = await TryPrintToPreferredPrinterAsync(PreviewWebView, CancellationToken.None);
+            var (didPrint, printerName) = await TryPrintToConfiguredPrinterAsync(PreviewWebView, CancellationToken.None);
 
-            if (!didPrint)
+            if (didPrint)
             {
-                PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
-                ShowToast("Открыто окно печати");
+                ShowToast($"Отправлено на принтер: {printerName}");
                 return;
             }
 
-            ShowToast("Печать отправлена");
+            PreviewWebView.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            ShowToast("Открыто окно печати");
         }
         catch (Exception exception)
         {
@@ -968,6 +969,44 @@ public partial class EndLabelTemplatePreviewWindow : Window
         };
 
         _toastTimer.Start();
+    }
+
+    private static async Task<(bool didPrint, string printerName)> TryPrintToConfiguredPrinterAsync(
+    WebView2 webView,
+    CancellationToken cancellationToken)
+    {
+        var settings = PrintSettingsStore.TryLoad();
+        var printerName = settings?.EndLabelPrinterName ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(printerName))
+        {
+            return (false, string.Empty);
+        }
+
+        if (!PrinterDiscovery.IsPrinterInstalled(printerName))
+        {
+            return (false, printerName);
+        }
+
+        var copies = settings?.EndLabelCopies ?? 2;
+        if (copies <= 0)
+        {
+            copies = 2;
+        }
+
+        for (var i = 0; i < copies; i++)
+        {
+            var printSettings = webView.CoreWebView2.Environment.CreatePrintSettings();
+            printSettings.ShouldPrintBackgrounds = true;
+            printSettings.ShouldPrintHeaderAndFooter = false;
+            printSettings.PrinterName = printerName;
+
+            await webView.CoreWebView2.PrintAsync(printSettings);
+
+            await Task.Delay(100, cancellationToken);
+        }
+
+        return (true, printerName);
     }
 
     private sealed record TemplateToken(string Label, string InsertText, string Detail);
