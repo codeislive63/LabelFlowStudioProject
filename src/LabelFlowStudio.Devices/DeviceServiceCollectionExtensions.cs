@@ -18,7 +18,7 @@ public static class DeviceServiceCollectionExtensions
                 "Devices:Scanner:PortName is required when Devices:Scanner:IsEnabled is true"
             );
 
-        var isScannerEnabled = configuration.GetValue<bool>($"{ScannerSection}:IsEnabled");
+        var isScannerEnabled = configuration.GetValue<bool?>($"{ScannerSection}:IsEnabled") ?? true;
 
         if (isScannerEnabled)
         {

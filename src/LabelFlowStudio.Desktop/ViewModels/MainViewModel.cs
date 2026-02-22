@@ -277,19 +277,7 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        // Торцевая этикетка печатается только при Success
-        if (response.Status == BoxProcessingStatus.Success)
-        {
-            StatusMessage = "Печать торцевой этикетки";
-            var okEndLabel = await PrintEndLabelSilentAsync(response, tenam, settings.EndLabelPrinterName, settings.EndLabelCopies);
-            if (!okEndLabel)
-            {
-                StatusMessage = "Не удалось напечатать торцевую этикетку";
-                return;
-            }
-        }
-
-        // Лист сброса печатаем если вообще есть записи (как и превью-логика)
+        // Сначала печатаем лист сброса (если есть записи), затем торцевую этикетку.
         if (response.Records.Count > 0)
         {
             StatusMessage = "Печать листа сброса";
@@ -297,6 +285,17 @@ public sealed class MainViewModel : ViewModelBase
             if (!okSheet)
             {
                 StatusMessage = "Не удалось напечатать лист сброса";
+                return;
+            }
+        }
+
+        if (response.Status == BoxProcessingStatus.Success)
+        {
+            StatusMessage = "Печать торцевой этикетки";
+            var okEndLabel = await PrintEndLabelSilentAsync(response, tenam, settings.EndLabelPrinterName, settings.EndLabelCopies);
+            if (!okEndLabel)
+            {
+                StatusMessage = "Не удалось напечатать торцевую этикетку";
                 return;
             }
         }
