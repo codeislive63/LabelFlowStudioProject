@@ -30,8 +30,6 @@ public sealed class MainViewModel : ViewModelBase
 
     private WorkMode _nextRequestMode = WorkMode.Manual;
     private WorkMode _currentWorkMode = WorkMode.Manual;
-    private string _automaticModeAnimationText = string.Empty;
-    private CancellationTokenSource? _automaticAnimationCts;
 
     private EndLabelTemplatePreviewWindow? _endLabelPreviewWindow;
     private StuffingSheetTemplatePreviewWindow? _stuffingSheetPreviewWindow;
@@ -61,9 +59,8 @@ public sealed class MainViewModel : ViewModelBase
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
         OpenStuffingSheetPreviewCommand = new AsyncCommand(OpenStuffingSheetPreviewAsync, CanOpenStuffingSheetPreview, HandleCommandException);
 
-        var settings = Printing.PrintSettingsStore.LoadOrDefault();
-        _currentWorkMode = settings.WorkMode;
-        UpdateAutomaticModeAnimation();
+        var settings = PrintSettingsStore.LoadOrDefault();
+        _currentWorkMode = settings?.WorkMode ?? WorkMode.Manual;
 
         StatusMessage = "Введите или отсканируйте TENAM и нажмите Enter";
 
@@ -131,15 +128,8 @@ public sealed class MainViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(IsAutomaticMode));
-            UpdateAutomaticModeAnimation();
             _ = SaveWorkModeAsync(value);
         }
-    }
-
-    public string AutomaticModeAnimationText
-    {
-        get => _automaticModeAnimationText;
-        private set => SetProperty(ref _automaticModeAnimationText, value);
     }
 
     public void ReceiveTenamFromScanner(string boxNumber)
@@ -184,64 +174,13 @@ public sealed class MainViewModel : ViewModelBase
     {
         try
         {
-            var settings = Printing.PrintSettingsStore.LoadOrDefault();
+            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
             settings.WorkMode = workMode;
-            await Printing.PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
+            await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
         }
         catch
         {
         }
-    }
-
-    private void UpdateAutomaticModeAnimation()
-    {
-        _automaticAnimationCts?.Cancel();
-        _automaticAnimationCts?.Dispose();
-        _automaticAnimationCts = null;
-
-        if (!IsAutomaticMode)
-        {
-            AutomaticModeAnimationText = string.Empty;
-            return;
-        }
-
-        var cts = new CancellationTokenSource();
-        _automaticAnimationCts = cts;
-
-        _ = Task.Run(async () =>
-        {
-            var frames = new[]
-            {
-                "Автоматический режим ·",
-                "Автоматический режим ··",
-                "Автоматический режим ···"
-            };
-
-            var index = 0;
-
-            while (!cts.Token.IsCancellationRequested)
-            {
-                var frame = frames[index % frames.Length];
-                index++;
-
-                await RunOnUiThreadAsync(() =>
-                {
-                    if (IsAutomaticMode)
-                    {
-                        AutomaticModeAnimationText = frame;
-                    }
-                });
-
-                try
-                {
-                    await Task.Delay(350, cts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-            }
-        }, cts.Token);
     }
 
     private bool CanLoadRecords()
@@ -325,10 +264,7 @@ public sealed class MainViewModel : ViewModelBase
             // Быстрая печать теперь только в режиме Automatic (скан + Enter)
             if (requestMode == WorkMode.Automatic && response is not null)
             {
-                await RunOnUiThreadAsync(async () =>
-                {
-                    await TryAutoPrintAsync(response, tenamSnapshot);
-                });
+                await RunOnUiThreadAsync(() => TryAutoPrintAsync(response, tenamSnapshot));
             }
         }
         catch (Exception exception)
@@ -360,9 +296,9 @@ public sealed class MainViewModel : ViewModelBase
     private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam)
     {
         // В fast-режиме никаких попапов, только статус
-        var settings = Printing.PrintSettingsStore.LoadOrDefault();
+        var settings = PrintSettingsStore.LoadOrDefault();
 
-        if (!settings.IsComplete)
+        if (settings is null || !settings.IsComplete)
         {
             StatusMessage = "Не настроены принтеры для быстрой печати";
             return;
@@ -499,7 +435,7 @@ public sealed class MainViewModel : ViewModelBase
             return false;
         }
 
-        if (!Printing.PrinterDiscovery.IsPrinterInstalled(printerName))
+        if (!PrinterDiscovery.IsPrinterInstalled(printerName))
         {
             return false;
         }
@@ -531,7 +467,7 @@ public sealed class MainViewModel : ViewModelBase
             return false;
         }
 
-        if (!Printing.PrinterDiscovery.IsPrinterInstalled(printerName))
+        if (!PrinterDiscovery.IsPrinterInstalled(printerName))
         {
             return false;
         }
