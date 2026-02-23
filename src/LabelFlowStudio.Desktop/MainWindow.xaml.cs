@@ -55,18 +55,6 @@ public partial class MainWindow : Window
         await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
     }
 
-    private void OnModeButtonClick(object sender, RoutedEventArgs e)
-    {
-        if (ModeButton.ContextMenu is null)
-        {
-            return;
-        }
-
-        ModeButton.ContextMenu.PlacementTarget = ModeButton;
-        ModeButton.ContextMenu.Placement = PlacementMode.Bottom;
-        ModeButton.ContextMenu.IsOpen = true;
-    }
-
     private void OnAutomaticModeMenuItemChecked(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)

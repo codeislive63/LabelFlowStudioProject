@@ -136,6 +136,12 @@
                                   Click="OnOpenPrintSettingsClick"/>
                     </MenuItem>
 
+                    <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
+                        <MenuItem Header="Автоматический режим"
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  Click="OnModeButtonClick"/>
+                    </MenuItem>
+
                 </Menu>
 
                 <!-- Drag zone -->
@@ -220,22 +226,6 @@
                     <Button Grid.Column="3"
                             Style="{StaticResource StuffingSheetButtonStyle}"
                             Command="{Binding OpenStuffingSheetPreviewCommand}" />
-                    <Button x:Name="ModeButton"
-                            Grid.Column="4"
-                            Style="{StaticResource ModeButtonStyle}"
-                            Click="OnModeButtonClick"
-                            Margin="10,0,0,0">
-                        <Button.ContextMenu>
-                            <ContextMenu x:Name="ModeContextMenu">
-                                <MenuItem Header="Автоматический режим"
-                                          IsCheckable="True"
-                                          IsChecked="{Binding IsAutomaticMode}"
-                                          Checked="OnAutomaticModeMenuItemChecked"
-                                          Unchecked="OnAutomaticModeMenuItemUnchecked"/>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
-
                 </Grid>
             </Border>
 
