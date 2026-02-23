@@ -16,6 +16,9 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _scanBufferTimer;
     private string _scanBuffer = string.Empty;
 
+    private const int MaxScannerInterKeyDelayMilliseconds = 60;
+    private DateTime _lastScanKeyAtUtc = DateTime.MinValue;
+
     public MainWindow(MainViewModel mainViewModel)
     {
         InitializeComponent();
@@ -150,12 +153,42 @@ public partial class MainWindow : Window
 
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        if (ShouldIgnoreGlobalScannerInput())
+        if (DataContext is not MainViewModel viewModel)
         {
             return;
         }
 
-        if (DataContext is MainViewModel viewModel && viewModel.IsBusy)
+        if (viewModel.IsBusy)
+        {
+            return;
+        }
+
+        if (viewModel.IsAutomaticMode)
+        {
+            if (string.IsNullOrWhiteSpace(e.Text) || !IsDigitsOnly(e.Text))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+
+            if (_lastScanKeyAtUtc != DateTime.MinValue
+                && (nowUtc - _lastScanKeyAtUtc) > TimeSpan.FromMilliseconds(MaxScannerInterKeyDelayMilliseconds))
+            {
+                ClearScanBuffer();
+                e.Handled = true;
+                return;
+            }
+
+            _lastScanKeyAtUtc = nowUtc;
+
+            AppendScanDigits(e.Text);
+            e.Handled = true;
+            return;
+        }
+
+        if (ShouldIgnoreGlobalScannerInput())
         {
             return;
         }
@@ -171,12 +204,42 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (ShouldIgnoreGlobalScannerInput())
+        if (DataContext is not MainViewModel viewModel)
         {
             return;
         }
 
-        if (DataContext is MainViewModel viewModel && viewModel.IsBusy)
+        if (viewModel.IsBusy)
+        {
+            return;
+        }
+
+        // В авто-режиме блокируем любые клавиши, кроме Enter (завершить скан)
+        if (viewModel.IsAutomaticMode)
+        {
+            if (e.Key != Key.Return && e.Key != Key.Enter)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_scanBuffer))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            viewModel.ReceiveTenamFromScanner(_scanBuffer);
+
+            ClearScanBuffer();
+            _lastScanKeyAtUtc = DateTime.MinValue;
+
+            e.Handled = true;
+            return;
+        }
+
+        // Ручной режим — старая логика
+        if (ShouldIgnoreGlobalScannerInput())
         {
             return;
         }
@@ -191,10 +254,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (DataContext is MainViewModel vm)
-        {
-            vm.ReceiveTenamFromScanner(_scanBuffer);
-        }
+        viewModel.ReceiveTenamFromScanner(_scanBuffer);
 
         ClearScanBuffer();
         e.Handled = true;
@@ -222,6 +282,7 @@ public partial class MainWindow : Window
     {
         _scanBufferTimer.Stop();
         ClearScanBuffer();
+        _lastScanKeyAtUtc = DateTime.MinValue;
     }
 
     private void ClearScanBuffer()
@@ -236,7 +297,7 @@ public partial class MainWindow : Window
 
     private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
     {
-        var grid = (DataGrid) sender;
+        var grid = (DataGrid)sender;
 
         grid.Dispatcher.InvokeAsync(() =>
         {
