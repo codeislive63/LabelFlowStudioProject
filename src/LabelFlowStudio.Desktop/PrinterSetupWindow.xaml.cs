@@ -32,7 +32,7 @@ public partial class PrinterSetupWindow : Window
     {
         var settings = PrintSettingsStore.LoadOrDefault();
 
-        if (!settings.IsComplete)
+        if (settings is not null && settings.IsComplete)
         {
             var window = new PrinterSetupWindow(settings)
             {
@@ -48,7 +48,11 @@ public partial class PrinterSetupWindow : Window
 
             await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
         }
-
+        else
+        {
+            return false;
+        }
+        
         return true;
     }
 
