@@ -95,6 +95,12 @@
             <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса" />
         </Style>
 
+        <Style x:Key="ModeButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
+            <Setter Property="Content" Value="Режим работы" />
+            <Setter Property="ToolTip" Value="Выбрать режим работы" />
+        </Style>
 
     </Window.Resources>
 
@@ -133,10 +139,7 @@
                     <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
                         <MenuItem Header="Автоматический режим"
                                   Style="{StaticResource VsMenuDropItemStyle}"
-                                  IsCheckable="True"
-                                  IsChecked="{Binding IsAutomaticMode}"
-                                  Checked="OnAutomaticModeMenuItemChecked"
-                                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
+                                  Click="OnModeButtonClick"/>
                     </MenuItem>
 
                 </Menu>
@@ -188,6 +191,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
