@@ -95,6 +95,7 @@
             <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса" />
         </Style>
 
+
     </Window.Resources>
 
     <Grid>
@@ -127,6 +128,15 @@
                         <MenuItem Header="Настройки печати..."
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   Click="OnOpenPrintSettingsClick"/>
+                    </MenuItem>
+
+                    <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
+                        <MenuItem Header="Автоматический режим"
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  IsCheckable="True"
+                                  IsChecked="{Binding IsAutomaticMode}"
+                                  Checked="OnAutomaticModeMenuItemChecked"
+                                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
                     </MenuItem>
 
                 </Menu>
@@ -242,6 +252,25 @@
                                    Text="{Binding StatusMessage}"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Margin="0,28,0,0"
+                                   Text="{Binding AutomaticModeAnimationText}"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.9"
+                                   VerticalAlignment="Top">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
 
                     <!-- Центр: последний успешный TENAM -->
