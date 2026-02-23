@@ -1,4 +1,5 @@
-﻿using LabelFlowStudio.Desktop.Printing;
+﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -52,6 +53,34 @@ public partial class MainWindow : Window
     private async void OnOpenPrintSettingsClick(object sender, RoutedEventArgs e)
     {
         await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
+    }
+
+    private void OnModeButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (ModeButton.ContextMenu is null)
+        {
+            return;
+        }
+
+        ModeButton.ContextMenu.PlacementTarget = ModeButton;
+        ModeButton.ContextMenu.Placement = PlacementMode.Bottom;
+        ModeButton.ContextMenu.IsOpen = true;
+    }
+
+    private void OnAutomaticModeMenuItemChecked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.CurrentWorkMode = WorkMode.Automatic;
+        }
+    }
+
+    private void OnAutomaticModeMenuItemUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.CurrentWorkMode = WorkMode.Manual;
+        }
     }
 
     private void FocusTenamSoon()

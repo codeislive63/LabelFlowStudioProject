@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using LabelFlowStudio.Application.BoxProcessing;
+using System.Text.Json.Serialization;
 
 namespace LabelFlowStudio.Desktop.Printing;
 
@@ -9,6 +10,8 @@ public sealed class PrintSettings
 
     public int EndLabelCopies { get; set; } = 2;
     public int StuffingSheetCopies { get; set; } = 1;
+
+    public WorkMode WorkMode { get; set; } = WorkMode.Manual;
 
     [JsonIgnore]
     public bool IsComplete =>

@@ -48,167 +48,18 @@
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="BackButton"
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
                             Style="{DynamicResource SecondaryButtonStyle}"
-                            MinWidth="110"
-                            Margin="0,0,8,0"
+                            MinWidth="114"
+                            MinHeight="38"
+                            Padding="16,8"
+                            Margin="0,0,10,0"
                             Content="Назад"
                             Click="OnBackClick"/>
                     <Button x:Name="NextButton"
                             Style="{DynamicResource PrimaryButtonStyle}"
-                            MinWidth="110"
+                            MinWidth="114"
+                            MinHeight="38"
+                            Padding="16,8"
                             Content="Далее"
                             Foreground="White"
                             Click="OnNextClick"/>
