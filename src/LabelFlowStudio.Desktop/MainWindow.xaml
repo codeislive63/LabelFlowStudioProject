@@ -95,6 +95,13 @@
             <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса" />
         </Style>
 
+        <Style x:Key="ModeButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
+            <Setter Property="Content" Value="Режим работы" />
+            <Setter Property="ToolTip" Value="Выбрать режим работы" />
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -180,6 +187,7 @@
                         <ColumnDefinition Width="260"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -212,6 +220,22 @@
                     <Button Grid.Column="3"
                             Style="{StaticResource StuffingSheetButtonStyle}"
                             Command="{Binding OpenStuffingSheetPreviewCommand}" />
+                    <Button x:Name="ModeButton"
+                            Grid.Column="4"
+                            Style="{StaticResource ModeButtonStyle}"
+                            Click="OnModeButtonClick"
+                            Margin="10,0,0,0">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="ModeContextMenu">
+                                <MenuItem Header="Автоматический режим"
+                                          IsCheckable="True"
+                                          IsChecked="{Binding IsAutomaticMode}"
+                                          Checked="OnAutomaticModeMenuItemChecked"
+                                          Unchecked="OnAutomaticModeMenuItemUnchecked"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+
                 </Grid>
             </Border>
 
@@ -242,6 +266,25 @@
                                    Text="{Binding StatusMessage}"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Margin="0,28,0,0"
+                                   Text="{Binding AutomaticModeAnimationText}"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   FontWeight="SemiBold"
+                                   Opacity="0.9"
+                                   VerticalAlignment="Top">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
 
                     <!-- Центр: последний успешный TENAM -->

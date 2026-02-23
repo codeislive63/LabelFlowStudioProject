@@ -32,9 +32,9 @@ public partial class PrinterSetupWindow : Window
     {
         var settings = PrintSettingsStore.LoadOrDefault();
 
-        if (settings is not null && settings.IsComplete)
+        if (!settings.IsComplete)
         {
-            var window = new PrinterSetupWindow(settings ?? new PrintSettings())
+            var window = new PrinterSetupWindow(settings)
             {
                 Owner = owner
             };
@@ -103,7 +103,7 @@ public partial class PrinterSetupWindow : Window
         if (_stepIndex == 0)
         {
             StepText.Text = "Шаг 1 из 2";
-            TitleText.Text = "Выбери принтер для торцевых этикеток";
+            TitleText.Text = "Выберите принтер для торцевых этикеток";
             BackButton.IsEnabled = false;
             NextButton.Content = "Далее";
 
@@ -116,7 +116,7 @@ public partial class PrinterSetupWindow : Window
         }
 
         StepText.Text = "Шаг 2 из 2";
-        TitleText.Text = "Выбери принтер для листов сброса";
+        TitleText.Text = "Выберите принтер для листов сброса";
         BackButton.IsEnabled = true;
         NextButton.Content = "Готово";
 

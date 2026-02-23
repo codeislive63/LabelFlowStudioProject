@@ -29,6 +29,9 @@ public sealed class MainViewModel : ViewModelBase
     private string _lastLoadedTenam = string.Empty;
 
     private WorkMode _nextRequestMode = WorkMode.Manual;
+    private WorkMode _currentWorkMode = WorkMode.Manual;
+    private string _automaticModeAnimationText = string.Empty;
+    private CancellationTokenSource? _automaticAnimationCts;
 
     private EndLabelTemplatePreviewWindow? _endLabelPreviewWindow;
     private StuffingSheetTemplatePreviewWindow? _stuffingSheetPreviewWindow;
@@ -57,6 +60,10 @@ public sealed class MainViewModel : ViewModelBase
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
         OpenStuffingSheetPreviewCommand = new AsyncCommand(OpenStuffingSheetPreviewAsync, CanOpenStuffingSheetPreview, HandleCommandException);
+
+        var settings = Printing.PrintSettingsStore.LoadOrDefault();
+        _currentWorkMode = settings.WorkMode;
+        UpdateAutomaticModeAnimation();
 
         StatusMessage = "Введите или отсканируйте TENAM и нажмите Enter";
 
@@ -111,6 +118,30 @@ public sealed class MainViewModel : ViewModelBase
         private set => SetProperty(ref _lastProcessedTenam, value);
     }
 
+    public bool IsAutomaticMode => CurrentWorkMode == WorkMode.Automatic;
+
+    public WorkMode CurrentWorkMode
+    {
+        get => _currentWorkMode;
+        set
+        {
+            if (!SetProperty(ref _currentWorkMode, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsAutomaticMode));
+            UpdateAutomaticModeAnimation();
+            _ = SaveWorkModeAsync(value);
+        }
+    }
+
+    public string AutomaticModeAnimationText
+    {
+        get => _automaticModeAnimationText;
+        private set => SetProperty(ref _automaticModeAnimationText, value);
+    }
+
     public void ReceiveTenamFromScanner(string boxNumber)
     {
         var digitsOnly = new string((boxNumber ?? string.Empty)
@@ -139,7 +170,7 @@ public sealed class MainViewModel : ViewModelBase
                 return;
             }
 
-            _nextRequestMode = WorkMode.Automatic;
+            _nextRequestMode = CurrentWorkMode == WorkMode.Automatic ? WorkMode.Automatic : WorkMode.Manual;
             Tenam = digitsOnly;
 
             if (LoadRecordsCommand.CanExecute(null))
@@ -147,6 +178,70 @@ public sealed class MainViewModel : ViewModelBase
                 LoadRecordsCommand.Execute(null);
             }
         });
+    }
+
+    private async Task SaveWorkModeAsync(WorkMode workMode)
+    {
+        try
+        {
+            var settings = Printing.PrintSettingsStore.LoadOrDefault();
+            settings.WorkMode = workMode;
+            await Printing.PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
+        }
+        catch
+        {
+        }
+    }
+
+    private void UpdateAutomaticModeAnimation()
+    {
+        _automaticAnimationCts?.Cancel();
+        _automaticAnimationCts?.Dispose();
+        _automaticAnimationCts = null;
+
+        if (!IsAutomaticMode)
+        {
+            AutomaticModeAnimationText = string.Empty;
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _automaticAnimationCts = cts;
+
+        _ = Task.Run(async () =>
+        {
+            var frames = new[]
+            {
+                "Автоматический режим ·",
+                "Автоматический режим ··",
+                "Автоматический режим ···"
+            };
+
+            var index = 0;
+
+            while (!cts.Token.IsCancellationRequested)
+            {
+                var frame = frames[index % frames.Length];
+                index++;
+
+                await RunOnUiThreadAsync(() =>
+                {
+                    if (IsAutomaticMode)
+                    {
+                        AutomaticModeAnimationText = frame;
+                    }
+                });
+
+                try
+                {
+                    await Task.Delay(350, cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }, cts.Token);
     }
 
     private bool CanLoadRecords()
