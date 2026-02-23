@@ -9,10 +9,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System.Collections.ObjectModel;
-using System.Drawing.Printing;
 using System.IO;
-using System.Text;
-using System.Text.Json;
 using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
@@ -43,7 +40,6 @@ public sealed class MainViewModel : ViewModelBase
 
     private string _lastProcessedTenam = string.Empty;
 
-    // Защита от двойного скана одного и того же TENAM подряд
     private string _lastScannedTenam = string.Empty;
     private DateTime _lastScannedAtUtc;
 
@@ -126,8 +122,8 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        // Если тот же TENAM пришёл подряд (часто бывает двойной Enter/дребезг сканера) – игнорируем
         var nowUtc = DateTime.UtcNow;
+
         if (digitsOnly == _lastScannedTenam && (nowUtc - _lastScannedAtUtc) < TimeSpan.FromSeconds(2))
         {
             return;

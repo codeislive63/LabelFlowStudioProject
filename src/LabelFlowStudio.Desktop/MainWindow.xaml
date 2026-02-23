@@ -125,8 +125,8 @@
 
                     <MenuItem Header="Печать" Style="{StaticResource VsMenuItemStyle}">
                         <MenuItem Header="Настройки печати..."
-              Style="{StaticResource VsMenuDropItemStyle}"
-              Click="OnOpenPrintSettingsClick"/>
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  Click="OnOpenPrintSettingsClick"/>
                     </MenuItem>
 
                 </Menu>

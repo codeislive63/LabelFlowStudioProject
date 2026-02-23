@@ -26,12 +26,12 @@
                                FontSize="20"
                                FontWeight="SemiBold"
                                Margin="0,6,0,0"
-                               Text="Выбери принтер для торцевых этикеток"/>
+                               Text="Выберите принтер для торцевых этикеток"/>
                     <TextBlock x:Name="SubtitleText"
                                FontSize="13"
                                Opacity="0.85"
                                Margin="0,6,0,0"
-                               Text="Потом это можно поменять в настройках печати"/>
+                               Text="*Этот параметр можно поменять в настройках печати"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,12">

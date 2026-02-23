@@ -30,24 +30,25 @@ public partial class PrinterSetupWindow : Window
 
     public static async Task<bool> EnsureConfiguredAsync(Window owner, CancellationToken cancellationToken)
     {
-        var settings = PrintSettingsStore.TryLoad();
+        var settings = PrintSettingsStore.LoadOrDefault();
+
         if (settings is not null && settings.IsComplete)
         {
-            return true;
+            var window = new PrinterSetupWindow(settings ?? new PrintSettings())
+            {
+                Owner = owner
+            };
+
+            var dialogResult = window.ShowDialog();
+
+            if (dialogResult != true)
+            {
+                return false;
+            }
+
+            await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
         }
 
-        var window = new PrinterSetupWindow(settings ?? new PrintSettings())
-        {
-            Owner = owner
-        };
-
-        var dialogResult = window.ShowDialog();
-        if (dialogResult != true)
-        {
-            return false;
-        }
-
-        await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
         return true;
     }
 
