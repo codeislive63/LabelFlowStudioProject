@@ -250,76 +250,7 @@
                         <TextBlock Grid.Column="1"
                                    Text="{Binding StatusMessage}"
                                    TextWrapping="Wrap"
-                                   VerticalAlignment="Center">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                        </TextBlock>
-
-                        <!-- Автоматический режим: спиннер как у "Загрузка" -->
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center">
-
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-
-                            <Grid Width="18" Height="18" Margin="0,1,8,0">
-                                <Ellipse Width="16"
-                                         Height="16"
-                                         Stroke="{DynamicResource SurfaceBorderBrush}"
-                                         StrokeThickness="3"
-                                         Opacity="0.55"/>
-
-                                <Path x:Name="AutoModeSpinnerArc"
-                                      Data="M 9,1 A 8,8 0 0 1 17,9"
-                                      Stroke="{DynamicResource AccentBrush}"
-                                      StrokeThickness="3"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      RenderTransformOrigin="0.5,0.5">
-                                    <Path.RenderTransform>
-                                        <RotateTransform Angle="0"/>
-                                    </Path.RenderTransform>
-                                </Path>
-
-                                <Grid.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation Storyboard.TargetName="AutoModeSpinnerArc"
-                                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                 From="0"
-                                                                 To="360"
-                                                                 Duration="0:0:0.9"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Grid.Triggers>
-                            </Grid>
-
-                            <TextBlock Text="Автоматический режим"
-                                       Foreground="{DynamicResource AccentBrush}"
-                                       FontWeight="SemiBold"
-                                       Opacity="0.9"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
+                                   VerticalAlignment="Center"/>
                     </Grid>
 
                     <!-- Центр: последний успешный TENAM -->
@@ -551,7 +482,7 @@
                 </Grid>
             </Border>
 
-            <!-- Busy overlay -->
+            <!-- Busy overlay (loading) -->
             <Grid Grid.RowSpan="3" Panel.ZIndex="100" IsHitTestVisible="True">
                 <Grid.Style>
                     <Style TargetType="{x:Type Grid}">
@@ -606,6 +537,67 @@
                         </Grid>
 
                         <TextBlock Text="{Binding StatusMessage}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Automatic mode overlay (blocking, like loading) -->
+            <Grid Grid.RowSpan="3" Panel.ZIndex="110" IsHitTestVisible="True">
+                <Grid.Style>
+                    <Style TargetType="{x:Type Grid}">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Border Background="{DynamicResource AppBackgroundBrush}" Opacity="0.65"/>
+
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="18"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid Width="28" Height="28" Margin="0,0,12,0">
+                            <Ellipse Width="26"
+                                     Height="26"
+                                     Stroke="{DynamicResource SurfaceBorderBrush}"
+                                     StrokeThickness="4"
+                                     Opacity="0.55"/>
+
+                            <Path x:Name="AutoModeSpinnerArc"
+                                  Data="M 13,1 A 12,12 0 0 1 25,13"
+                                  Stroke="{DynamicResource AccentBrush}"
+                                  StrokeThickness="4"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Path.RenderTransform>
+                            </Path>
+
+                            <Grid.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetName="AutoModeSpinnerArc"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                             From="0"
+                                                             To="360"
+                                                             Duration="0:0:0.9"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </Grid.Triggers>
+                        </Grid>
+
+                        <TextBlock Text="Автоматический режим"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
