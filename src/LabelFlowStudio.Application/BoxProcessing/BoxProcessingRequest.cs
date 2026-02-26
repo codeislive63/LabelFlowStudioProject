@@ -3,5 +3,6 @@
 public sealed record BoxProcessingRequest(
     string Tenam,
     WorkMode Mode,
-    bool ShouldPrintEndLabels
+    bool ShouldPrintEndLabels,
+    bool ShouldPrintStuffingSheet
 );

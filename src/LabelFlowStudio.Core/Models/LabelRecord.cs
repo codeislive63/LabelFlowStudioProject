@@ -2,22 +2,22 @@
 
 public sealed class LabelRecord
 {
-    public string Tenam { get; set; } = string.Empty;
-    public string Artnr { get; set; } = string.Empty;
-    public string Artbez { get; set; } = string.Empty;
-    public string Bstchgnam5 { get; set; } = string.Empty;
+    public string? Tenam { get; set; }
+    public string? Artnr { get; set; }
+    public string? Artbez { get; set; }
+    public string? Bstchgnam5 { get; set; }
     public decimal? Bstmg { get; set; }
-    public string Aufid { get; set; } = string.Empty;
-    public string Gpplz { get; set; } = string.Empty;
-    public string Gpbez { get; set; } = string.Empty;
-    public string Lndnam { get; set; } = string.Empty;
-    public string Gport1 { get; set; } = string.Empty;
-    public string Gpstrasse { get; set; } = string.Empty;
-    public string Lfakdnr { get; set; } = string.Empty;
-    public string Adres { get; set; } = string.Empty;
+    public string? Aufid { get; set; }
+    public string? Gpplz { get; set; }
+    public string? Gpbez { get; set; }
+    public string? Lndnam { get; set; }
+    public string? Gport1 { get; set; }
+    public string? Gpstrasse { get; set; }
+    public string? Lfakdnr { get; set; }
+    public string? Adres { get; set; }
     public decimal? Brutto { get; set; }
     public decimal? Tesortnr { get; set; }
-    public string Lfaempfkdnr { get; set; } = string.Empty;
+    public string? Lfaempfkdnr { get; set; }
     public string? Market { get; set; }
     public decimal? CountBst { get; set; }
     public decimal? SumBst { get; set; }

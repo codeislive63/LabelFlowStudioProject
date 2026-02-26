@@ -13,6 +13,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -32,6 +33,19 @@
                                Opacity="0.85"
                                Margin="0,6,0,0"
                                Text="*Этот параметр можно поменять в настройках печати"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+                    <CheckBox x:Name="PrintEndLabelCheckBox"
+                              Content="Печатать торцевую этикетку"
+                              VerticalAlignment="Center"
+                              Margin="0,0,18,0"
+                              Checked="OnPrintEndLabelChecked"
+                              Unchecked="OnPrintEndLabelChecked"/>
+                    <CheckBox x:Name="PrintStuffingSheetCheckBox"
+                              Content="Печатать лист сброса"
+                              VerticalAlignment="Center"
+                              Checked="OnPrintStuffingSheetChecked"
+                              Unchecked="OnPrintStuffingSheetChecked"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,12">
