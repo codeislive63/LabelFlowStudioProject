@@ -46,7 +46,11 @@
     </Style>
 
     <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}}" Value="{x:Null}">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="AppTextBoxStyle" TargetType="TextBox">
@@ -154,7 +158,8 @@
                         <ContentPresenter
                             HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                             VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                            RecognizesAccessKey="True" />
+                            RecognizesAccessKey="True" 
+                            TextElement.Foreground="{TemplateBinding Foreground}"/>
                     </Border>
 
                     <ControlTemplate.Triggers>
