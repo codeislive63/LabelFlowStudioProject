@@ -68,7 +68,7 @@
                             Padding="16,8"
                             Margin="0,0,10,0"
                             Content="Назад"
-                            Click="OnBackClick"/>
+                            Click="OnBackClick" Height="44"/>
                     <Button x:Name="NextButton"
                             Style="{DynamicResource PrimaryButtonStyle}"
                             MinWidth="114"
@@ -76,7 +76,7 @@
                             Padding="16,8"
                             Content="Далее"
                             Foreground="White"
-                            Click="OnNextClick"/>
+                            Click="OnNextClick" Height="44"/>
                 </StackPanel>
             </Grid>
         </Border>
