@@ -214,10 +214,13 @@ public sealed class MainViewModel : ViewModelBase
 
         try
         {
+            var settings = PrintSettingsStore.LoadOrDefault();
+
             var request = new BoxProcessingRequest(
                 Tenam: tenamSnapshot,
                 Mode: requestMode,
-                ShouldPrintEndLabels: true
+                ShouldPrintEndLabels: settings.PrintEndLabelEnabled,
+                ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled
             );
 
             response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
@@ -304,8 +307,14 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        // Сначала печатаем лист сброса (если есть записи), затем торцевую этикетку.
-        if (response.Records.Count > 0)
+        if (!settings.PrintEndLabelEnabled && !settings.PrintStuffingSheetEnabled)
+        {
+            StatusMessage = "Автопечать отключена в настройках";
+            return;
+        }
+
+        // Сначала печатаем лист сброса (если включено), затем торцевую этикетку.
+        if (settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
         {
             StatusMessage = "Печать листа сброса";
             var okSheet = await PrintStuffingSheetSilentAsync(response, tenam, settings.StuffingSheetPrinterName, settings.StuffingSheetCopies);
@@ -316,7 +325,7 @@ public sealed class MainViewModel : ViewModelBase
             }
         }
 
-        if (response.Status == BoxProcessingStatus.Success)
+        if (settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
         {
             StatusMessage = "Печать торцевой этикетки";
             var okEndLabel = await PrintEndLabelSilentAsync(response, tenam, settings.EndLabelPrinterName, settings.EndLabelCopies);

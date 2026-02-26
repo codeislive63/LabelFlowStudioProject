@@ -17,6 +17,9 @@ public partial class PrinterSetupWindow : Window
 
         PrintersComboBox.ItemsSource = _printers;
 
+        PrintEndLabelCheckBox.IsChecked = _settings.PrintEndLabelEnabled;
+        PrintStuffingSheetCheckBox.IsChecked = _settings.PrintStuffingSheetEnabled;
+
         if (_printers.Length > 0)
         {
             PrintersComboBox.SelectedIndex = 0;
@@ -32,27 +35,19 @@ public partial class PrinterSetupWindow : Window
     {
         var settings = PrintSettingsStore.LoadOrDefault();
 
-        if (settings is not null && settings.IsComplete)
+        var window = new PrinterSetupWindow(settings)
         {
-            var window = new PrinterSetupWindow(settings)
-            {
-                Owner = owner
-            };
+            Owner = owner
+        };
 
-            var dialogResult = window.ShowDialog();
+        var dialogResult = window.ShowDialog();
 
-            if (dialogResult != true)
-            {
-                return false;
-            }
-
-            await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
-        }
-        else
+        if (dialogResult != true)
         {
             return false;
         }
-        
+
+        await PrintSettingsStore.SaveAsync(window.ResultSettings, cancellationToken);
         return true;
     }
 
@@ -71,8 +66,15 @@ public partial class PrinterSetupWindow : Window
     {
         ValidationText.Visibility = Visibility.Collapsed;
 
+        _settings.PrintEndLabelEnabled = PrintEndLabelCheckBox.IsChecked == true;
+        _settings.PrintStuffingSheetEnabled = PrintStuffingSheetCheckBox.IsChecked == true;
+
         var selected = PrintersComboBox.SelectedItem as string;
-        if (string.IsNullOrWhiteSpace(selected))
+        var printerRequired = _stepIndex == 0
+            ? _settings.PrintEndLabelEnabled
+            : _settings.PrintStuffingSheetEnabled;
+
+        if (printerRequired && string.IsNullOrWhiteSpace(selected))
         {
             ValidationText.Visibility = Visibility.Visible;
             return;
@@ -80,13 +82,13 @@ public partial class PrinterSetupWindow : Window
 
         if (_stepIndex == 0)
         {
-            _settings.EndLabelPrinterName = selected;
+            _settings.EndLabelPrinterName = _settings.PrintEndLabelEnabled ? selected ?? string.Empty : string.Empty;
             _stepIndex = 1;
             UpdateStepUi();
             return;
         }
 
-        _settings.StuffingSheetPrinterName = selected;
+        _settings.StuffingSheetPrinterName = _settings.PrintStuffingSheetEnabled ? selected ?? string.Empty : string.Empty;
 
         if (_settings.EndLabelCopies <= 0)
         {
@@ -102,6 +104,28 @@ public partial class PrinterSetupWindow : Window
         Close();
     }
 
+    private void OnPrintEndLabelChecked(object sender, RoutedEventArgs e)
+    {
+        _settings.PrintEndLabelEnabled = PrintEndLabelCheckBox.IsChecked == true;
+
+        if (_stepIndex == 0)
+        {
+            PrintersComboBox.IsEnabled = _settings.PrintEndLabelEnabled;
+            ValidationText.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnPrintStuffingSheetChecked(object sender, RoutedEventArgs e)
+    {
+        _settings.PrintStuffingSheetEnabled = PrintStuffingSheetCheckBox.IsChecked == true;
+
+        if (_stepIndex == 1)
+        {
+            PrintersComboBox.IsEnabled = _settings.PrintStuffingSheetEnabled;
+            ValidationText.Visibility = Visibility.Collapsed;
+        }
+    }
+
     private void UpdateStepUi()
     {
         if (_stepIndex == 0)
@@ -115,7 +139,13 @@ public partial class PrinterSetupWindow : Window
             {
                 PrintersComboBox.SelectedItem = _settings.EndLabelPrinterName;
             }
+            else if (_printers.Length > 0)
+            {
+                PrintersComboBox.SelectedIndex = 0;
+            }
 
+            PrintersComboBox.IsEnabled = _settings.PrintEndLabelEnabled;
+            ValidationText.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -128,5 +158,12 @@ public partial class PrinterSetupWindow : Window
         {
             PrintersComboBox.SelectedItem = _settings.StuffingSheetPrinterName;
         }
+        else if (_printers.Length > 0)
+        {
+            PrintersComboBox.SelectedIndex = 0;
+        }
+
+        PrintersComboBox.IsEnabled = _settings.PrintStuffingSheetEnabled;
+        ValidationText.Visibility = Visibility.Collapsed;
     }
 }

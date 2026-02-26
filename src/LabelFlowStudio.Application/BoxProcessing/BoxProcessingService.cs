@@ -61,7 +61,7 @@ public sealed class BoxProcessingService : IBoxProcessingService
                     Records: records,
                     Weight: null,
                     ShouldPrintDropSheet: false,
-                    ShouldPrintEmptyDropSheet: true,
+                    ShouldPrintEmptyDropSheet: request.ShouldPrintStuffingSheet,
                     ShouldPrintEndLabels: request.ShouldPrintEndLabels
                 );
             }
@@ -82,7 +82,7 @@ public sealed class BoxProcessingService : IBoxProcessingService
             Message: "Данные загружены",
             Records: records,
             Weight: weightFromDatabase,
-            ShouldPrintDropSheet: true,
+            ShouldPrintDropSheet: request.ShouldPrintStuffingSheet,
             ShouldPrintEmptyDropSheet: false,
             ShouldPrintEndLabels: request.ShouldPrintEndLabels
         );
