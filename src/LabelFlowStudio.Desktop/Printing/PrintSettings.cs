@@ -5,6 +5,9 @@ namespace LabelFlowStudio.Desktop.Printing;
 
 public sealed class PrintSettings
 {
+    public bool PrintEndLabelEnabled { get; set; } = true;
+    public bool PrintStuffingSheetEnabled { get; set; } = true;
+
     public string EndLabelPrinterName { get; set; } = string.Empty;
     public string StuffingSheetPrinterName { get; set; } = string.Empty;
 
@@ -15,6 +18,6 @@ public sealed class PrintSettings
 
     [JsonIgnore]
     public bool IsComplete =>
-        !string.IsNullOrWhiteSpace(EndLabelPrinterName) &&
-        !string.IsNullOrWhiteSpace(StuffingSheetPrinterName);
+        (!PrintEndLabelEnabled || !string.IsNullOrWhiteSpace(EndLabelPrinterName)) &&
+        (!PrintStuffingSheetEnabled || !string.IsNullOrWhiteSpace(StuffingSheetPrinterName));
 }

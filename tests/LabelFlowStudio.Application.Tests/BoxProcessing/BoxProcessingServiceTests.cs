@@ -43,7 +43,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest("   ", WorkMode.Manual, ShouldPrintEndLabels: true),
+            new BoxProcessingRequest("   ", WorkMode.Manual, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -62,7 +62,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest(" 4340558 ", WorkMode.Manual, ShouldPrintEndLabels: false),
+            new BoxProcessingRequest(" 4340558 ", WorkMode.Manual, ShouldPrintEndLabels: false, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -77,7 +77,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: true),
+            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -101,7 +101,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: true),
+            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -125,7 +125,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest("4340558", WorkMode.Automatic, ShouldPrintEndLabels: true),
+            new BoxProcessingRequest("4340558", WorkMode.Automatic, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -149,7 +149,7 @@ public sealed class BoxProcessingServiceTests
         var service = new BoxProcessingService(repository);
 
         var response = await service.ProcessAsync(
-            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: false),
+            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: false, ShouldPrintStuffingSheet: true),
             CancellationToken.None
         );
 
@@ -160,6 +160,29 @@ public sealed class BoxProcessingServiceTests
         Assert.True(response.ShouldPrintDropSheet);
         Assert.False(response.ShouldPrintEmptyDropSheet);
         Assert.False(response.ShouldPrintEndLabels);
+    }
+
+
+    [Fact]
+    public async Task ProcessAsync_WeightPresent_StuffingSheetDisabled_DoesNotRequestDropSheet()
+    {
+        var records = new[]
+        {
+            CreateRecord(brutto: 5m)
+        };
+
+        var repository = new FakeLabelRepository(records);
+        var service = new BoxProcessingService(repository);
+
+        var response = await service.ProcessAsync(
+            new BoxProcessingRequest("4340558", WorkMode.Manual, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: false),
+            CancellationToken.None
+        );
+
+        Assert.Equal(BoxProcessingStatus.Success, response.Status);
+        Assert.False(response.ShouldPrintDropSheet);
+        Assert.False(response.ShouldPrintEmptyDropSheet);
+        Assert.True(response.ShouldPrintEndLabels);
     }
 
     private static LabelRecord CreateRecord(decimal? brutto)
