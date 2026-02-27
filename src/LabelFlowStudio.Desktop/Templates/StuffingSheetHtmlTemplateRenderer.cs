@@ -68,6 +68,7 @@ public static class StuffingSheetHtmlTemplateRenderer
         result = ReplaceEncodedToken(result, "Gport1", header?.Gport1);
         result = ReplaceEncodedToken(result, "Gpstrasse", header?.Gpstrasse);
         result = ReplaceEncodedToken(result, "Aufid", header?.Aufid);
+        result = ReplaceEncodedToken(result, "Market", FormatMarket(header?.Market));
 
         result = ReplaceEncodedToken(result, "CurrentDate", currentDate);
         result = ReplaceEncodedToken(result, "CurrentTime", currentTime);
@@ -81,6 +82,7 @@ public static class StuffingSheetHtmlTemplateRenderer
         result = ReplaceEncodedToken(result, "country", header?.Lndnam);
         result = ReplaceEncodedToken(result, "te", tenam);
         result = ReplaceEncodedToken(result, "index", header?.Gpplz);
+        result = ReplaceEncodedToken(result, "market", FormatMarket(header?.Market));
         result = ReplaceEncodedToken(result, "place", header?.Gpbez);
         result = ReplaceEncodedToken(result, "city", header?.Gport1);
         result = ReplaceEncodedToken(result, "street", header?.Gpstrasse);
@@ -144,6 +146,16 @@ public static class StuffingSheetHtmlTemplateRenderer
         var after = html[(match.Index + match.Length)..];
 
         return before + builder + after;
+    }
+
+    private static string FormatMarket(string? market)
+    {
+        if (string.IsNullOrWhiteSpace(market))
+        {
+            return string.Empty;
+        }
+
+        return $"{market.Trim()}";
     }
 
     private static string FormatQuantity(decimal? value)
