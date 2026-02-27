@@ -185,6 +185,52 @@ public sealed class BoxProcessingServiceTests
         Assert.True(response.ShouldPrintEndLabels);
     }
 
+    [Fact]
+    public async Task ProcessAsync_WeightMissing_Automatic_StuffingSheetDisabled_DoesNotPrintEmptyDropSheet()
+    {
+        var records = new[]
+        {
+            CreateRecord(brutto: 0m)
+        };
+
+        var repository = new FakeLabelRepository(records);
+        var service = new BoxProcessingService(repository);
+
+        var response = await service.ProcessAsync(
+            new BoxProcessingRequest("4340558", WorkMode.Automatic, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: false),
+            CancellationToken.None
+        );
+
+        Assert.Equal(BoxProcessingStatus.Success, response.Status);
+        Assert.False(response.ShouldPrintDropSheet);
+        Assert.False(response.ShouldPrintEmptyDropSheet);
+        Assert.True(response.ShouldPrintEndLabels);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_TenamIsNull_ReturnsError()
+    {
+        var repository = new FakeLabelRepository(Array.Empty<LabelRecord>());
+        var service = new BoxProcessingService(repository);
+
+        var response = await service.ProcessAsync(
+            new BoxProcessingRequest(null!, WorkMode.Manual, ShouldPrintEndLabels: true, ShouldPrintStuffingSheet: true),
+            CancellationToken.None
+        );
+
+        Assert.Equal(BoxProcessingStatus.Error, response.Status);
+        Assert.Equal("TENAM пустой", response.Message);
+        Assert.Empty(response.Records);
+    }
+
+    [Fact]
+    public void Constructor_RepositoryIsNull_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() => new BoxProcessingService(null!));
+
+        Assert.Equal("labelRepository", exception.ParamName);
+    }
+
     private static LabelRecord CreateRecord(decimal? brutto)
     {
         return new LabelRecord

@@ -38,9 +38,6 @@ public sealed class MainViewModelTests
 
         Assert.Equal(2, vm.Records.Count);
         Assert.Equal("OK", vm.StatusMessage);
-
-        // Если в твоей VM TENAM очищается на Success – раскомментируй
-        // Assert.Equal(string.Empty, vm.Tenam);
     }
 
     [Fact]
@@ -60,6 +57,7 @@ public sealed class MainViewModelTests
         scanner.Raise("4340559");
 
         await service.WaitCalledAsync();
+        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
         Assert.Equal("AUTO OK", vm.StatusMessage);
     }
