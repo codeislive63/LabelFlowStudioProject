@@ -1,4 +1,8 @@
+using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Data;
+using LabelFlowStudio.Data.Oracle;
+using LabelFlowStudio.Data.Oracle.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,5 +25,32 @@ public sealed class DataServiceCollectionExtensionsTests
         });
 
         Assert.Contains("Oracle", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddLabelFlowDataAccess_RegistersRepositoryAndDbFactory()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Oracle"] = "Data Source=localhost/XEPDB1;User Id=u;Password=p;"
+        };
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+
+        var services = new ServiceCollection();
+
+        services.AddLabelFlowDataAccess(configuration);
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IDbContextFactory<LabelDbContext>));
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(ILabelRepository)
+                && descriptor.ImplementationType == typeof(LabelRepository)
+                && descriptor.Lifetime == ServiceLifetime.Singleton);
     }
 }
