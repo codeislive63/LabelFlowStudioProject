@@ -1,5 +1,8 @@
 ﻿namespace LabelFlowStudio.Application.BoxProcessing;
 
+/// <summary>
+/// Итоговый статус обработки короба
+/// </summary>
 public enum BoxProcessingStatus
 {
     Success = 0,
