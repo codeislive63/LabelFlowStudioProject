@@ -2,7 +2,9 @@
 
 namespace LabelFlowStudio.Application.BoxProcessing;
 
-
+/// <summary>
+/// Содержит результат обработки короба и параметры печати
+/// </summary>
 public sealed record BoxProcessingResponse(
     BoxProcessingStatus Status,
     string Message,

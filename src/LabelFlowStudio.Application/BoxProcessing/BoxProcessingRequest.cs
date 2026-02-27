@@ -1,5 +1,8 @@
 ﻿namespace LabelFlowStudio.Application.BoxProcessing;
 
+/// <summary>
+/// Описывает входные параметры обработки короба
+/// </summary>
 public sealed record BoxProcessingRequest(
     string Tenam,
     WorkMode Mode,
