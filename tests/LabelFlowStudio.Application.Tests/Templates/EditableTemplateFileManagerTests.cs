@@ -6,6 +6,45 @@ namespace LabelFlowStudio.Application.Tests.Templates;
 public sealed class EditableTemplateFileManagerTests
 {
     [Fact]
+    public async Task LoadOrCreateAsync_WhenTemplatePathIsBlank_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            EditableTemplateFileManager.LoadOrCreateAsync(
+                " ",
+                getDefaultTemplate: () => "<html/>",
+                cancellationToken: CancellationToken.None
+            )
+        );
+    }
+
+    [Fact]
+    public async Task LoadOrCreateAsync_WhenDefaultFactoryIsNull_ThrowsArgumentNullException()
+    {
+        var directory = CreateTempDirectory();
+        var templatePath = Path.Combine(directory, "EndLabel.html");
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            EditableTemplateFileManager.LoadOrCreateAsync(
+                templatePath,
+                getDefaultTemplate: null!,
+                cancellationToken: CancellationToken.None
+            )
+        );
+    }
+
+    [Fact]
+    public async Task LoadOrCreateAsync_WhenTemplatePathHasNoDirectory_ThrowsInvalidOperationException()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            EditableTemplateFileManager.LoadOrCreateAsync(
+                "EndLabel.html",
+                getDefaultTemplate: () => "<html/>",
+                cancellationToken: CancellationToken.None
+            )
+        );
+    }
+
+    [Fact]
     public async Task LoadOrCreateAsync_CreatesTemplateAndMeta_WhenMissing()
     {
         var directory = CreateTempDirectory();
@@ -81,6 +120,48 @@ public sealed class EditableTemplateFileManagerTests
 
         var newText = await File.ReadAllTextAsync(newPath, Encoding.UTF8);
         Assert.Equal("<html>v2</html>", NormalizeNewlines(newText));
+    }
+
+    [Fact]
+    public async Task LoadOrCreateAsync_WhenMetaMissingAndTemplateMatchesDefault_CreatesMeta()
+    {
+        var directory = CreateTempDirectory();
+        var templatePath = Path.Combine(directory, "EndLabel.html");
+
+        await File.WriteAllTextAsync(templatePath, "<html>stable</html>", new UTF8Encoding(false));
+
+        var loaded = await EditableTemplateFileManager.LoadOrCreateAsync(
+            templatePath,
+            getDefaultTemplate: () => "<html>stable</html>",
+            cancellationToken: CancellationToken.None
+        );
+
+        Assert.Equal("<html>stable</html>", NormalizeNewlines(loaded));
+        Assert.True(File.Exists(Path.Combine(directory, "EndLabel.meta.json")));
+    }
+
+    [Fact]
+    public async Task LoadOrCreateAsync_WhenUserEditedAndDefaultUnchanged_DoesNotWriteNewTemplate()
+    {
+        var directory = CreateTempDirectory();
+        var templatePath = Path.Combine(directory, "StuffingSheet.html");
+
+        await EditableTemplateFileManager.LoadOrCreateAsync(
+            templatePath,
+            getDefaultTemplate: () => "<html>v1</html>",
+            cancellationToken: CancellationToken.None
+        );
+
+        await File.WriteAllTextAsync(templatePath, "<html>custom</html>", new UTF8Encoding(false));
+
+        var loaded = await EditableTemplateFileManager.LoadOrCreateAsync(
+            templatePath,
+            getDefaultTemplate: () => "<html>v1</html>",
+            cancellationToken: CancellationToken.None
+        );
+
+        Assert.Equal("<html>custom</html>", NormalizeNewlines(loaded));
+        Assert.False(File.Exists(Path.Combine(directory, "StuffingSheet.new.html")));
     }
 
     private static string CreateTempDirectory()
