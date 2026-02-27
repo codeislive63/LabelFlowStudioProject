@@ -41,11 +41,10 @@ public sealed class EndLabelHtmlTemplateRendererTests
             "TENAM={{Tenam}}",
             "SHOP={{Lfakdnr}}",
             "NAME={{Gpbez}}",
-            "CITY={{Gport1}}",
-            "STREET={{Gpstrasse}}",
+            "CITY={{DeliveryCity}}",
+            "STREET={{DeliveryStreet}}",
             "ORDER={{Bstchgnam5}}",
             "BRUTTO={{Brutto}}",
-            "COUNT={{CountBst}}",
             "SUM={{SumBst}}",
             "BAR={{BarcodeDataUri}}"
         });
