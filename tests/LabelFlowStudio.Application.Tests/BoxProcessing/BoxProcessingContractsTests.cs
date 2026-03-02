@@ -8,10 +8,10 @@ public sealed class BoxProcessingContractsTests
     [Fact]
     public void BoxProcessingRequest_StoresValues()
     {
-        var request = new BoxProcessingRequest("T001", WorkMode.Auto, true, false);
+        var request = new BoxProcessingRequest("T001", WorkMode.Automatic, true, false);
 
         Assert.Equal("T001", request.Tenam);
-        Assert.Equal(WorkMode.Auto, request.Mode);
+        Assert.Equal(WorkMode.Automatic, request.Mode);
         Assert.True(request.ShouldPrintEndLabels);
         Assert.False(request.ShouldPrintStuffingSheet);
     }
@@ -21,7 +21,7 @@ public sealed class BoxProcessingContractsTests
     {
         var records = new List<LabelRecord>
         {
-            new() { Tenam = "T001", Pn = "PN-1", Quantity = 1 }
+            new() { Tenam = "4340558", Artnr = "PN-1", CountBst = 1 }
         };
 
         var response = new BoxProcessingResponse(
