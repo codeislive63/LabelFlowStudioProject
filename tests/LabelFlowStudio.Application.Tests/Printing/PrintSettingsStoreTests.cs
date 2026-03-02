@@ -3,6 +3,7 @@ using LabelFlowStudio.Desktop.Printing;
 
 namespace LabelFlowStudio.Application.Tests.Printing;
 
+[Collection("PrintSettingsStore")]
 public sealed class PrintSettingsStoreTests
 {
     [Fact]
@@ -47,6 +48,7 @@ public sealed class PrintSettingsStoreTests
     {
         using var _ = new SettingsFileScope("invalid-json", "not json");
 
+        ResetCache();
         var loaded = PrintSettingsStore.TryLoad();
 
         Assert.Null(loaded);
@@ -77,10 +79,21 @@ public sealed class PrintSettingsStoreTests
 
     private static void ResetCache()
     {
-        var cacheField = typeof(PrintSettingsStore)
-            .GetField("_cached", BindingFlags.NonPublic | BindingFlags.Static);
+        var t = typeof(PrintSettingsStore);
 
-        cacheField!.SetValue(null, null);
+        var gateField = t.GetField("Gate", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Gate field not found");
+
+        var cacheField = t.GetField("_cached", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("_cached field not found");
+
+        var gate = gateField.GetValue(null)
+            ?? throw new InvalidOperationException("Gate is null");
+
+        lock (gate)
+        {
+            cacheField.SetValue(null, null);
+        }
     }
 
     private sealed class SettingsFileScope : IDisposable
@@ -128,3 +141,6 @@ public sealed class PrintSettingsStoreTests
         }
     }
 }
+
+[CollectionDefinition("PrintSettingsStore", DisableParallelization = true)]
+public sealed class PrintSettingsStoreCollection { }
