@@ -41,6 +41,26 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public async Task ScannerEvent_WhenBusy_QueuesLatestTenamAndProcessesAfterCurrentRequest()
+    {
+        var scanner = new FakeScanner();
+        var service = new DelayedProcessingService();
+        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+
+        scanner.Raise("4340551");
+        await service.WaitFirstCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
+
+        scanner.Raise("4340552");
+
+        service.ReleaseFirstCall();
+
+        await service.WaitSecondCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
+        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+
+        Assert.Equal("4340552", service.LastRequest?.Tenam);
+    }
+
+    [Fact]
     public async Task ScannerEvent_AutomaticallyTriggers_LoadRecords()
     {
         var scanner = new FakeScanner();
@@ -129,5 +149,39 @@ public sealed class MainViewModelTests
         {
             return _called.Task;
         }
+    }
+
+    private sealed class DelayedProcessingService : IBoxProcessingService
+    {
+        private readonly TaskCompletionSource<bool> _firstCall = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _secondCall = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _releaseFirstCall = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _callCount;
+
+        public BoxProcessingRequest? LastRequest { get; private set; }
+
+        public async Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            _callCount++;
+
+            if (_callCount == 1)
+            {
+                _firstCall.TrySetResult(true);
+                await _releaseFirstCall.Task;
+            }
+            else if (_callCount == 2)
+            {
+                _secondCall.TrySetResult(true);
+            }
+
+            return CreateSuccessResponse("OK", new List<LabelRecord>());
+        }
+
+        public Task WaitFirstCallAsync() => _firstCall.Task;
+
+        public Task WaitSecondCallAsync() => _secondCall.Task;
+
+        public void ReleaseFirstCall() => _releaseFirstCall.TrySetResult(true);
     }
 }
