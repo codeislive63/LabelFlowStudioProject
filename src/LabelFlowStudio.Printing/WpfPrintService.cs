@@ -7,6 +7,9 @@ using System.Windows.Documents;
 
 namespace LabelFlowStudio.Printing;
 
+/// <summary>
+/// Сервис печати документов через WPF PrintDialog
+/// </summary>
 public sealed class WpfPrintService : IPrintService
 {
     private readonly IOptionsMonitor<PrintingOptions> _optionsMonitor;
@@ -25,6 +28,9 @@ public sealed class WpfPrintService : IPrintService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Печатает лист сброса
+    /// </summary>
     public async Task PrintDropSheetAsync(BoxProcessingResponse response, string tenam, CancellationToken cancellationToken)
     {
         if (response is null)
@@ -48,6 +54,9 @@ public sealed class WpfPrintService : IPrintService
             cancellationToken);
     }
 
+    /// <summary>
+    /// Печатает пустой лист сброса
+    /// </summary>
     public async Task PrintEmptyDropSheetAsync(string tenam, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(tenam))
@@ -66,6 +75,9 @@ public sealed class WpfPrintService : IPrintService
             cancellationToken);
     }
 
+    /// <summary>
+    /// Печатает торцевую этикетку
+    /// </summary>
     public async Task PrintEndLabelAsync(BoxProcessingResponse response, string tenam, CancellationToken cancellationToken)
     {
         if (response is null)
@@ -90,6 +102,7 @@ public sealed class WpfPrintService : IPrintService
         );
     }
 
+    // Выполняет печать документа в UI потоке
     private async Task PrintDocumentAsync(
         IDocumentPaginatorSource document,
         string jobName,
@@ -130,7 +143,7 @@ public sealed class WpfPrintService : IPrintService
                 }
 
                 printDialog.PrintDocument(document.DocumentPaginator, jobName);
-            });
+            }, cancellationToken);
         }
         catch (Exception exception)
         {
@@ -143,6 +156,7 @@ public sealed class WpfPrintService : IPrintService
         }
     }
 
+    // Возвращает очередь печати по имени принтера
     private static PrintQueue? TryGetPrintQueue(string printerName)
     {
         try
@@ -156,16 +170,18 @@ public sealed class WpfPrintService : IPrintService
         }
     }
 
-    private static Task RunOnUiThreadAsync(Action action)
+    // Выполняет действие в UI потоке с учетом отмены
+    private static Task RunOnUiThreadAsync(Action action, CancellationToken cancellationToken)
     {
         var dispatcher = System.Windows.Application.Current?.Dispatcher;
 
         if (dispatcher is null || dispatcher.CheckAccess())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             action();
             return Task.CompletedTask;
         }
 
-        return dispatcher.InvokeAsync(action).Task;
+        return dispatcher.InvokeAsync(action, System.Windows.Threading.DispatcherPriority.Send, cancellationToken).Task;
     }
 }
