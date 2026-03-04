@@ -46,8 +46,9 @@ public sealed class MainViewModel : ViewModelBase
     private bool _isScannerSubscribed;
 
     private string _lastProcessedTenam = string.Empty;
-
     private string _lastScannedTenam = string.Empty;
+    private string _pendingScannerTenam = string.Empty;
+
     private DateTime _lastScannedAtUtc;
 
     /// <summary>
@@ -202,6 +203,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             if (IsBusy)
             {
+                _pendingScannerTenam = digitsOnly;
                 return;
             }
 
@@ -224,8 +226,9 @@ public sealed class MainViewModel : ViewModelBase
             settings.WorkMode = workMode;
             await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogWarning(exception, "Failed to persist selected work mode");
         }
     }
 
@@ -254,14 +257,13 @@ public sealed class MainViewModel : ViewModelBase
         Records.Clear();
         Tenam = string.Empty;
 
-        BoxProcessingResponse? response = null;
-
         try
         {
             var request = BuildRequest(tenamSnapshot, requestMode);
 
-            response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
+            await Task.Yield();
 
+            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             ApplyResponseState(response, tenamSnapshot);
@@ -284,7 +286,49 @@ public sealed class MainViewModel : ViewModelBase
         finally
         {
             IsBusy = false;
+            SchedulePendingScannerProcessing();
         }
+    }
+
+    // Планирует обработку отложенного скана после завершения текущей команды
+    private void SchedulePendingScannerProcessing()
+    {
+        if (string.IsNullOrWhiteSpace(_pendingScannerTenam))
+        {
+            return;
+        }
+
+        // Важно: запускаем ПОСЛЕ возврата из LoadRecordsAsync,
+        // чтобы AsyncCommand успел снять флаг "executing"
+        _ = Task.Run(async () =>
+        {
+            await Task.Yield();
+            await RunOnUiThreadAsync(TryProcessPendingScannerTenam);
+        });
+    }
+
+    // Запускает отложенный скан после завершения текущей обработки
+    private void TryProcessPendingScannerTenam()
+    {
+        if (string.IsNullOrWhiteSpace(_pendingScannerTenam))
+        {
+            return;
+        }
+
+        if (IsBusy)
+        {
+            return;
+        }
+
+        var pendingTenam = _pendingScannerTenam;
+        _pendingScannerTenam = string.Empty;
+
+        // Для отложенного TENAM пропускаем дедупликацию сканера,
+        // иначе повторно принятый код может быть отброшен в окне подавления дублей
+        _lastScannedTenam = string.Empty;
+        _lastScannedAtUtc = DateTime.MinValue;
+
+        ReceiveTenamFromScanner(pendingTenam);
     }
 
     // Выполняет обработку TENAM вне UI потока
