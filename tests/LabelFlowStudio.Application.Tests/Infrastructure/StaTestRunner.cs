@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 namespace LabelFlowStudio.Application.Tests.Infrastructure;
 
 public static class StaTestRunner
@@ -29,7 +31,7 @@ public static class StaTestRunner
 
         if (exception is not null)
         {
-            throw new AggregateException(exception);
+            ExceptionDispatchInfo.Capture(exception).Throw();
         }
     }
 
@@ -61,7 +63,7 @@ public static class StaTestRunner
 
         if (exception is not null)
         {
-            throw new AggregateException(exception);
+            ExceptionDispatchInfo.Capture(exception).Throw();
         }
 
         return result!;
