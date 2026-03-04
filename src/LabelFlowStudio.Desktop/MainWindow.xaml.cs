@@ -9,6 +9,9 @@ using System.Windows.Threading;
 
 namespace LabelFlowStudio.Desktop;
 
+/// <summary>
+/// Главное окно приложения
+/// </summary>
 public partial class MainWindow : Window
 {
     private const int ScanBufferTimeoutMilliseconds = 900;
@@ -19,6 +22,9 @@ public partial class MainWindow : Window
     private const int MaxScannerInterKeyDelayMilliseconds = 60;
     private DateTime _lastScanKeyAtUtc = DateTime.MinValue;
 
+    /// <summary>
+    /// Создает главное окно и связывает его с моделью представления
+    /// </summary>
     public MainWindow(MainViewModel mainViewModel)
     {
         InitializeComponent();
@@ -28,11 +34,11 @@ public partial class MainWindow : Window
         {
             if (e.PropertyName == nameof(MainViewModel.IsBusy) && !mainViewModel.IsBusy)
             {
-                FocusTenamSoon();
+                _ = FocusTenamSoonAsync();
             }
         };
 
-        AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, __) => FocusTenamSoon()), true);
+        AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, __) => _ = FocusTenamSoonAsync()), true);
 
         _scanBufferTimer = new DispatcherTimer
         {
@@ -45,12 +51,12 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
-        FocusTenamSoon();
+        await FocusTenamSoonAsync();
     }
 
     private void MainWindow_Activated(object? sender, EventArgs e)
     {
-        FocusTenamSoon();
+        _ = FocusTenamSoonAsync();
     }
 
     private async void OnOpenPrintSettingsClick(object sender, RoutedEventArgs e)
@@ -74,7 +80,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private void FocusTenamSoon()
+    // Переносит фокус в поле TENAM после завершения текущего UI-цикла
+    private async Task FocusTenamSoonAsync()
     {
         if (!IsActive)
         {
@@ -86,17 +93,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (!IsActive)
-            {
-                return;
-            }
+        await Task.Yield();
 
-            TenamTextBox.Focus();
-            Keyboard.Focus(TenamTextBox);
-            TenamTextBox.SelectAll();
-        }, DispatcherPriority.ContextIdle);
+        if (!IsActive)
+        {
+            return;
+        }
+
+        TenamTextBox.Focus();
+        Keyboard.Focus(TenamTextBox);
+        TenamTextBox.SelectAll();
     }
 
     private void TenamTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -295,20 +301,20 @@ public partial class MainWindow : Window
         e.Row.Header = (e.Row.GetIndex() + 1).ToString();
     }
 
-    private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+    // Обновляет номера строк после сортировки
+    private async void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
     {
         var grid = (DataGrid)sender;
 
-        grid.Dispatcher.InvokeAsync(() =>
+        await Task.Yield();
+
+        foreach (var item in grid.Items)
         {
-            foreach (var item in grid.Items)
+            if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
             {
-                if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
-                {
-                    row.Header = (row.GetIndex() + 1).ToString();
-                }
+                row.Header = (row.GetIndex() + 1).ToString();
             }
-        });
+        }
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
