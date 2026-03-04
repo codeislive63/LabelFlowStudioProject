@@ -24,7 +24,9 @@ public sealed class MainViewModel : ViewModelBase
     private readonly ILogger<MainViewModel> _logger;
 
     private readonly SemaphoreSlim _scannerGate = new(1, 1);
+    private readonly SemaphoreSlim _requestGate = new(1, 1);
     private readonly SynchronizationContext? _uiContext;
+    private CancellationTokenSource? _loadCancellation;
 
     private BoxProcessingResponse? _lastSuccessfulResponse;
     private string _lastSuccessfulTenam = string.Empty;
@@ -48,6 +50,9 @@ public sealed class MainViewModel : ViewModelBase
     private string _lastScannedTenam = string.Empty;
     private DateTime _lastScannedAtUtc;
 
+    /// <summary>
+    /// Создает модель представления главного экрана
+    /// </summary>
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
         IBoxScanner boxScanner,
@@ -242,13 +247,12 @@ public sealed class MainViewModel : ViewModelBase
         _nextRequestMode = WorkMode.Manual;
 
         var tenamSnapshot = Tenam?.Trim() ?? string.Empty;
+        var cancellationToken = StartNewLoadCancellation();
 
         IsBusy = true;
         StatusMessage = "Загрузка";
         Records.Clear();
         Tenam = string.Empty;
-
-        await Task.Yield();
 
         BoxProcessingResponse? response = null;
 
@@ -256,15 +260,20 @@ public sealed class MainViewModel : ViewModelBase
         {
             var request = BuildRequest(tenamSnapshot, requestMode);
 
-            response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
+            response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             ApplyResponseState(response, tenamSnapshot);
 
-            // Быстрая печать теперь только в режиме Automatic (скан + Enter)
             if (requestMode == WorkMode.Automatic && response is not null)
             {
-                await TryAutoPrintAsync(response, tenamSnapshot);
+                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Операция отменена";
         }
         catch (Exception exception)
         {
@@ -276,6 +285,36 @@ public sealed class MainViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    // Выполняет обработку TENAM вне UI потока
+    private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
+        BoxProcessingRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _requestGate.WaitAsync(cancellationToken);
+
+        try
+        {
+            return await Task.Run(
+                () => _boxProcessingService.ProcessAsync(request, cancellationToken), 
+                cancellationToken
+            );
+        }
+        finally
+        {
+            _requestGate.Release();
+        }
+    }
+
+    // Создает новый токен отмены и отменяет предыдущий запрос
+    private CancellationToken StartNewLoadCancellation()
+    {
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = new CancellationTokenSource();
+
+        return _loadCancellation.Token;
     }
 
     // Создает запрос на обработку с безопасными значениями настроек
@@ -344,7 +383,7 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     // Выполняет бесшумную автопечать после успешной обработки
-    private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam)
+    private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam, CancellationToken cancellationToken)
     {
         // В fast-режиме никаких попапов, только статус
         var settings = PrintSettingsStore.LoadOrDefault();
@@ -365,7 +404,15 @@ public sealed class MainViewModel : ViewModelBase
         if (settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
         {
             StatusMessage = "Печать листа сброса";
-            var okSheet = await PrintStuffingSheetSilentAsync(response, tenam, settings.StuffingSheetPrinterName, settings.StuffingSheetCopies);
+            
+            var okSheet = await PrintStuffingSheetSilentAsync(
+                response,
+                tenam,
+                settings.StuffingSheetPrinterName,
+                settings.StuffingSheetCopies,
+                cancellationToken
+            );
+
             if (!okSheet)
             {
                 StatusMessage = "Не удалось напечатать лист сброса";
@@ -376,7 +423,15 @@ public sealed class MainViewModel : ViewModelBase
         if (settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
         {
             StatusMessage = "Печать торцевой этикетки";
-            var okEndLabel = await PrintEndLabelSilentAsync(response, tenam, settings.EndLabelPrinterName, settings.EndLabelCopies);
+
+            var okEndLabel = await PrintEndLabelSilentAsync(
+                response,
+                tenam,
+                settings.EndLabelPrinterName,
+                settings.EndLabelCopies,
+                cancellationToken
+            );
+
             if (!okEndLabel)
             {
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
@@ -488,7 +543,8 @@ public sealed class MainViewModel : ViewModelBase
         BoxProcessingResponse response,
         string tenam,
         string printerName,
-        int copies)
+        int copies,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(printerName))
         {
@@ -505,7 +561,7 @@ public sealed class MainViewModel : ViewModelBase
             copies = 1;
         }
 
-        var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+        var templateText = await EndLabelTemplateStore.LoadOrCreateAsync(cancellationToken);
         var html = EndLabelHtmlTemplateRenderer.Render(templateText, response, tenam);
 
         return await SilentHtmlPrinter.PrintHtmlAsync(
@@ -513,7 +569,8 @@ public sealed class MainViewModel : ViewModelBase
             printerName: printerName,
             copies: copies,
             owner: System.Windows.Application.Current?.MainWindow,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: cancellationToken
+        );
     }
 
     // Печатает лист сброса без отображения окна настроек
@@ -521,7 +578,8 @@ public sealed class MainViewModel : ViewModelBase
         BoxProcessingResponse response,
         string tenam,
         string printerName,
-        int copies)
+        int copies,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(printerName))
         {
@@ -542,11 +600,11 @@ public sealed class MainViewModel : ViewModelBase
 
         if (!BoxProcessingResponseInspector.HasWeight(response))
         {
-            html = await EmptyPageTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+            html = await EmptyPageTemplateStore.LoadOrCreateAsync(cancellationToken);
         }
         else
         {
-            var template = await StuffingSheetTemplateStore.LoadOrCreateAsync(CancellationToken.None);
+            var template = await StuffingSheetTemplateStore.LoadOrCreateAsync(cancellationToken);
             html = StuffingSheetHtmlTemplateRenderer.Render(template, response, tenam);
         }
 
@@ -555,7 +613,8 @@ public sealed class MainViewModel : ViewModelBase
             printerName: printerName,
             copies: copies,
             owner: System.Windows.Application.Current?.MainWindow,
-            cancellationToken: CancellationToken.None);
+            cancellationToken: cancellationToken
+        );
     }
 
     // Инициализирует подключение к сканеру
@@ -647,32 +706,6 @@ public sealed class MainViewModel : ViewModelBase
             try
             {
                 action();
-                completion.SetResult();
-            }
-            catch (Exception exception)
-            {
-                completion.SetException(exception);
-            }
-        }, null);
-
-        return completion.Task;
-    }
-
-    // Выполняет асинхронное действие в захваченном UI контексте
-    private Task RunOnUiThreadAsync(Func<Task> action)
-    {
-        if (_uiContext is null || SynchronizationContext.Current == _uiContext)
-        {
-            return action();
-        }
-
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        _uiContext.Post(async _ =>
-        {
-            try
-            {
-                await action();
                 completion.SetResult();
             }
             catch (Exception exception)
