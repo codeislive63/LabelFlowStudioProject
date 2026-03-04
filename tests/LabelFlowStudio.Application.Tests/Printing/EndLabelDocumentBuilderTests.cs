@@ -19,7 +19,7 @@ public sealed class EndLabelDocumentBuilderTests
     {
         var builder = CreateBuilder();
 
-        AssertStaThrows<ArgumentNullException>(() => builder.Build(null!, "4340558"));
+        Assert.Throws<ArgumentNullException>(() => StaTestRunner.Run(() => builder.Build(null!, "4340558")));
     }
 
     [Theory]
@@ -30,7 +30,7 @@ public sealed class EndLabelDocumentBuilderTests
         var builder = CreateBuilder();
         var response = CreateResponse(weight: 10m);
 
-        AssertStaThrows<ArgumentException>(() => builder.Build(response, tenam));
+        Assert.Throws<ArgumentException>(() => StaTestRunner.Run(() => builder.Build(response, tenam)));
     }
 
     [Fact]
@@ -39,15 +39,10 @@ public sealed class EndLabelDocumentBuilderTests
         var builder = CreateBuilder();
         var response = CreateResponse(weight: 12.345m);
 
-        var (pagesCount, textBlocks) = StaTestRunner.Run(() =>
-        {
-            var document = builder.Build(response, "4340558");
-            var extracted = ExtractTextBlocks(document);
+        var document = StaTestRunner.Run(() => builder.Build(response, "4340558"));
+        var textBlocks = StaTestRunner.Run(() => ExtractTextBlocks(document));
 
-            return (document.Pages.Count, extracted);
-        });
-
-        Assert.Equal(1, pagesCount);
+        Assert.Single(document.Pages);
         Assert.Contains(textBlocks, text => text == "TENAM 4340558");
         Assert.Contains(textBlocks, text => text == "Вес 12.345");
     }
@@ -58,20 +53,10 @@ public sealed class EndLabelDocumentBuilderTests
         var builder = CreateBuilder();
         var response = CreateResponse(weight: null);
 
-        var textBlocks = StaTestRunner.Run(() =>
-        {
-            var document = builder.Build(response, "4340558");
-            return ExtractTextBlocks(document);
-        });
+        var document = StaTestRunner.Run(() => builder.Build(response, "4340558"));
+        var textBlocks = StaTestRunner.Run(() => ExtractTextBlocks(document));
 
         Assert.Contains(textBlocks, text => text == "Вес отсутствует");
-    }
-
-    private static void AssertStaThrows<TException>(Action action) where TException : Exception
-    {
-        var aggregateException = Assert.Throws<AggregateException>(() => StaTestRunner.Run(action));
-
-        Assert.IsType<TException>(aggregateException.InnerException);
     }
 
     private static EndLabelDocumentBuilder CreateBuilder(double width = 100, double height = 150)

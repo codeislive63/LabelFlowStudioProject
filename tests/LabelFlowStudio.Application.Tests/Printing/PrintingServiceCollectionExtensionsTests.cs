@@ -23,7 +23,6 @@ public sealed class PrintingServiceCollectionExtensionsTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
 
-        services.AddLogging();
         services.AddLabelFlowPrinting(configuration);
 
         using var provider = services.BuildServiceProvider();
@@ -54,7 +53,6 @@ public sealed class PrintingServiceCollectionExtensionsTests
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
 
-        services.AddLogging();
         services.AddLabelFlowPrinting(configuration);
 
         using var provider = services.BuildServiceProvider();
