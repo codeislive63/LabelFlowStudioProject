@@ -5,8 +5,13 @@ using Microsoft.Extensions.Options;
 
 namespace LabelFlowStudio.Devices.BoxScanner;
 
+/// <summary>
+/// Сканер коробов через COM порт
+/// </summary>
 public sealed class ComPortBoxScanner : IBoxScanner
 {
+    private const string DefaultLineSeparator = "\n";
+
     private readonly IOptionsMonitor<BoxScannerOptions> _optionsMonitor;
     private readonly ILogger<ComPortBoxScanner> _logger;
 
@@ -18,16 +23,28 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
     private BoxScannerOptions _optionsSnapshot = new();
 
+    /// <summary>
+    /// Создает экземпляр сканера COM порта
+    /// </summary>
     public ComPortBoxScanner(IOptionsMonitor<BoxScannerOptions> optionsMonitor, ILogger<ComPortBoxScanner> logger)
     {
         _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Событие получения номера короба
+    /// </summary>
     public event EventHandler<BoxNumberReceivedEventArgs>? BoxNumberReceived;
 
+    /// <summary>
+    /// Признак активного состояния сканера
+    /// </summary>
     public bool IsRunning { get; private set; }
 
+    /// <summary>
+    /// Запускает чтение данных из COM порта
+    /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -36,6 +53,8 @@ public sealed class ComPortBoxScanner : IBoxScanner
         {
             return Task.CompletedTask;
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         var options = _optionsMonitor.CurrentValue;
 
@@ -47,35 +66,30 @@ public sealed class ComPortBoxScanner : IBoxScanner
         try
         {
             _optionsSnapshot = options;
-
-            _serialPort = new SerialPort(options.PortName, options.BaudRate)
-            {
-                DataBits = options.DataBits,
-                Parity = options.Parity,
-                StopBits = options.StopBits,
-                Handshake = options.Handshake,
-                ReadTimeout = options.ReadTimeoutMilliseconds
-            };
-
+            _serialPort = BuildSerialPort(options);
             _serialPort.DataReceived += OnDataReceived;
             _serialPort.Open();
 
             IsRunning = true;
-
             _logger.LogInformation("Box scanner started on {PortName}", options.PortName);
+
             return Task.CompletedTask;
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to start box scanner on {PortName}", options.PortName);
-
             CleanupPort();
             throw;
         }
     }
 
+    /// <summary>
+    /// Останавливает чтение данных из COM порта
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!IsRunning)
         {
             return Task.CompletedTask;
@@ -96,6 +110,9 @@ public sealed class ComPortBoxScanner : IBoxScanner
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Освобождает ресурсы сканера
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -114,19 +131,33 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
     }
 
-    private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
+    // Создает и настраивает экземпляр SerialPort
+    private static SerialPort BuildSerialPort(BoxScannerOptions options)
+    {
+        return new SerialPort(options.PortName, options.BaudRate)
+        {
+            DataBits = options.DataBits,
+            Parity = options.Parity,
+            StopBits = options.StopBits,
+            Handshake = options.Handshake,
+            ReadTimeout = options.ReadTimeoutMilliseconds
+        };
+    }
+
+    // Читает данные из COM порта и дописывает их в буфер
+    private void OnDataReceived(object sender, SerialDataReceivedEventArgs eventArgs)
     {
         try
         {
             var serialPort = _serialPort;
-            
+
             if (serialPort is null)
             {
                 return;
             }
 
             var received = serialPort.ReadExisting();
-            
+
             if (string.IsNullOrEmpty(received))
             {
                 return;
@@ -144,40 +175,13 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
     }
 
+    // Извлекает завершенные строки из буфера и публикует событие
     private void ProcessBufferLocked()
     {
-        var separator = _optionsSnapshot.LineSeparator;
-        
-        if (string.IsNullOrEmpty(separator))
+        var separator = ResolveSeparator(_optionsSnapshot.LineSeparator);
+
+        while (TryReadNextLine(separator, out var boxNumber))
         {
-            separator = "\n";
-        }
-
-        while (true)
-        {
-            var bufferText = _buffer.ToString();
-            var separatorIndex = bufferText.IndexOf(separator, StringComparison.Ordinal);
-
-            if (separatorIndex < 0 && separator != "\n")
-            {
-                separatorIndex = bufferText.IndexOf("\n", StringComparison.Ordinal);
-                
-                if (separatorIndex >= 0)
-                {
-                    separator = "\n";
-                }
-            }
-
-            if (separatorIndex < 0)
-            {
-                return;
-            }
-
-            var line = bufferText[..separatorIndex];
-            _buffer.Remove(0, separatorIndex + separator.Length);
-
-            var boxNumber = (line ?? string.Empty).Trim();
-            
             if (string.IsNullOrWhiteSpace(boxNumber))
             {
                 continue;
@@ -188,10 +192,76 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
     }
 
+    // Возвращает корректный разделитель строк
+    private static string ResolveSeparator(string? configuredSeparator)
+    {
+        return string.IsNullOrEmpty(configuredSeparator)
+            ? DefaultLineSeparator
+            : configuredSeparator;
+    }
+
+    // Пытается извлечь очередную строку из буфера
+    private bool TryReadNextLine(string separator, out string line)
+    {
+        line = string.Empty;
+
+        var separatorIndex = IndexOf(_buffer, separator);
+        var separatorLength = separator.Length;
+
+        if (separatorIndex < 0 && separator != DefaultLineSeparator)
+        {
+            separatorIndex = IndexOf(_buffer, DefaultLineSeparator);
+            separatorLength = DefaultLineSeparator.Length;
+        }
+
+        if (separatorIndex < 0)
+        {
+            return false;
+        }
+
+        line = _buffer.ToString(0, separatorIndex).Trim();
+        _buffer.Remove(0, separatorIndex + separatorLength);
+
+        return true;
+    }
+
+    // Находит индекс подстроки в StringBuilder без лишних аллокаций
+    private static int IndexOf(StringBuilder source, string value)
+    {
+        if (source.Length == 0 || string.IsNullOrEmpty(value) || value.Length > source.Length)
+        {
+            return -1;
+        }
+
+        for (var i = 0; i <= source.Length - value.Length; i++)
+        {
+            var matched = true;
+
+            for (var j = 0; j < value.Length; j++)
+            {
+                if (source[i + j] == value[j])
+                {
+                    continue;
+                }
+
+                matched = false;
+                break;
+            }
+
+            if (matched)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    // Освобождает ресурсы SerialPort и очищает буфер
     private void CleanupPort()
     {
         var serialPort = _serialPort;
-        
+
         if (serialPort is null)
         {
             return;
@@ -225,6 +295,7 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
     }
 
+    // Проверяет что экземпляр не освобожден
     private void ThrowIfDisposed()
     {
         if (_disposed)

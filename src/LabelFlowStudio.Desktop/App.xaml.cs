@@ -14,6 +14,9 @@ using System.Windows;
 
 namespace LabelFlowStudio.Desktop;
 
+/// <summary>
+/// Точка входа WPF приложения и конфигурация инфраструктуры
+/// </summary>
 public partial class App : System.Windows.Application
 {
     private IHost? _host;
@@ -21,12 +24,35 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         ConfigureGlobalExceptionLogging();
+        ConfigureSerilog();
 
+        try
+        {
+            _host = BuildHost();
+            _host.Start();
+
+            var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+        }
+        catch (Exception exception)
+        {
+            Log.Fatal(exception, "Application failed to start");
+            Log.CloseAndFlush();
+            throw;
+        }
+
+        base.OnStartup(e);
+    }
+
+
+    // Настраивает Serilog для файла и отладочного вывода
+    private static void ConfigureSerilog()
+    {
         var logDirectory = LogPathResolver.GetLogDirectory();
         var logFilePath = Path.Combine(logDirectory, "LabelFlowStudio-.log");
-        var logTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}{NewLine}" 
-                            + "{Message:lj}{NewLine}" + "{Exception}" 
-                            + "──────────────────────────────────────────────────────────────{NewLine}";
+        var logTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}{NewLine}"
+                          + "{Message:lj}{NewLine}" + "{Exception}"
+                          + "──────────────────────────────────────────────────────────────{NewLine}";
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -41,61 +67,37 @@ public partial class App : System.Windows.Application
                 shared: true,
                 outputTemplate: logTemplate)
             .CreateLogger();
-
-        try
-        {
-            _host = Host.CreateDefaultBuilder()
-                .ConfigureAppConfiguration((context, config) =>
-                {
-                    config.SetBasePath(AppContext.BaseDirectory);
-
-                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
-                    config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: false);
-
-                    config.AddEnvironmentVariables();
-
-                #if DEBUG
-                    config.AddUserSecrets<App>(optional: true);
-                #endif
-                })
-                .ConfigureServices((context, services) =>
-                {
-                    // Database
-                    services.AddLabelFlowDataAccess(context.Configuration);
-
-                    // Devices
-                    services.AddLabelFlowDevices(context.Configuration);
-
-                    // Application
-                    services.AddLabelFlowApplication();
-
-                    // Printing
-                    services.AddLabelFlowPrinting(context.Configuration);
-
-                    // UI
-                    services.AddSingleton<MainWindow>();
-
-                    // ViewModel
-                    services.AddSingleton<MainViewModel>();
-                })
-                .UseSerilog()
-                .Build();
-
-            _host.Start();
-
-            var mainWindow = _host.Services.GetRequiredService<MainWindow>();
-            mainWindow.Show();
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Application failed to start");
-            Log.CloseAndFlush();
-            throw;
-        }
-
-        base.OnStartup(e);
     }
 
+    // Создает и конфигурирует DI host приложения
+    private static IHost BuildHost()
+    {
+        return Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                config.SetBasePath(AppContext.BaseDirectory);
+                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+                config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+                config.AddEnvironmentVariables();
+
+#if DEBUG
+                config.AddUserSecrets<App>(optional: true);
+#endif
+            })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddLabelFlowDataAccess(context.Configuration);
+                services.AddLabelFlowDevices(context.Configuration);
+                services.AddLabelFlowApplication();
+                services.AddLabelFlowPrinting(context.Configuration);
+                services.AddSingleton<MainWindow>();
+                services.AddSingleton<MainViewModel>();
+            })
+            .UseSerilog()
+            .Build();
+    }
+
+    // Останавливает host и освобождает ресурсы при завершении приложения
     protected override async void OnExit(ExitEventArgs e)
     {
         try
@@ -131,6 +133,7 @@ public partial class App : System.Windows.Application
         }
     }
 
+    // Регистрирует глобальные обработчики необработанных исключений
     private static void ConfigureGlobalExceptionLogging()
     {
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>

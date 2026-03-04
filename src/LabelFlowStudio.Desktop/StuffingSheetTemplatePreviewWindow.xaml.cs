@@ -1,4 +1,5 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Desktop.BoxProcessing;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
@@ -9,6 +10,9 @@ using System.Windows;
 
 namespace LabelFlowStudio.Desktop;
 
+/// <summary>
+/// Окно предпросмотра и печати листа сброса
+/// </summary>
 public partial class StuffingSheetTemplatePreviewWindow : Window
 {
     private readonly BoxProcessingResponse _response;
@@ -19,6 +23,9 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
     private Task? _initializeWebViewTask;
     private bool _isPreviewReady;
 
+    /// <summary>
+    /// Создает окно предпросмотра листа сброса
+    /// </summary>
     public StuffingSheetTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
@@ -34,12 +41,14 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         Loaded += OnLoaded;
     }
 
+    // Инициализирует предпросмотр при загрузке окна
     private async void OnLoaded(object sender, RoutedEventArgs eventArgs)
     {
         Loaded -= OnLoaded;
         await LoadPreviewAsync();
     }
 
+    // Загружает HTML шаблон и отображает его в WebView
     private async Task LoadPreviewAsync()
     {
         if (!await _previewGate.WaitAsync(0))
@@ -51,7 +60,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         {
             SetPreviewState(isReady: false, status: "Загрузка предпросмотра");
 
-            var hasWeight = HasWeight(_response);
+            var hasWeight = BoxProcessingResponseInspector.HasWeight(_response);
 
             string html;
 
@@ -87,22 +96,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         }
     }
 
-    private static bool HasWeight(BoxProcessingResponse response)
-    {
-        if (response.Weight.HasValue && response.Weight.Value > 0)
-        {
-            return true;
-        }
-
-        if (response.Records.Count == 0)
-        {
-            return false;
-        }
-
-        var brutto = response.Records[0].Brutto;
-        return brutto.HasValue && brutto.Value > 0;
-    }
-
+    // Подготавливает WebView2 к загрузке предпросмотра
     private async Task EnsureWebViewReadyAsync()
     {
         if (PreviewWebView.CoreWebView2 is not null)
@@ -126,6 +120,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         }
     }
 
+    // Инициализирует окружение WebView2
     private async Task InitializeWebViewAsync()
     {
         var userDataFolder = GetWebViewUserDataFolder();
@@ -139,12 +134,14 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         await PreviewWebView.EnsureCoreWebView2Async();
     }
 
+    // Возвращает путь до папки пользовательских данных WebView2
     private static string GetWebViewUserDataFolder()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, "LabelFlowStudio", "WebView2", $"pid-{Environment.ProcessId}");
     }
 
+    // Обновляет состояние интерфейса после загрузки предпросмотра
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
     {
         if (eventArgs.IsSuccess)
@@ -156,6 +153,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         SetPreviewState(isReady: false, status: "Ошибка загрузки предпросмотра");
     }
 
+    // Запускает печать листа сброса
     private async void OnPrintClick(object sender, RoutedEventArgs eventArgs)
     {
         try
@@ -171,37 +169,24 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
                 return;
             }
 
+            var webView = PreviewWebView.CoreWebView2;
             var settings = PrintSettingsStore.TryLoad();
             var printerName = settings?.StuffingSheetPrinterName ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(printerName) || !PrinterDiscovery.IsPrinterInstalled(printerName))
             {
                 // Настроек/принтера нет — оставляем старое поведение
-                PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+                webView.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
                 return;
             }
 
-            var copies = settings?.StuffingSheetCopies ?? 1;
-            if (copies < 1)
+            var copies = Math.Max(1, settings?.StuffingSheetCopies ?? 1);
+            var isPrinted = await TryPrintSilentAsync(webView, printerName, copies, CancellationToken.None);
+
+            if (!isPrinted)
             {
-                copies = 1;
-            }
-
-            for (var i = 0; i < copies; i++)
-            {
-                var printSettings = PreviewWebView.CoreWebView2.Environment.CreatePrintSettings();
-                printSettings.PrinterName = printerName;
-                printSettings.ShouldPrintBackgrounds = true;
-                printSettings.ShouldPrintHeaderAndFooter = false;
-
-                var status = await PreviewWebView.CoreWebView2.PrintAsync(printSettings);
-                if (status != CoreWebView2PrintStatus.Succeeded)
-                {
-                    MessageBox.Show(this, "Не удалось отправить задание на принтер", "Печать", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                await Task.Delay(120);
+                MessageBox.Show(this, "Не удалось отправить задание на принтер", "Печать", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
 
             MessageBox.Show(this, $"Отправлено на принтер: {printerName}", "Печать", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -212,11 +197,37 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         }
     }
 
+    // Печатает документ в фоне без системного диалога
+    private static async Task<bool> TryPrintSilentAsync(CoreWebView2 webView, string printerName, int copies, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < copies; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var printSettings = webView.Environment.CreatePrintSettings();
+            printSettings.PrinterName = printerName;
+            printSettings.ShouldPrintBackgrounds = true;
+            printSettings.ShouldPrintHeaderAndFooter = false;
+
+            var status = await webView.PrintAsync(printSettings);
+            if (status != CoreWebView2PrintStatus.Succeeded)
+            {
+                return false;
+            }
+
+            await Task.Delay(120, cancellationToken);
+        }
+
+        return true;
+    }
+
+    // Закрывает окно предпросмотра
     private void OnCloseClick(object sender, RoutedEventArgs eventArgs)
     {
         Close();
     }
 
+    // Сохраняет HTML предпросмотра во временный файл
     private static async Task<string> SavePreviewHtmlAsync(string html, CancellationToken cancellationToken)
     {
         var folder = Path.Combine(Path.GetTempPath(), "LabelFlowStudio");
@@ -234,6 +245,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         return filePath;
     }
 
+    // Обновляет индикаторы готовности предпросмотра
     private void SetPreviewState(bool isReady, string status)
     {
         _isPreviewReady = isReady;

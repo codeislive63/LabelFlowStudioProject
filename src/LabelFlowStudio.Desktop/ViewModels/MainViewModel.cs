@@ -1,26 +1,30 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
+using LabelFlowStudio.Desktop.BoxProcessing;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.Wpf;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
+/// <summary>
+/// Основная модель представления экрана обработки коробов
+/// </summary>
 public sealed class MainViewModel : ViewModelBase
 {
+    private static readonly TimeSpan ScannerDeduplicationWindow = TimeSpan.FromSeconds(2);
+
     private readonly IBoxProcessingService _boxProcessingService;
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
 
     private readonly SemaphoreSlim _scannerGate = new(1, 1);
+    private readonly SynchronizationContext? _uiContext;
 
     private BoxProcessingResponse? _lastSuccessfulResponse;
     private string _lastSuccessfulTenam = string.Empty;
@@ -52,6 +56,7 @@ public sealed class MainViewModel : ViewModelBase
         _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
         _boxScanner = boxScanner ?? throw new ArgumentNullException(nameof(boxScanner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _uiContext = SynchronizationContext.Current;
 
         Records = new ObservableCollection<LabelRecord>();
 
@@ -67,12 +72,29 @@ public sealed class MainViewModel : ViewModelBase
         _ = InitializeScannerAsync();
     }
 
+    /// <summary>
+    /// Коллекция записей для отображения в таблице
+    /// </summary>
     public ObservableCollection<LabelRecord> Records { get; }
 
+    /// <summary>
+    /// Команда загрузки записей по введенному TENAM
+    /// </summary>
     public AsyncCommand LoadRecordsCommand { get; }
+
+    /// <summary>
+    /// Команда открытия предпросмотра торцевой этикетки
+    /// </summary>
     public AsyncCommand OpenEndLabelPreviewCommand { get; }
+
+    /// <summary>
+    /// Команда открытия предпросмотра листа сброса
+    /// </summary>
     public AsyncCommand OpenStuffingSheetPreviewCommand { get; }
 
+    /// <summary>
+    /// Текущее значение TENAM
+    /// </summary>
     public string Tenam
     {
         get => _tenam;
@@ -89,12 +111,18 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Текущее статусное сообщение для пользователя
+    /// </summary>
     public string StatusMessage
     {
         get => _statusMessage;
         private set => SetProperty(ref _statusMessage, value);
     }
 
+    /// <summary>
+    /// Признак активной операции обработки
+    /// </summary>
     public bool IsBusy
     {
         get => _isBusy;
@@ -109,14 +137,23 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Последний успешно обработанный TENAM
+    /// </summary>
     public string LastProcessedTenam
     {
         get => _lastProcessedTenam;
         private set => SetProperty(ref _lastProcessedTenam, value);
     }
 
+    /// <summary>
+    /// Признак автоматического режима
+    /// </summary>
     public bool IsAutomaticMode => CurrentWorkMode == WorkMode.Automatic;
 
+    /// <summary>
+    /// Текущий режим обработки коробов
+    /// </summary>
     public WorkMode CurrentWorkMode
     {
         get => _currentWorkMode;
@@ -132,6 +169,9 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Принимает TENAM от сканера и запускает обработку
+    /// </summary>
     public void ReceiveTenamFromScanner(string boxNumber)
     {
         var digitsOnly = new string((boxNumber ?? string.Empty)
@@ -145,7 +185,7 @@ public sealed class MainViewModel : ViewModelBase
 
         var nowUtc = DateTime.UtcNow;
 
-        if (digitsOnly == _lastScannedTenam && (nowUtc - _lastScannedAtUtc) < TimeSpan.FromSeconds(2))
+        if (digitsOnly == _lastScannedTenam && (nowUtc - _lastScannedAtUtc) < ScannerDeduplicationWindow)
         {
             return;
         }
@@ -170,6 +210,7 @@ public sealed class MainViewModel : ViewModelBase
         });
     }
 
+    // Сохраняет выбранный режим работы в настройках
     private async Task SaveWorkModeAsync(WorkMode workMode)
     {
         try
@@ -183,6 +224,7 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    // Проверяет возможность запуска загрузки
     private bool CanLoadRecords()
     {
         if (IsBusy)
@@ -193,6 +235,7 @@ public sealed class MainViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(Tenam);
     }
 
+    // Выполняет загрузку данных и обновляет состояние экрана
     private async Task LoadRecordsAsync()
     {
         var requestMode = _nextRequestMode;
@@ -200,13 +243,10 @@ public sealed class MainViewModel : ViewModelBase
 
         var tenamSnapshot = Tenam?.Trim() ?? string.Empty;
 
-        await RunOnUiThreadAsync(() =>
-        {
-            IsBusy = true;
-            StatusMessage = "Загрузка";
-            Records.Clear();
-            Tenam = string.Empty;
-        });
+        IsBusy = true;
+        StatusMessage = "Загрузка";
+        Records.Clear();
+        Tenam = string.Empty;
 
         await Task.Yield();
 
@@ -214,88 +254,96 @@ public sealed class MainViewModel : ViewModelBase
 
         try
         {
-            var settings = PrintSettingsStore.LoadOrDefault();
+            var request = BuildRequest(tenamSnapshot, requestMode);
 
-            var request = new BoxProcessingRequest(
-                Tenam: tenamSnapshot,
-                Mode: requestMode,
-                ShouldPrintEndLabels: settings.PrintEndLabelEnabled,
-                ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled
-            );
+            response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
 
-            response = await Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
-
-            await RunOnUiThreadAsync(() =>
-            {
-                foreach (var record in response.Records)
-                {
-                    Records.Add(record);
-                }
-
-                StatusMessage = response.Message;
-
-                if (response.Records.Count > 0)
-                {
-                    _lastLoadedResponse = response;
-                    _lastLoadedTenam = tenamSnapshot;
-                }
-                else
-                {
-                    _lastLoadedResponse = null;
-                    _lastLoadedTenam = string.Empty;
-                }
-
-                if (response.Status == BoxProcessingStatus.Success)
-                {
-                    _lastSuccessfulResponse = response;
-                    _lastSuccessfulTenam = tenamSnapshot;
-
-                    LastProcessedTenam = tenamSnapshot;
-                }
-                else
-                {
-                    _lastSuccessfulResponse = null;
-                    _lastSuccessfulTenam = string.Empty;
-
-                    LastProcessedTenam = string.Empty;
-                }
-
-                OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
-                OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
-            });
+            ApplyResponseState(response, tenamSnapshot);
 
             // Быстрая печать теперь только в режиме Automatic (скан + Enter)
             if (requestMode == WorkMode.Automatic && response is not null)
             {
-                await RunOnUiThreadAsync(() => TryAutoPrintAsync(response, tenamSnapshot));
+                await TryAutoPrintAsync(response, tenamSnapshot);
             }
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Failed to load records");
 
-            await RunOnUiThreadAsync(() =>
-            {
-                StatusMessage = exception.Message;
-                _lastLoadedResponse = null;
-                _lastLoadedTenam = string.Empty;
-                _lastSuccessfulResponse = null;
-                _lastSuccessfulTenam = string.Empty;
-                LastProcessedTenam = string.Empty;
-
-                OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
-                OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
-            });
+            ApplyFailedLoadState(exception.Message);
         }
         finally
         {
-            await RunOnUiThreadAsync(() =>
-            {
-                IsBusy = false;
-            });
+            IsBusy = false;
         }
     }
 
+    // Создает запрос на обработку с безопасными значениями настроек
+    private static BoxProcessingRequest BuildRequest(string tenam, WorkMode requestMode)
+    {
+        var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+
+        return new BoxProcessingRequest(
+            Tenam: tenam,
+            Mode: requestMode,
+            ShouldPrintEndLabels: settings.PrintEndLabelEnabled,
+            ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled
+        );
+    }
+
+    // Применяет результат обработки к состоянию экрана
+    private void ApplyResponseState(BoxProcessingResponse response, string tenamSnapshot)
+    {
+        foreach (var record in response.Records)
+        {
+            Records.Add(record);
+        }
+
+        StatusMessage = response.Message;
+
+        if (response.Records.Count > 0)
+        {
+            _lastLoadedResponse = response;
+            _lastLoadedTenam = tenamSnapshot;
+        }
+        else
+        {
+            _lastLoadedResponse = null;
+            _lastLoadedTenam = string.Empty;
+        }
+
+        if (response.Status == BoxProcessingStatus.Success)
+        {
+            _lastSuccessfulResponse = response;
+            _lastSuccessfulTenam = tenamSnapshot;
+            LastProcessedTenam = tenamSnapshot;
+        }
+        else
+        {
+            _lastSuccessfulResponse = null;
+            _lastSuccessfulTenam = string.Empty;
+            LastProcessedTenam = string.Empty;
+        }
+
+        OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+        OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+    }
+
+    // Применяет состояние ошибки после неудачной загрузки
+    private void ApplyFailedLoadState(string errorMessage)
+    {
+        StatusMessage = errorMessage;
+        _lastLoadedResponse = null;
+        _lastLoadedTenam = string.Empty;
+        _lastSuccessfulResponse = null;
+        _lastSuccessfulTenam = string.Empty;
+        LastProcessedTenam = string.Empty;
+
+        OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+        OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+    }
+
+    // Выполняет бесшумную автопечать после успешной обработки
     private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam)
     {
         // В fast-режиме никаких попапов, только статус
@@ -339,6 +387,7 @@ public sealed class MainViewModel : ViewModelBase
         StatusMessage = "Отправлено на печать";
     }
 
+    // Проверяет доступность предпросмотра торцевой этикетки
     private bool CanOpenEndLabelPreview()
     {
         if (IsBusy)
@@ -354,38 +403,39 @@ public sealed class MainViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(_lastSuccessfulTenam);
     }
 
-    private async Task OpenEndLabelPreviewAsync()
+    // Открывает окно предпросмотра торцевой этикетки
+    private Task OpenEndLabelPreviewAsync()
     {
         var response = _lastSuccessfulResponse;
 
         if (response is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var tenam = _lastSuccessfulTenam;
 
-        await RunOnUiThreadAsync(() =>
+        _endLabelPreviewWindow?.Close();
+        _endLabelPreviewWindow = null;
+
+        var window = new EndLabelTemplatePreviewWindow(response, tenam)
         {
-            _endLabelPreviewWindow?.Close();
-            _endLabelPreviewWindow = null;
+            Owner = System.Windows.Application.Current?.MainWindow,
+            ShowInTaskbar = true,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
 
-            var window = new EndLabelTemplatePreviewWindow(response, tenam)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow,
-                ShowInTaskbar = true,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+        window.Closed += (_, _) => _endLabelPreviewWindow = null;
 
-            window.Closed += (_, _) => _endLabelPreviewWindow = null;
+        _endLabelPreviewWindow = window;
 
-            _endLabelPreviewWindow = window;
+        window.Show();
+        window.Activate();
 
-            window.Show();
-            window.Activate();
-        });
+        return Task.CompletedTask;
     }
 
+    // Проверяет доступность предпросмотра листа сброса
     private bool CanOpenStuffingSheetPreview()
     {
         if (IsBusy)
@@ -401,38 +451,39 @@ public sealed class MainViewModel : ViewModelBase
         return !string.IsNullOrWhiteSpace(_lastLoadedTenam);
     }
 
-    private async Task OpenStuffingSheetPreviewAsync()
+    // Открывает окно предпросмотра листа сброса
+    private Task OpenStuffingSheetPreviewAsync()
     {
         var response = _lastLoadedResponse;
 
         if (response is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var tenam = _lastLoadedTenam;
 
-        await RunOnUiThreadAsync(() =>
+        _stuffingSheetPreviewWindow?.Close();
+        _stuffingSheetPreviewWindow = null;
+
+        var window = new StuffingSheetTemplatePreviewWindow(response, tenam)
         {
-            _stuffingSheetPreviewWindow?.Close();
-            _stuffingSheetPreviewWindow = null;
+            Owner = System.Windows.Application.Current?.MainWindow,
+            ShowInTaskbar = true,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
 
-            var window = new StuffingSheetTemplatePreviewWindow(response, tenam)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow,
-                ShowInTaskbar = true,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+        window.Closed += (_, _) => _stuffingSheetPreviewWindow = null;
 
-            window.Closed += (_, _) => _stuffingSheetPreviewWindow = null;
+        _stuffingSheetPreviewWindow = window;
 
-            _stuffingSheetPreviewWindow = window;
+        window.Show();
+        window.Activate();
 
-            window.Show();
-            window.Activate();
-        });
+        return Task.CompletedTask;
     }
 
+    // Печатает торцевую этикетку без отображения окна настроек
     private static async Task<bool> PrintEndLabelSilentAsync(
         BoxProcessingResponse response,
         string tenam,
@@ -465,6 +516,7 @@ public sealed class MainViewModel : ViewModelBase
             cancellationToken: CancellationToken.None);
     }
 
+    // Печатает лист сброса без отображения окна настроек
     private static async Task<bool> PrintStuffingSheetSilentAsync(
         BoxProcessingResponse response,
         string tenam,
@@ -488,7 +540,7 @@ public sealed class MainViewModel : ViewModelBase
 
         string html;
 
-        if (!HasWeight(response))
+        if (!BoxProcessingResponseInspector.HasWeight(response))
         {
             html = await EmptyPageTemplateStore.LoadOrCreateAsync(CancellationToken.None);
         }
@@ -506,22 +558,7 @@ public sealed class MainViewModel : ViewModelBase
             cancellationToken: CancellationToken.None);
     }
 
-    private static bool HasWeight(BoxProcessingResponse response)
-    {
-        if (response.Weight.HasValue && response.Weight.Value > 0)
-        {
-            return true;
-        }
-
-        if (response.Records.Count == 0)
-        {
-            return false;
-        }
-
-        var brutto = response.Records[0].Brutto;
-        return brutto.HasValue && brutto.Value > 0;
-    }
-
+    // Инициализирует подключение к сканеру
     private async Task InitializeScannerAsync()
     {
         try
@@ -543,6 +580,7 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    // Гарантирует запуск сканера и подписку на события
     private async Task EnsureScannerStartedAsync()
     {
         try
@@ -575,6 +613,7 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
+    // Отвязывает обработчик событий сканера после ошибки запуска
     private Task FailScannerStartAsync()
     {
         if (_isScannerSubscribed)
@@ -586,221 +625,71 @@ public sealed class MainViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    // Обработчик события получения номера короба от сканера
     private void OnBoxNumberReceived(object? sender, BoxNumberReceivedEventArgs eventArgs)
     {
         ReceiveTenamFromScanner(eventArgs.BoxNumber);
     }
 
-    private static Task RunOnUiThreadAsync(Action action)
+    // Выполняет действие в захваченном UI контексте
+    private Task RunOnUiThreadAsync(Action action)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-
-        if (dispatcher is null || dispatcher.CheckAccess())
+        if (_uiContext is null || SynchronizationContext.Current == _uiContext)
         {
             action();
             return Task.CompletedTask;
         }
 
-        return dispatcher.InvokeAsync(action).Task;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _uiContext.Post(_ =>
+        {
+            try
+            {
+                action();
+                completion.SetResult();
+            }
+            catch (Exception exception)
+            {
+                completion.SetException(exception);
+            }
+        }, null);
+
+        return completion.Task;
     }
 
-    private static Task RunOnUiThreadAsync(Func<Task> action)
+    // Выполняет асинхронное действие в захваченном UI контексте
+    private Task RunOnUiThreadAsync(Func<Task> action)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-
-        if (dispatcher is null || dispatcher.CheckAccess())
+        if (_uiContext is null || SynchronizationContext.Current == _uiContext)
         {
             return action();
         }
 
-        return dispatcher.InvokeAsync(action).Task.Unwrap();
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _uiContext.Post(async _ =>
+        {
+            try
+            {
+                await action();
+                completion.SetResult();
+            }
+            catch (Exception exception)
+            {
+                completion.SetException(exception);
+            }
+        }, null);
+
+        return completion.Task;
     }
 
+    // Преобразует ошибку команды в пользовательский статус
     private void HandleCommandException(Exception exception)
     {
         _ = RunOnUiThreadAsync(() =>
         {
             StatusMessage = exception.Message;
         });
-    }
-}
-
-internal static class SilentHtmlPrinter
-{
-    public static async Task<bool> PrintHtmlAsync(
-        string html,
-        string printerName,
-        int copies,
-        Window? owner,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(html))
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(printerName))
-        {
-            return false;
-        }
-
-        if (copies <= 0)
-        {
-            copies = 1;
-        }
-
-        WebView2PrintHostWindow? hostWindow = null;
-
-        try
-        {
-            hostWindow = new WebView2PrintHostWindow
-            {
-                Owner = owner
-            };
-
-            hostWindow.Show();
-
-            await hostWindow.EnsureInitializedAsync(cancellationToken);
-            await hostWindow.NavigateToStringAsync(html, cancellationToken);
-
-            return await hostWindow.TryPrintToPrinterAsync(printerName, copies, cancellationToken);
-        }
-        catch
-        {
-            return false;
-        }
-        finally
-        {
-            try
-            {
-                hostWindow?.Close();
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    private sealed class WebView2PrintHostWindow : Window
-    {
-        private readonly WebView2 _webView;
-
-        public WebView2PrintHostWindow()
-        {
-            Width = 1;
-            Height = 1;
-            WindowStyle = WindowStyle.None;
-            ResizeMode = ResizeMode.NoResize;
-            ShowInTaskbar = false;
-            ShowActivated = false;
-            AllowsTransparency = true;
-            Opacity = 0;
-            WindowStartupLocation = WindowStartupLocation.Manual;
-            Left = -10000;
-            Top = -10000;
-
-            _webView = new WebView2();
-            Content = _webView;
-        }
-
-        public async Task EnsureInitializedAsync(CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (_webView.CoreWebView2 is not null)
-            {
-                return;
-            }
-
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var userDataFolder = Path.Combine(
-                localAppData,
-                "LabelFlowStudio",
-                "WebView2",
-                $"pid-{Environment.ProcessId}"
-            );
-
-            Directory.CreateDirectory(userDataFolder);
-
-            var environment = await CoreWebView2Environment.CreateAsync(
-                browserExecutableFolder: null,
-                userDataFolder: userDataFolder,
-                options: null
-            );
-
-            await _webView.EnsureCoreWebView2Async(environment);
-
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
-        public async Task NavigateToStringAsync(string html, CancellationToken cancellationToken)
-        {
-            if (_webView.CoreWebView2 is null)
-            {
-                throw new InvalidOperationException("WebView2 is not initialized");
-            }
-
-            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            void Handler(object? sender, CoreWebView2NavigationCompletedEventArgs args)
-            {
-                _webView.NavigationCompleted -= Handler;
-                tcs.TrySetResult(args.IsSuccess);
-            }
-
-            _webView.NavigationCompleted += Handler;
-
-            using var reg = cancellationToken.Register(() =>
-            {
-                _webView.NavigationCompleted -= Handler;
-                tcs.TrySetCanceled(cancellationToken);
-            });
-
-            _webView.CoreWebView2.NavigateToString(html);
-
-            var ok = await tcs.Task;
-            if (!ok)
-            {
-                throw new InvalidOperationException("Не удалось отрендерить HTML в WebView2");
-            }
-
-            await Task.Delay(120, cancellationToken);
-        }
-
-        public async Task<bool> TryPrintToPrinterAsync(string printerName, int copies, CancellationToken cancellationToken)
-        {
-            if (_webView.CoreWebView2 is null)
-            {
-                return false;
-            }
-
-            if (!PrinterDiscovery.IsPrinterInstalled(printerName))
-            {
-                return false;
-            }
-
-            if (copies < 1)
-            {
-                copies = 1;
-            }
-
-            for (var i = 0; i < copies; i++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var settings = _webView.CoreWebView2.Environment.CreatePrintSettings();
-                settings.PrinterName = printerName;
-                settings.ShouldPrintBackgrounds = true;
-                settings.ShouldPrintHeaderAndFooter = false;
-
-                var status = await _webView.CoreWebView2.PrintAsync(settings);
-                if (status != CoreWebView2PrintStatus.Succeeded)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
     }
 }

@@ -253,11 +253,16 @@ public partial class EndLabelTemplatePreviewWindow : Window
         ToolsColumn.Width = GridLength.Auto;
         PreviewToolsPanel.Visibility = Visibility.Visible;
 
-        Dispatcher.BeginInvoke(() =>
-        {
-            EditorWebView.Focus();
-            Keyboard.Focus(EditorWebView);
-        }, DispatcherPriority.Background);
+        _ = FocusEditorSoonAsync();
+    }
+
+    // Переносит фокус в редактор после перестроения разметки
+    private async Task FocusEditorSoonAsync()
+    {
+        await Task.Yield();
+
+        EditorWebView.Focus();
+        Keyboard.Focus(EditorWebView);
     }
 
     // ===========================
