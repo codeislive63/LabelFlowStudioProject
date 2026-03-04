@@ -256,7 +256,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             var request = BuildRequest(tenamSnapshot, requestMode);
 
-            response = await ExecuteProcessingAsync(request);
+            response = await _boxProcessingService.ProcessAsync(request, CancellationToken.None);
 
             ApplyResponseState(response, tenamSnapshot);
 
@@ -289,13 +289,6 @@ public sealed class MainViewModel : ViewModelBase
             ShouldPrintEndLabels: settings.PrintEndLabelEnabled,
             ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled
         );
-    }
-
-
-    // Выполняет поиск в БД в фоновом потоке чтобы не блокировать UI
-    private Task<BoxProcessingResponse> ExecuteProcessingAsync(BoxProcessingRequest request)
-    {
-        return Task.Run(() => _boxProcessingService.ProcessAsync(request, CancellationToken.None));
     }
 
     // Применяет результат обработки к состоянию экрана
@@ -654,6 +647,32 @@ public sealed class MainViewModel : ViewModelBase
             try
             {
                 action();
+                completion.SetResult();
+            }
+            catch (Exception exception)
+            {
+                completion.SetException(exception);
+            }
+        }, null);
+
+        return completion.Task;
+    }
+
+    // Выполняет асинхронное действие в захваченном UI контексте
+    private Task RunOnUiThreadAsync(Func<Task> action)
+    {
+        if (_uiContext is null || SynchronizationContext.Current == _uiContext)
+        {
+            return action();
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _uiContext.Post(async _ =>
+        {
+            try
+            {
+                await action();
                 completion.SetResult();
             }
             catch (Exception exception)
