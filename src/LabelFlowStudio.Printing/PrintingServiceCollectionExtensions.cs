@@ -13,6 +13,7 @@ public static class PrintingServiceCollectionExtensions
                 .Bind(configuration.GetSection(PrintingSection))
                 .ValidateDataAnnotations();
 
+        services.AddLogging();
         services.AddSingleton<EndLabelDocumentBuilder>();
         services.AddSingleton<IPrintService, WpfPrintService>();
         return services;

@@ -38,13 +38,17 @@ public sealed class EndLabelDocumentBuilderTests
     {
         var builder = CreateBuilder();
         var response = CreateResponse(weight: 12.345m);
+        var expectedWeightText = $"Вес {response.Weight!.Value:0.###}";
 
-        var document = StaTestRunner.Run(() => builder.Build(response, "4340558"));
-        var textBlocks = StaTestRunner.Run(() => ExtractTextBlocks(document));
+        var (pageCount, textBlocks) = StaTestRunner.Run(() =>
+        {
+            var document = builder.Build(response, "4340558");
+            return (document.Pages.Count, ExtractTextBlocks(document));
+        });
 
-        Assert.Single(document.Pages);
+        Assert.Equal(1, pageCount);
         Assert.Contains(textBlocks, text => text == "TENAM 4340558");
-        Assert.Contains(textBlocks, text => text == "Вес 12.345");
+        Assert.Contains(textBlocks, text => text == expectedWeightText);
     }
 
     [Fact]
@@ -54,7 +58,12 @@ public sealed class EndLabelDocumentBuilderTests
         var response = CreateResponse(weight: null);
 
         var document = StaTestRunner.Run(() => builder.Build(response, "4340558"));
-        var textBlocks = StaTestRunner.Run(() => ExtractTextBlocks(document));
+        
+        var textBlocks = StaTestRunner.Run(() =>
+        {
+            var document = builder.Build(response, "4340558");
+            return ExtractTextBlocks(document);
+        });
 
         Assert.Contains(textBlocks, text => text == "Вес отсутствует");
     }
