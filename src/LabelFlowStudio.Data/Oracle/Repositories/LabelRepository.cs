@@ -38,4 +38,28 @@ public sealed class LabelRepository : ILabelRepository
             .Where(record => record.Tenam == normalizedTenam)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<bool> UpdateBruttoByTenamAsync(string tenam, decimal brutto, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(tenam))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(tenam));
+        }
+
+        if (brutto <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(brutto), "Weight must be greater than zero.");
+        }
+
+        string normalizedTenam = tenam.Trim();
+
+        await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var affectedRows = await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE MLSOFT.LIST_FOR_TEKARTON_V SET BRUTTO = {brutto} WHERE TENAM = {normalizedTenam}",
+            cancellationToken
+        );
+
+        return affectedRows > 0;
+    }
 }
