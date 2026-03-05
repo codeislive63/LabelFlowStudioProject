@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.BoxProcessing;
+using LabelFlowStudio.Desktop;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
@@ -270,6 +271,12 @@ public sealed class MainViewModel : ViewModelBase
             BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (response.Status == BoxProcessingStatus.NeedWeight)
+            {
+                response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
             ApplyResponseState(response, tenamSnapshot);
 
             if (requestMode == WorkMode.Automatic && response is not null)
@@ -292,6 +299,63 @@ public sealed class MainViewModel : ViewModelBase
             IsBusy = false;
             SchedulePendingScannerProcessing();
         }
+    }
+
+    private async Task<BoxProcessingResponse> RequestManualWeightAsync(
+        BoxProcessingResponse response,
+        string tenam,
+        CancellationToken cancellationToken)
+    {
+        var completion = new TaskCompletionSource<decimal?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await RunOnUiThreadAsync(() =>
+        {
+            var dialog = new ManualWeightInputWindow(tenam)
+            {
+                Owner = Application.Current?.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            var accepted = dialog.ShowDialog() == true;
+            completion.SetResult(accepted ? dialog.EnteredWeight : null);
+        });
+
+        var enteredWeight = await completion.Task;
+
+        if (!enteredWeight.HasValue)
+        {
+            return response;
+        }
+
+        var manualWeight = Math.Round(enteredWeight.Value, 3, MidpointRounding.AwayFromZero);
+        var saved = await _boxProcessingService.UpdateWeightAsync(tenam, manualWeight, cancellationToken);
+
+        if (!saved)
+        {
+            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД", isError: true);
+            return response with { Message = "Не удалось сохранить вес в БД" };
+        }
+
+        var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+
+        var updatedRecords = response.Records
+            .Select(record =>
+            {
+                record.Brutto = manualWeight;
+                return record;
+            })
+            .ToList();
+
+        return response with
+        {
+            Status = BoxProcessingStatus.Success,
+            Message = "Вес введен вручную и сохранен в БД",
+            Weight = manualWeight,
+            Records = updatedRecords,
+            ShouldPrintDropSheet = settings.PrintStuffingSheetEnabled,
+            ShouldPrintEmptyDropSheet = false,
+            ShouldPrintEndLabels = settings.PrintEndLabelEnabled
+        };
     }
 
     // Планирует обработку отложенного скана после завершения текущей команды

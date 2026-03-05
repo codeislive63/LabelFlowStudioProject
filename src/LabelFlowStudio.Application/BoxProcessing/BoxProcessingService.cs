@@ -52,6 +52,18 @@ public sealed class BoxProcessingService : IBoxProcessingService
         return CreateSuccessResponse(records, request, weight);
     }
 
+    public async Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
+    {
+        var normalizedTenam = NormalizeTenam(tenam);
+
+        if (string.IsNullOrWhiteSpace(normalizedTenam) || weight <= 0)
+        {
+            return false;
+        }
+
+        return await _labelRepository.UpdateBruttoByTenamAsync(normalizedTenam, weight, cancellationToken);
+    }
+
     // Нормализуем код короба перед обращением в репозиторий
     private static string NormalizeTenam(string tenam) => (tenam ?? string.Empty).Trim();
 

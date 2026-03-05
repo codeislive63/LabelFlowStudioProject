@@ -149,6 +149,11 @@ public sealed class MainViewModelTests
         {
             return _called.Task;
         }
+
+        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class DelayedProcessingService : IBoxProcessingService
@@ -183,5 +188,10 @@ public sealed class MainViewModelTests
         public Task WaitSecondCallAsync() => _secondCall.Task;
 
         public void ReleaseFirstCall() => _releaseFirstCall.TrySetResult(true);
+
+        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(true);
+        }
     }
 }

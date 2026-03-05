@@ -9,4 +9,9 @@ public interface IBoxProcessingService
     /// Обрабатывает запрос по коробу и возвращает итоговый статус
     /// </summary>
     Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Сохраняет введенный вручную вес короба в базе данных
+    /// </summary>
+    Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken);
 }
