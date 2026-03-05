@@ -67,7 +67,7 @@ public sealed class MainViewModelTests
         var service = new FakeProcessingService
         {
             Response = CreateSuccessResponse(
-                message: "AUTO OK",
+                message: "Отправлено на печать",
                 records: new List<LabelRecord>()
             )
         };
@@ -79,7 +79,7 @@ public sealed class MainViewModelTests
         await service.WaitCalledAsync();
         await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.Equal("AUTO OK", vm.StatusMessage);
+        Assert.Equal("Отправлено на печать", vm.StatusMessage);
     }
 
     private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
