@@ -312,7 +312,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             var dialog = new ManualWeightInputWindow(tenam)
             {
-                Owner = Application.Current?.MainWindow,
+                Owner = System.Windows.Application.Current?.MainWindow,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
