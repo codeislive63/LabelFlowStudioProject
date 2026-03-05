@@ -21,8 +21,7 @@
                         Width="140"
                         Grid.Column="0"
                         Style="{StaticResource PrimaryButtonStyle}"
-                        Click="OnPrintClick"
-                        IsEnabled="False">
+                        Click="OnPrintClick">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets"
                                    Text="&#xE749;"

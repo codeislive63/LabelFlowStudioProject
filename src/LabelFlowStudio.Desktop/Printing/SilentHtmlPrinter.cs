@@ -60,6 +60,7 @@ internal static class SilentHtmlPrinter
         {
             try
             {
+                hostWindow?.DisposeWebView();
                 hostWindow?.Close();
             }
             catch
@@ -88,6 +89,19 @@ internal static class SilentHtmlPrinter
 
             _webView = new WebView2();
             Content = _webView;
+        }
+
+
+        public void DisposeWebView()
+        {
+            try
+            {
+                Content = null;
+                _webView.Dispose();
+            }
+            catch
+            {
+            }
         }
 
         // Инициализирует WebView2 окружение для печати

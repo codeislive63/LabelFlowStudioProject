@@ -169,27 +169,22 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
                 return;
             }
 
-            var webView = PreviewWebView.CoreWebView2;
             var settings = PrintSettingsStore.TryLoad();
             var printerName = settings?.StuffingSheetPrinterName ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(printerName) || !PrinterDiscovery.IsPrinterInstalled(printerName))
             {
-                // Настроек/принтера нет — оставляем старое поведение
-                webView.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+                PreviewWebView.CoreWebView2.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
+                StatusText.Text = "Открыто окно печати";
                 return;
             }
 
             var copies = Math.Max(1, settings?.StuffingSheetCopies ?? 1);
-            var isPrinted = await TryPrintSilentAsync(webView, printerName, copies, CancellationToken.None);
+            var isPrinted = await TryPrintSilentAsync(PreviewWebView.CoreWebView2, printerName, copies, CancellationToken.None);
 
-            if (!isPrinted)
-            {
-                MessageBox.Show(this, "Не удалось отправить задание на принтер", "Печать", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            MessageBox.Show(this, $"Отправлено на принтер: {printerName}", "Печать", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusText.Text = isPrinted
+                ? $"Отправлено на принтер: {printerName}"
+                : "Не удалось отправить задание на принтер";
         }
         catch (Exception exception)
         {
@@ -215,7 +210,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
                 return false;
             }
 
-            await Task.Delay(120, cancellationToken);
+            await Task.Delay(100, cancellationToken);
         }
 
         return true;
@@ -249,7 +244,6 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
     private void SetPreviewState(bool isReady, string status)
     {
         _isPreviewReady = isReady;
-        PrintButton.IsEnabled = isReady;
         StatusText.Text = status;
     }
 }
