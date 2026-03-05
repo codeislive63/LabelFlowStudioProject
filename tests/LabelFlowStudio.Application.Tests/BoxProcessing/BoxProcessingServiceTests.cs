@@ -22,6 +22,11 @@ public sealed class BoxProcessingServiceTests
             LastTenam = tenam;
             return Task.FromResult(_records);
         }
+
+        public Task<bool> UpdateBruttoByTenamAsync(string tenam, decimal brutto, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(true);
+        }
     }
 
     [Fact]
@@ -229,6 +234,18 @@ public sealed class BoxProcessingServiceTests
         var exception = Assert.Throws<ArgumentNullException>(() => new BoxProcessingService(null!));
 
         Assert.Equal("labelRepository", exception.ParamName);
+    }
+
+
+    [Fact]
+    public async Task UpdateWeightAsync_ValidInput_DelegatesToRepository()
+    {
+        var repository = new FakeLabelRepository(Array.Empty<LabelRecord>());
+        var service = new BoxProcessingService(repository);
+
+        var updated = await service.UpdateWeightAsync("4340559", 5.155m, CancellationToken.None);
+
+        Assert.True(updated);
     }
 
     private static LabelRecord CreateRecord(decimal? brutto)
