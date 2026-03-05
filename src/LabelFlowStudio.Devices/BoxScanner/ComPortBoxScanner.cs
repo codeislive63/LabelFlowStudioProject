@@ -11,11 +11,13 @@ namespace LabelFlowStudio.Devices.BoxScanner;
 public sealed class ComPortBoxScanner : IBoxScanner
 {
     private const string DefaultLineSeparator = "\n";
+    private const int MaxBufferLength = 4096;
 
     private readonly IOptionsMonitor<BoxScannerOptions> _optionsMonitor;
     private readonly ILogger<ComPortBoxScanner> _logger;
 
     private readonly object _sync = new();
+    private readonly object _lifecycleSync = new();
     private readonly StringBuilder _buffer = new();
 
     private SerialPort? _serialPort;
@@ -48,12 +50,6 @@ public sealed class ComPortBoxScanner : IBoxScanner
     public Task StartAsync(CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-
-        if (IsRunning)
-        {
-            return Task.CompletedTask;
-        }
-
         cancellationToken.ThrowIfCancellationRequested();
 
         var options = _optionsMonitor.CurrentValue;
@@ -65,13 +61,26 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
         try
         {
-            _optionsSnapshot = options;
-            _serialPort = BuildSerialPort(options);
-            _serialPort.DataReceived += OnDataReceived;
-            _serialPort.Open();
+            lock (_lifecycleSync)
+            {
+                if (IsRunning)
+                {
+                    return Task.CompletedTask;
+                }
 
-            IsRunning = true;
-            _logger.LogInformation("Box scanner started on {PortName}", options.PortName);
+                CleanupPort();
+
+                _optionsSnapshot = options;
+
+                var port = BuildSerialPort(options);
+                port.DataReceived += OnDataReceived;
+                port.Open();
+
+                _serialPort = port;
+                IsRunning = true;
+
+                _logger.LogInformation("Box scanner started on {PortName}", options.PortName);
+            }
 
             return Task.CompletedTask;
         }
@@ -90,17 +99,20 @@ public sealed class ComPortBoxScanner : IBoxScanner
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!IsRunning)
-        {
-            return Task.CompletedTask;
-        }
-
-        IsRunning = false;
-
         try
         {
-            CleanupPort();
-            _logger.LogInformation("Box scanner stopped");
+            lock (_lifecycleSync)
+            {
+                if (!IsRunning && _serialPort is null)
+                {
+                    return Task.CompletedTask;
+                }
+
+                IsRunning = false;
+                CleanupPort();
+
+                _logger.LogInformation("Box scanner stopped");
+            }
         }
         catch (Exception exception)
         {
@@ -166,6 +178,7 @@ public sealed class ComPortBoxScanner : IBoxScanner
             lock (_sync)
             {
                 _buffer.Append(received);
+                TrimBufferIfNeededLocked();
                 ProcessBufferLocked();
             }
         }
@@ -261,6 +274,7 @@ public sealed class ComPortBoxScanner : IBoxScanner
     private void CleanupPort()
     {
         var serialPort = _serialPort;
+        _serialPort = null;
 
         if (serialPort is null)
         {
@@ -287,12 +301,28 @@ public sealed class ComPortBoxScanner : IBoxScanner
         }
 
         serialPort.Dispose();
-        _serialPort = null;
 
         lock (_sync)
         {
             _buffer.Clear();
         }
+    }
+
+    // Ограничивает размер входного буфера, чтобы исключить неограниченный рост памяти
+    private void TrimBufferIfNeededLocked()
+    {
+        if (_buffer.Length <= MaxBufferLength)
+        {
+            return;
+        }
+
+        var charsToRemove = _buffer.Length - MaxBufferLength;
+        _buffer.Remove(0, charsToRemove);
+
+        _logger.LogWarning(
+            "Box scanner input buffer exceeded {MaxBufferLength} chars and was trimmed by {TrimmedChars}",
+            MaxBufferLength,
+            charsToRemove);
     }
 
     // Проверяет что экземпляр не освобожден

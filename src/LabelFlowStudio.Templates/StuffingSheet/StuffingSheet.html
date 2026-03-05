@@ -29,6 +29,14 @@
             display: block;
         }
 
+        .page-footer {
+            display: none;
+        }
+
+        @page {
+            margin: 12mm 10mm 14mm 10mm;
+        }
+
         @media print {
             * {
                 -webkit-print-color-adjust: exact;
@@ -43,6 +51,24 @@
 
             .products-table {
                 border-right: 3px dashed #000 !important;
+            }
+
+            .page-footer {
+                display: block;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                text-align: center;
+                font-size: 10pt;
+            }
+
+            .page-footer .page-number::before {
+                content: counter(page);
+            }
+
+            .page-footer .page-total::before {
+                content: counter(pages);
             }
         }
 
@@ -134,6 +160,9 @@
             <td style="text-align: right; padding-right: 50px;">{{SumBst}}</td>
         </tr>
     </table>
+</div>
+<div class="page-footer">
+    <span class="page-number"></span> из <span class="page-total"></span>
 </div>
 </body>
 </html>

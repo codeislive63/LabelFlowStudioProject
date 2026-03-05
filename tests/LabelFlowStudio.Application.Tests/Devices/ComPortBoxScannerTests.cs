@@ -105,6 +105,30 @@ public sealed class ComPortBoxScannerTests
         Assert.False(scanner.IsRunning);
     }
 
+    [Fact]
+    public void TrimBufferIfNeededLocked_TrimsLargeBuffer()
+    {
+        var options = new BoxScannerOptions
+        {
+            PortName = "COM1",
+            LineSeparator = "\n"
+        };
+
+        var scanner = CreateScanner(options);
+        var bufferField = typeof(ComPortBoxScanner).GetField("_buffer", BindingFlags.NonPublic | BindingFlags.Instance);
+        var trimMethod = typeof(ComPortBoxScanner).GetMethod("TrimBufferIfNeededLocked", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        Assert.NotNull(bufferField);
+        Assert.NotNull(trimMethod);
+
+        var buffer = (StringBuilder)bufferField!.GetValue(scanner)!;
+        buffer.Append(new string('1', 5000));
+
+        trimMethod!.Invoke(scanner, null);
+
+        Assert.True(buffer.Length <= 4096);
+    }
+
     private static ComPortBoxScanner CreateScanner(BoxScannerOptions options)
     {
         return new ComPortBoxScanner(new TestOptionsMonitor<BoxScannerOptions>(options), NullLogger<ComPortBoxScanner>.Instance);

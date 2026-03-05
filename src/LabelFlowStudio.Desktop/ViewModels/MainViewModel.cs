@@ -18,6 +18,7 @@ namespace LabelFlowStudio.Desktop.ViewModels;
 public sealed class MainViewModel : ViewModelBase
 {
     private static readonly TimeSpan ScannerDeduplicationWindow = TimeSpan.FromSeconds(2);
+    private const int MaxNotifications = 50;
 
     private readonly IBoxProcessingService _boxProcessingService;
     private readonly IBoxScanner _boxScanner;
@@ -65,6 +66,7 @@ public sealed class MainViewModel : ViewModelBase
         _uiContext = SynchronizationContext.Current;
 
         Records = new ObservableCollection<LabelRecord>();
+        Notifications = new ObservableCollection<UiNotification>();
 
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
@@ -82,6 +84,8 @@ public sealed class MainViewModel : ViewModelBase
     /// Коллекция записей для отображения в таблице
     /// </summary>
     public ObservableCollection<LabelRecord> Records { get; }
+
+    public ObservableCollection<UiNotification> Notifications { get; }
 
     /// <summary>
     /// Команда загрузки записей по введенному TENAM
@@ -448,7 +452,7 @@ public sealed class MainViewModel : ViewModelBase
         if (settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
         {
             StatusMessage = "Печать листа сброса";
-            
+
             var okSheet = await PrintStuffingSheetSilentAsync(
                 response,
                 tenam,
@@ -460,8 +464,11 @@ public sealed class MainViewModel : ViewModelBase
             if (!okSheet)
             {
                 StatusMessage = "Не удалось напечатать лист сброса";
+                AddNotification($"Лист сброса №{tenam} не отправлен на печать", isError: true);
                 return;
             }
+
+            AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", isError: false);
         }
 
         if (settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
@@ -479,8 +486,11 @@ public sealed class MainViewModel : ViewModelBase
             if (!okEndLabel)
             {
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
+                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать", isError: true);
                 return;
             }
+
+            AddNotification($"Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", isError: false);
         }
 
         StatusMessage = "Отправлено на печать";
@@ -703,29 +713,38 @@ public sealed class MainViewModel : ViewModelBase
         {
             _logger.LogInformation(exception, "Box scanner configuration is invalid, fallback to keyboard scanner");
             await FailScannerStartAsync();
+            AddNotification("Не удалось запустить COM-сканер: неверная конфигурация", isError: true);
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogInformation(exception, "Box scanner is not configured, fallback to keyboard scanner");
             await FailScannerStartAsync();
+            AddNotification("COM-сканер не настроен, активирован ввод с клавиатуры", isError: true);
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Failed to start box scanner, fallback to keyboard scanner");
             await FailScannerStartAsync();
+            AddNotification($"Ошибка запуска COM-сканера: {exception.Message}", isError: true);
         }
     }
 
     // Отвязывает обработчик событий сканера после ошибки запуска
-    private Task FailScannerStartAsync()
+    private async Task FailScannerStartAsync()
     {
+        try
+        {
+            await _boxScanner.StopAsync(CancellationToken.None);
+        }
+        catch
+        {
+        }
+
         if (_isScannerSubscribed)
         {
             _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
             _isScannerSubscribed = false;
         }
-
-        return Task.CompletedTask;
     }
 
     // Обработчик события получения номера короба от сканера
@@ -767,6 +786,22 @@ public sealed class MainViewModel : ViewModelBase
         _ = RunOnUiThreadAsync(() =>
         {
             StatusMessage = exception.Message;
+            AddNotification($"Ошибка: {exception.Message}", isError: true);
         });
+    }
+
+    private void AddNotification(string message, bool isError)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
+
+        while (Notifications.Count > MaxNotifications)
+        {
+            Notifications.RemoveAt(Notifications.Count - 1);
+        }
     }
 }

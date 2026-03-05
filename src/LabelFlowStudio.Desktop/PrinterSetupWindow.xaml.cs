@@ -4,6 +4,9 @@ namespace LabelFlowStudio.Desktop.Printing;
 
 public partial class PrinterSetupWindow : Window
 {
+    private const string PreferredEndLabelPrinter = "zebra_torec";
+    private const string PreferredStuffingSheetPrinter = "Kyocera ECOSYS PA6000x KX";
+
     private readonly string[] _printers;
     private readonly PrintSettings _settings;
     private int _stepIndex;
@@ -22,7 +25,7 @@ public partial class PrinterSetupWindow : Window
 
         if (_printers.Length > 0)
         {
-            PrintersComboBox.SelectedIndex = 0;
+            PrintersComboBox.SelectedItem = ResolveDefaultPrinter(PreferredEndLabelPrinter) ?? _printers[0];
         }
 
         BackButton.IsEnabled = false;
@@ -141,7 +144,7 @@ public partial class PrinterSetupWindow : Window
             }
             else if (_printers.Length > 0)
             {
-                PrintersComboBox.SelectedIndex = 0;
+                PrintersComboBox.SelectedItem = ResolveDefaultPrinter(PreferredEndLabelPrinter) ?? _printers[0];
             }
 
             PrintersComboBox.IsEnabled = _settings.PrintEndLabelEnabled;
@@ -160,10 +163,15 @@ public partial class PrinterSetupWindow : Window
         }
         else if (_printers.Length > 0)
         {
-            PrintersComboBox.SelectedIndex = 0;
+            PrintersComboBox.SelectedItem = ResolveDefaultPrinter(PreferredStuffingSheetPrinter) ?? _printers[0];
         }
 
         PrintersComboBox.IsEnabled = _settings.PrintStuffingSheetEnabled;
         ValidationText.Visibility = Visibility.Collapsed;
+    }
+
+    private string? ResolveDefaultPrinter(string preferredName)
+    {
+        return _printers.FirstOrDefault(printer => string.Equals(printer, preferredName, StringComparison.OrdinalIgnoreCase));
     }
 }
