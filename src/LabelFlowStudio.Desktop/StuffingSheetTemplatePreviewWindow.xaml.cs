@@ -19,6 +19,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
 {
     private readonly BoxProcessingResponse _response;
     private readonly string _tenam;
+    private readonly Action<string, bool>? _notificationSink;
 
     private readonly SemaphoreSlim _previewGate = new(1, 1);
 
@@ -72,7 +73,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
 
     private ViewMode _mode = ViewMode.Preview;
 
-    public StuffingSheetTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
+    public StuffingSheetTemplatePreviewWindow(BoxProcessingResponse response, string tenam, Action<string, bool>? notificationSink = null)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
 
@@ -82,6 +83,7 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         }
 
         _tenam = tenam;
+        _notificationSink = notificationSink;
 
         InitializeComponent();
 
@@ -852,6 +854,13 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
             if (didPrint)
             {
                 ShowToast($"Отправлено на принтер: {printerName}");
+                _notificationSink?.Invoke($"Лист сброса №{_tenam} отправлен на печать ({printerName})", false);
+                MessageBox.Show(
+                    this,
+                    $"Короб №{_tenam}: лист сброса отправлен на печать.\nПринтер: {printerName}",
+                    "Печать выполнена",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 

@@ -19,6 +19,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
 {
     private readonly BoxProcessingResponse _response;
     private readonly string _tenam;
+    private readonly Action<string, bool>? _notificationSink;
 
     private readonly SemaphoreSlim _previewGate = new(1, 1);
 
@@ -67,7 +68,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private ViewMode _mode = ViewMode.Preview;
 
-    public EndLabelTemplatePreviewWindow(BoxProcessingResponse response, string tenam)
+    public EndLabelTemplatePreviewWindow(BoxProcessingResponse response, string tenam, Action<string, bool>? notificationSink = null)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
 
@@ -77,6 +78,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
 
         _tenam = tenam;
+        _notificationSink = notificationSink;
 
         InitializeComponent();
 
@@ -847,6 +849,13 @@ public partial class EndLabelTemplatePreviewWindow : Window
             if (didPrint)
             {
                 ShowToast($"Отправлено на принтер: {printerName}");
+                _notificationSink?.Invoke($"Торцевая этикетка №{_tenam} отправлена на печать ({printerName})", false);
+                MessageBox.Show(
+                    this,
+                    $"Короб №{_tenam}: торцевая этикетка отправлена на печать.\nПринтер: {printerName}",
+                    "Печать выполнена",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 

@@ -671,7 +671,7 @@ public sealed class MainViewModel : ViewModelBase
         _endLabelPreviewWindow?.Close();
         _endLabelPreviewWindow = null;
 
-        var window = new EndLabelTemplatePreviewWindow(response, tenam)
+        var window = new EndLabelTemplatePreviewWindow(response, tenam, AddNotification)
         {
             Owner = System.Windows.Application.Current?.MainWindow,
             ShowInTaskbar = true,
@@ -719,7 +719,7 @@ public sealed class MainViewModel : ViewModelBase
         _stuffingSheetPreviewWindow?.Close();
         _stuffingSheetPreviewWindow = null;
 
-        var window = new StuffingSheetTemplatePreviewWindow(response, tenam)
+        var window = new StuffingSheetTemplatePreviewWindow(response, tenam, AddNotification)
         {
             Owner = System.Windows.Application.Current?.MainWindow,
             ShowInTaskbar = true,
