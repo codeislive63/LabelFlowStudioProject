@@ -605,8 +605,9 @@ public sealed class MainViewModel : ViewModelBase
 
             if (!okSheet)
             {
+                var reason = ResolvePrintFailureReason(settings.StuffingSheetPrinterName);
                 StatusMessage = "Не удалось напечатать лист сброса";
-                AddNotification($"Лист сброса №{tenam} не отправлен на печать", isError: true);
+                AddNotification($"Лист сброса №{tenam} не отправлен на печать. {reason}", isError: true);
                 return;
             }
 
@@ -627,8 +628,9 @@ public sealed class MainViewModel : ViewModelBase
 
             if (!okEndLabel)
             {
+                var reason = ResolvePrintFailureReason(settings.EndLabelPrinterName);
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
-                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать", isError: true);
+                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать. {reason}", isError: true);
                 return;
             }
 
@@ -941,7 +943,7 @@ public sealed class MainViewModel : ViewModelBase
 
         Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
 
-        ToastNotification = Notifications[0];
+        ToastNotification = isError ? null : Notifications[0];
 
         if (!IsNotificationCenterOpen)
         {
@@ -959,6 +961,22 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(FilteredNotifications));
+    }
+
+
+    private static string ResolvePrintFailureReason(string printerName)
+    {
+        if (string.IsNullOrWhiteSpace(printerName))
+        {
+            return "Причина: принтер не выбран в настройках печати.";
+        }
+
+        if (!PrinterDiscovery.IsPrinterInstalled(printerName))
+        {
+            return $"Причина: принтер '{printerName}' не найден в системе (проверьте подключение/драйвер).";
+        }
+
+        return "Причина: задание отклонено драйвером или очередью печати. Проверьте состояние принтера и очередь заданий.";
     }
 
     public void ToggleNotificationCenter()
