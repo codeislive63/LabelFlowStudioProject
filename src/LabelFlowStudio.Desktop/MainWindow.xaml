@@ -617,8 +617,9 @@
                         </DockPanel>
 
                         <TabControl Grid.Row="1"
+                                    Style="{StaticResource NotificationTabControlStyle}"
                                     SelectedIndex="{Binding NotificationTabIndex}">
-                            <TabItem Header="Все">
+                            <TabItem Header="Все" Style="{StaticResource NotificationTabItemStyle}">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="3*"/>
@@ -628,13 +629,42 @@
                                     <ListBox Grid.Row="0"
                                              Margin="0,0,0,10"
                                              ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}">
+                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,6">
+                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0">
+                                                        <DockPanel LastChildFill="False">
+                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                            <Border DockPanel.Dock="Right" Padding="8,2" CornerRadius="9" Background="#1630884E" Margin="8,0,0,0">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="#1630884E"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                <Setter Property="Background" Value="#1AB00020"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Text" Value="Успех"/>
+                                                                            <Setter Property="Foreground" Value="#FF30884E"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                    <Setter Property="Text" Value="Ошибка"/>
+                                                                                    <Setter Property="Foreground" Value="#FFB00020"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </Border>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,6,0,0">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -669,7 +699,7 @@
                                     </Border>
                                 </Grid>
                             </TabItem>
-                            <TabItem Header="Ошибки">
+                            <TabItem Header="Ошибки" Style="{StaticResource NotificationTabItemStyle}">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="3*"/>
@@ -679,13 +709,17 @@
                                     <ListBox Grid.Row="0"
                                              Margin="0,0,0,10"
                                              ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}">
+                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,6">
+                                                <Border BorderBrush="#66B00020" BorderThickness="1" CornerRadius="8" Padding="10" Background="#0FB00020">
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FFB00020"/>
+                                                        <DockPanel LastChildFill="False">
+                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                            <TextBlock DockPanel.Dock="Right" Text="Ошибка" Foreground="#FFB00020" FontWeight="SemiBold"/>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FFB00020"/>
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
@@ -720,17 +754,17 @@
                 </Border>
             </Popup>
 
-            <!-- Всплывающее уведомление -->
-            <Border Panel.ZIndex="95"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom"
-                    Width="430"
-                    Margin="0,0,0,14"
-                    Background="{DynamicResource AppBackgroundBrush}"
-                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            <!-- Успешное всплывающее уведомление -->
+            <Border Panel.ZIndex="120"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Width="460"
+                    Margin="0,14,0,0"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="#6630884E"
                     BorderThickness="1"
-                    CornerRadius="10"
-                    Padding="10">
+                    CornerRadius="12"
+                    Padding="12">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -741,33 +775,26 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <DockPanel>
+                <DockPanel LastChildFill="True">
                     <Button DockPanel.Dock="Right"
-                            Width="24"
-                            Height="24"
                             Margin="10,0,0,0"
-                            Content="✕"
+                            Style="{StaticResource NotificationCloseButtonStyle}"
                             Click="CloseToast_Click"/>
                     <StackPanel>
+                        <TextBlock Text="✅ Отправлено в печать"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FF30884E"/>
                         <TextBlock Text="{Binding ToastNotification.Timestamp, StringFormat=HH:mm:ss}"
+                                   Margin="0,2,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding ToastNotification.Message}"
-                                   Margin="0,4,0,0"
-                                   TextWrapping="Wrap">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ToastNotification.IsError}" Value="True">
-                                            <Setter Property="Foreground" Value="#FFB00020"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <Button Margin="0,8,0,0"
+                                   Margin="0,6,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <Button Margin="0,10,0,0"
                                 HorizontalAlignment="Left"
-                                Content="Открыть детали"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Content="Открыть центр уведомлений"
                                 Click="OpenToastDetails_Click"/>
                     </StackPanel>
                 </DockPanel>
