@@ -852,6 +852,12 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
             if (didPrint)
             {
                 ShowToast($"Отправлено на принтер: {printerName}");
+                MessageBox.Show(
+                    this,
+                    $"Короб №{_tenam}: лист сброса отправлен на печать.\nПринтер: {printerName}",
+                    "Печать выполнена",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
