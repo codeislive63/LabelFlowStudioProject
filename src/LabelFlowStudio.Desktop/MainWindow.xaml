@@ -95,6 +95,117 @@
             <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса" />
         </Style>
 
+        <Style x:Key="NotificationCloseButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="CloseButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <Viewbox Width="12" Height="12" Stretch="Uniform">
+                                <Path Stroke="{TemplateBinding Foreground}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M1,1 L11,11 M11,1 L1,11"/>
+                            </Viewbox>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CloseButtonBorder" Property="Background" Value="#1AB00020"/>
+                                <Setter Property="Foreground" Value="#FFB00020"/>
+                                <Setter TargetName="CloseButtonBorder" Property="BorderBrush" Value="#66B00020"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="CloseButtonBorder" Property="Background" Value="#26B00020"/>
+                                <Setter Property="Foreground" Value="#FFB00020"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NotificationTabControlStyle" TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TabPanel Grid.Row="0" Margin="0,0,0,10" IsItemsHost="True" Background="Transparent"/>
+                            <Border Grid.Row="1" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="10" Background="{DynamicResource SurfaceBrush}">
+                                <ContentPresenter ContentSource="SelectedContent" Margin="10"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NotificationTabItemStyle" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Padding="14,7"
+                                CornerRadius="8"
+                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                BorderThickness="1"
+                                Background="{DynamicResource SurfaceAltBrush}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" ContentSource="Header"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NotificationListItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="9" Padding="2">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#40000000"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -548,19 +659,19 @@
             <!-- Центр уведомлений -->
             <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
                    Placement="Bottom"
-                   HorizontalOffset="-380"
+                   HorizontalOffset="-580"
                    VerticalOffset="8"
                    StaysOpen="False"
                    IsOpen="{Binding IsNotificationCenterOpen}"
                    AllowsTransparency="True"
                    PopupAnimation="Slide">
-                <Border Width="420"
-                        MaxHeight="560"
+                <Border Width="640"
+                        Height="640"
                         Background="{DynamicResource AppBackgroundBrush}"
                         BorderBrush="{DynamicResource SurfaceBorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="12"
-                        Padding="12">
+                        CornerRadius="14"
+                        Padding="16">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -568,38 +679,67 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
                             <TextBlock DockPanel.Dock="Left"
                                        Text="Уведомления"
+                                       FontSize="18"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right"
-                                    Width="28"
-                                    Height="28"
-                                    Margin="8,0,0,0"
-                                    Content="✕"
+                                    Margin="12,0,-6,0"
+                                    Style="{StaticResource NotificationCloseButtonStyle}"
                                     Click="CloseNotificationCenter_Click"/>
                         </DockPanel>
 
                         <TabControl Grid.Row="1"
+                                    Style="{StaticResource NotificationTabControlStyle}"
                                     SelectedIndex="{Binding NotificationTabIndex}">
-                            <TabItem Header="Все">
+                            <TabItem Header="Все" Style="{StaticResource NotificationTabItemStyle}">
                                 <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="3*"/>
+                                        <RowDefinition Height="2*"/>
+                                    </Grid.RowDefinitions>
 
-                                    <ListBox Grid.Column="0"
-                                             Margin="0,0,10,0"
+                                    <ListBox Grid.Row="0"
+                                             Margin="0,0,0,10"
                                              ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}">
+                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,6">
+                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0">
+                                                        <DockPanel LastChildFill="False">
+                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                            <Border DockPanel.Dock="Right" Padding="8,2" CornerRadius="9" Background="#1630884E" Margin="8,0,0,0">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="#1630884E"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                <Setter Property="Background" Value="#1AB00020"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Text" Value="Успех"/>
+                                                                            <Setter Property="Foreground" Value="#FF30884E"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                    <Setter Property="Text" Value="Ошибка"/>
+                                                                                    <Setter Property="Foreground" Value="#FFB00020"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </Border>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,6,0,0">
                                                             <TextBlock.Style>
                                                                 <Style TargetType="TextBlock">
                                                                     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -617,7 +757,7 @@
                                         </ListBox.ItemTemplate>
                                     </ListBox>
 
-                                    <Border Grid.Column="1"
+                                    <Border Grid.Row="1"
                                             BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
@@ -634,30 +774,34 @@
                                     </Border>
                                 </Grid>
                             </TabItem>
-                            <TabItem Header="Ошибки">
+                            <TabItem Header="Ошибки" Style="{StaticResource NotificationTabItemStyle}">
                                 <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="3*"/>
+                                        <RowDefinition Height="2*"/>
+                                    </Grid.RowDefinitions>
 
-                                    <ListBox Grid.Column="0"
-                                             Margin="0,0,10,0"
+                                    <ListBox Grid.Row="0"
+                                             Margin="0,0,0,10"
                                              ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}">
+                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,6">
+                                                <Border BorderBrush="#66B00020" BorderThickness="1" CornerRadius="8" Padding="10" Background="#0FB00020">
                                                     <StackPanel>
-                                                        <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#FFB00020"/>
+                                                        <DockPanel LastChildFill="False">
+                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                            <TextBlock DockPanel.Dock="Right" Text="Ошибка" Foreground="#FFB00020" FontWeight="SemiBold"/>
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FFB00020"/>
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
 
-                                    <Border Grid.Column="1"
+                                    <Border Grid.Row="1"
                                             BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
@@ -678,24 +822,24 @@
                         </TabControl>
 
                         <TextBlock Grid.Row="2"
-                                   Text="Нажмите на уведомление, чтобы открыть детали справа."
+                                   Text="Выберите уведомление в списке выше, чтобы открыть подробности."
                                    Margin="0,10,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </Grid>
                 </Border>
             </Popup>
 
-            <!-- Всплывающее уведомление -->
-            <Border Panel.ZIndex="95"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom"
-                    Width="430"
-                    Margin="0,0,0,14"
-                    Background="{DynamicResource AppBackgroundBrush}"
-                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            <!-- Успешное всплывающее уведомление -->
+            <Border Panel.ZIndex="120"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Width="460"
+                    Margin="0,14,0,0"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="#6630884E"
                     BorderThickness="1"
-                    CornerRadius="10"
-                    Padding="10">
+                    CornerRadius="12"
+                    Padding="12">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -706,40 +850,33 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <DockPanel>
+                <DockPanel LastChildFill="True">
                     <Button DockPanel.Dock="Right"
-                            Width="24"
-                            Height="24"
                             Margin="10,0,0,0"
-                            Content="✕"
+                            Style="{StaticResource NotificationCloseButtonStyle}"
                             Click="CloseToast_Click"/>
                     <StackPanel>
+                        <TextBlock Text="✅ Отправлено в печать"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FF30884E"/>
                         <TextBlock Text="{Binding ToastNotification.Timestamp, StringFormat=HH:mm:ss}"
+                                   Margin="0,2,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding ToastNotification.Message}"
-                                   Margin="0,4,0,0"
-                                   TextWrapping="Wrap">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ToastNotification.IsError}" Value="True">
-                                            <Setter Property="Foreground" Value="#FFB00020"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <Button Margin="0,8,0,0"
+                                   Margin="0,6,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <Button Margin="0,10,0,0"
                                 HorizontalAlignment="Left"
-                                Content="Открыть детали"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Content="Открыть центр уведомлений"
                                 Click="OpenToastDetails_Click"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
             <!-- Busy overlay (loading) -->
-            <Grid Grid.RowSpan="3" Panel.ZIndex="100" IsHitTestVisible="True">
+            <Grid Grid.RowSpan="3" Panel.ZIndex="100" IsHitTestVisible="False">
                 <Grid.Style>
                     <Style TargetType="{x:Type Grid}">
                         <Setter Property="Visibility" Value="Collapsed"/>
