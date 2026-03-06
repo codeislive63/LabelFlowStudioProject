@@ -85,13 +85,20 @@ public partial class PrinterSetupWindow : Window
 
         if (_stepIndex == 0)
         {
-            _settings.EndLabelPrinterName = _settings.PrintEndLabelEnabled ? selected ?? string.Empty : string.Empty;
+            if (!string.IsNullOrWhiteSpace(selected))
+            {
+                _settings.EndLabelPrinterName = selected;
+            }
+
             _stepIndex = 1;
             UpdateStepUi();
             return;
         }
 
-        _settings.StuffingSheetPrinterName = _settings.PrintStuffingSheetEnabled ? selected ?? string.Empty : string.Empty;
+        if (!string.IsNullOrWhiteSpace(selected))
+        {
+            _settings.StuffingSheetPrinterName = selected;
+        }
 
         if (_settings.EndLabelCopies <= 0)
         {
