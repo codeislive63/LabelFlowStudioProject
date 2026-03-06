@@ -82,6 +82,34 @@ public sealed class MainViewModelTests
         Assert.Equal("Отправлено на печать", vm.StatusMessage);
     }
 
+
+    [Fact]
+    public async Task NotificationCenter_TracksUnreadAndErrorTabFiltering()
+    {
+        var scanner = new FakeScanner();
+        var service = new ThrowingProcessingService();
+        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+        {
+            Tenam = "4340558"
+        };
+
+        vm.LoadRecordsCommand.Execute(null);
+
+        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+
+        Assert.True(vm.UnreadNotificationsCount > 0);
+        Assert.NotNull(vm.ToastNotification);
+
+        vm.ToggleNotificationCenter();
+
+        Assert.True(vm.IsNotificationCenterOpen);
+        Assert.Equal(0, vm.UnreadNotificationsCount);
+
+        vm.NotificationTabIndex = 1;
+
+        Assert.All(vm.FilteredNotifications, notification => Assert.True(notification.IsError));
+    }
+
     private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
     {
         return new BoxProcessingResponse(
@@ -153,6 +181,19 @@ public sealed class MainViewModelTests
         public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
         {
             return Task.FromResult(true);
+        }
+    }
+
+    private sealed class ThrowingProcessingService : IBoxProcessingService
+    {
+        public Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("Ошибка сервиса");
+        }
+
+        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(false);
         }
     }
 

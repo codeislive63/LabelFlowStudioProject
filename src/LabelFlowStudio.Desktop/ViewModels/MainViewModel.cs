@@ -9,6 +9,7 @@ using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Windows;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
@@ -53,6 +54,12 @@ public sealed class MainViewModel : ViewModelBase
 
     private DateTime _lastScannedAtUtc;
 
+    private bool _isNotificationCenterOpen;
+    private UiNotification? _selectedNotification;
+    private UiNotification? _toastNotification;
+    private int _notificationTabIndex;
+    private int _unreadNotificationsCount;
+
     /// <summary>
     /// Создает модель представления главного экрана
     /// </summary>
@@ -68,6 +75,7 @@ public sealed class MainViewModel : ViewModelBase
 
         Records = new ObservableCollection<LabelRecord>();
         Notifications = new ObservableCollection<UiNotification>();
+        Notifications.CollectionChanged += OnNotificationsCollectionChanged;
 
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
@@ -87,6 +95,76 @@ public sealed class MainViewModel : ViewModelBase
     public ObservableCollection<LabelRecord> Records { get; }
 
     public ObservableCollection<UiNotification> Notifications { get; }
+
+    public IEnumerable<UiNotification> FilteredNotifications => NotificationTabIndex == 1
+        ? Notifications.Where(notification => notification.IsError)
+        : Notifications;
+
+    public UiNotification? SelectedNotification
+    {
+        get => _selectedNotification;
+        set => SetProperty(ref _selectedNotification, value);
+    }
+
+    public UiNotification? ToastNotification
+    {
+        get => _toastNotification;
+        private set
+        {
+            if (SetProperty(ref _toastNotification, value))
+            {
+                OnPropertyChanged(nameof(IsToastVisible));
+            }
+        }
+    }
+
+    public bool IsToastVisible => ToastNotification is not null;
+
+    public bool IsNotificationCenterOpen
+    {
+        get => _isNotificationCenterOpen;
+        set
+        {
+            if (!SetProperty(ref _isNotificationCenterOpen, value))
+            {
+                return;
+            }
+
+            if (value)
+            {
+                UnreadNotificationsCount = 0;
+                if (SelectedNotification is null)
+                {
+                    SelectedNotification = Notifications.FirstOrDefault();
+                }
+            }
+        }
+    }
+
+    public int NotificationTabIndex
+    {
+        get => _notificationTabIndex;
+        set
+        {
+            if (!SetProperty(ref _notificationTabIndex, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(FilteredNotifications));
+
+            if (SelectedNotification is not null && value == 1 && !SelectedNotification.IsError)
+            {
+                SelectedNotification = Notifications.FirstOrDefault(notification => notification.IsError);
+            }
+        }
+    }
+
+    public int UnreadNotificationsCount
+    {
+        get => _unreadNotificationsCount;
+        private set => SetProperty(ref _unreadNotificationsCount, value);
+    }
 
     /// <summary>
     /// Команда загрузки записей по введенному TENAM
@@ -863,9 +941,55 @@ public sealed class MainViewModel : ViewModelBase
 
         Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
 
+        ToastNotification = Notifications[0];
+
+        if (!IsNotificationCenterOpen)
+        {
+            UnreadNotificationsCount++;
+        }
+
+        if (SelectedNotification is null)
+        {
+            SelectedNotification = Notifications[0];
+        }
+
         while (Notifications.Count > MaxNotifications)
         {
             Notifications.RemoveAt(Notifications.Count - 1);
+        }
+
+        OnPropertyChanged(nameof(FilteredNotifications));
+    }
+
+    public void ToggleNotificationCenter()
+    {
+        IsNotificationCenterOpen = !IsNotificationCenterOpen;
+    }
+
+    public void CloseToast()
+    {
+        ToastNotification = null;
+    }
+
+    public void OpenNotificationDetails(UiNotification? notification)
+    {
+        if (notification is null)
+        {
+            return;
+        }
+
+        SelectedNotification = notification;
+        IsNotificationCenterOpen = true;
+        ToastNotification = null;
+    }
+
+    private void OnNotificationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
+    {
+        OnPropertyChanged(nameof(FilteredNotifications));
+
+        if (SelectedNotification is not null && !Notifications.Contains(SelectedNotification))
+        {
+            SelectedNotification = Notifications.FirstOrDefault();
         }
     }
 }
