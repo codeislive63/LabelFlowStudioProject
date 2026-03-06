@@ -847,6 +847,12 @@ public partial class EndLabelTemplatePreviewWindow : Window
             if (didPrint)
             {
                 ShowToast($"Отправлено на принтер: {printerName}");
+                MessageBox.Show(
+                    this,
+                    $"Короб №{_tenam}: торцевая этикетка отправлена на печать.\nПринтер: {printerName}",
+                    "Печать выполнена",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
