@@ -12,7 +12,8 @@ namespace LabelFlowStudio.Desktop.Templates;
 
 public static class StuffingSheetHtmlTemplateRenderer
 {
-    private const int DefaultRowsPerPage = 41;
+    // Keep one row in reserve so the footer and summary line do not spill onto a phantom extra page.
+    private const int DefaultRowsPerPage = 40;
 
     // Supports both:
     //   {% for product in products %}...{% endfor %} (legacy)
@@ -152,7 +153,7 @@ public static class StuffingSheetHtmlTemplateRenderer
             pageBuilder.Append("</section>");
         }
 
-        var paginationStyle = "<style>@media print {.lfs-sheet-page{page-break-after:always;}.lfs-sheet-page:last-child{page-break-after:auto;}}</style>";
+        var paginationStyle = "<style>@media print {.lfs-sheet-page{page-break-after:always;break-after:page;break-inside:avoid;}.lfs-sheet-page:last-child{page-break-after:auto;break-after:auto;}.lfs-sheet-page .page-footer{position:static!important;margin-top:12mm;}}</style>";
         if (docStart.Contains("</head>", StringComparison.OrdinalIgnoreCase))
         {
             docStart = Regex.Replace(docStart, "</head>", paginationStyle + "</head>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
