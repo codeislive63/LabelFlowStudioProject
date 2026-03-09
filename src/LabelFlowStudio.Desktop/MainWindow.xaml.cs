@@ -3,7 +3,6 @@ using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -366,35 +365,5 @@ public partial class MainWindow : Window
             : WindowState.Maximized;
     }
 
-    private void NotificationButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.ToggleNotificationCenter();
-        }
-    }
 
-    private void CloseNotificationCenter_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.IsNotificationCenterOpen = false;
-        }
-    }
-
-    private void CloseToast_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.CloseToast();
-        }
-    }
-
-    private void OpenToastDetails_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.OpenNotificationDetails(viewModel.ToastNotification);
-        }
-    }
 }

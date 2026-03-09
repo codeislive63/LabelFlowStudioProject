@@ -415,6 +415,68 @@
                             Style="{StaticResource StuffingSheetButtonStyle}"
                             Command="{Binding OpenStuffingSheetPreviewCommand}" />
                 </Grid>
+
+                <Border Panel.ZIndex="20"
+                        Background="#4A0F172A"
+                        CornerRadius="10"
+                        IsHitTestVisible="True">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+
+                    <Border Style="{StaticResource CardStyle}"
+                            Padding="14,10"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Opacity="0.96">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid Width="22" Height="22" Margin="0,0,10,0">
+                                <Ellipse Width="20"
+                                         Height="20"
+                                         Stroke="{DynamicResource SurfaceBorderBrush}"
+                                         StrokeThickness="3"
+                                         Opacity="0.55"/>
+
+                                <Path x:Name="TopPanelAutomaticModeSpinnerArc"
+                                      Data="M 11,1 A 10,10 0 0 1 21,11"
+                                      Stroke="{DynamicResource AccentBrush}"
+                                      StrokeThickness="3"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="0"/>
+                                    </Path.RenderTransform>
+                                </Path>
+
+                                <Grid.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeSpinnerArc"
+                                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                 From="0"
+                                                                 To="360"
+                                                                 Duration="0:0:1.1"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Grid.Triggers>
+                            </Grid>
+
+                            <TextBlock Text="Автоматический режим"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
             </Border>
 
             <!-- Статус + центрированный TENAM + счётчик -->
@@ -480,8 +542,7 @@
                                 Background="Transparent"
                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
-                                ToolTip="Центр уведомлений"
-                                Click="NotificationButton_Click">
+                                ToolTip="Новые уведомления">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="NotificationButtonBorder"
@@ -499,26 +560,39 @@
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
                                                     Margin="0,-6,-6,0"
-                                                    Background="#FFB00020"
                                                     CornerRadius="9"
                                                     BorderBrush="{DynamicResource SurfaceAltBrush}"
                                                     BorderThickness="1">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
                                                         <Setter Property="Visibility" Value="Visible"/>
+                                                        <Setter Property="Background" Value="#FFB00020"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding UnreadNotificationsCount}" Value="0">
                                                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding HasUnreadErrorNotifications}" Value="False">
+                                                                <Setter Property="Background" Value="#FF2E7D32"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
                                                 <TextBlock Text="{Binding UnreadNotificationsCount}"
-                                                           Foreground="White"
                                                            FontSize="10"
                                                            FontWeight="Bold"
                                                            HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasUnreadErrorNotifications}" Value="False">
+                                                                    <Setter Property="Foreground" Value="#FFF1FFF5"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </Border>
                                         </Grid>
                                     </Border>
@@ -739,252 +813,6 @@
                 </Grid>
             </Border>
 
-            <!-- Центр уведомлений -->
-            <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
-                   Placement="Bottom"
-                   HorizontalOffset="-580"
-                   VerticalOffset="8"
-                   StaysOpen="False"
-                   IsOpen="{Binding IsNotificationCenterOpen}"
-                   AllowsTransparency="True"
-                   PopupAnimation="Slide">
-                <Border Width="640"
-                        Height="640"
-                        Background="{DynamicResource AppBackgroundBrush}"
-                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="16">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
-                            <TextBlock DockPanel.Dock="Left"
-                                       Text="Уведомления"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                            <Button DockPanel.Dock="Right"
-                                    Margin="12,0,-6,0"
-                                    Style="{StaticResource NotificationCloseButtonStyle}"
-                                    Click="CloseNotificationCenter_Click"/>
-                        </DockPanel>
-
-                        <TabControl Grid.Row="1"
-                                    Style="{StaticResource NotificationTabControlStyle}"
-                                    SelectedIndex="{Binding NotificationTabIndex}">
-
-                            <TabItem Header="Все" Style="{StaticResource NotificationTabItemStyle}">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="3*"/>
-                                        <RowDefinition Height="2*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <ListBox Grid.Row="0"
-                                             Margin="0,0,0,10"
-                                             HorizontalContentAlignment="Stretch"
-                                             ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
-                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8"
-                                                        Padding="10">
-                                                    <StackPanel>
-                                                        <DockPanel LastChildFill="False">
-                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <Border DockPanel.Dock="Right"
-                                                                    Margin="8,0,0,0"
-                                                                    Padding="8,2"
-                                                                    CornerRadius="9"
-                                                                    Background="#1630884E">
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
-                                                                        <Setter Property="Background" Value="#1630884E"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                                <Setter Property="Background" Value="#1AB00020"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Border.Style>
-                                                                <TextBlock FontSize="11"
-                                                                           FontWeight="SemiBold">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Text" Value="Успех"/>
-                                                                            <Setter Property="Foreground" Value="#FF30884E"/>
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                                    <Setter Property="Text" Value="Ошибка"/>
-                                                                                    <Setter Property="Foreground" Value="#FFB00020"/>
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </Border>
-                                                        </DockPanel>
-
-                                                        <TextBlock Text="{Binding Message}"
-                                                                   Margin="0,6,0,0"
-                                                                   TextWrapping="Wrap">
-                                                            <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                            <Setter Property="Foreground" Value="#FFB00020"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-
-                                    <Border Grid.Row="1"
-                                            Padding="10"
-                                            BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}"
-                                                           Margin="0,0,0,8"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                <TextBlock Text="{Binding SelectedNotification.Message}"
-                                                           TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </Border>
-                                </Grid>
-                            </TabItem>
-
-                            <TabItem Header="Ошибки" Style="{StaticResource NotificationTabItemStyle}">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="3*"/>
-                                        <RowDefinition Height="2*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <ListBox Grid.Row="0"
-                                             Margin="0,0,0,10"
-                                             HorizontalContentAlignment="Stretch"
-                                             ItemsSource="{Binding FilteredNotifications}"
-                                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
-                                             ItemContainerStyle="{StaticResource NotificationListItemStyle}">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="#66B00020"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8"
-                                                        Padding="10"
-                                                        Background="#0FB00020">
-                                                    <StackPanel>
-                                                        <DockPanel LastChildFill="False">
-                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <TextBlock DockPanel.Dock="Right"
-                                                                       Text="Ошибка"
-                                                                       Foreground="#FFB00020"
-                                                                       FontWeight="SemiBold"/>
-                                                        </DockPanel>
-                                                        <TextBlock Text="{Binding Message}"
-                                                                   Margin="0,6,0,0"
-                                                                   TextWrapping="Wrap"
-                                                                   Foreground="#FFB00020"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-
-                                    <Border Grid.Row="1"
-                                            Padding="10"
-                                            BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}"
-                                                           Margin="0,0,0,8"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                <TextBlock Text="{Binding SelectedNotification.Message}"
-                                                           TextWrapping="Wrap"
-                                                           Foreground="#FFB00020"/>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </Border>
-                                </Grid>
-                            </TabItem>
-                        </TabControl>
-
-                        <TextBlock Grid.Row="2"
-                                   Text="Выберите уведомление в списке выше, чтобы открыть подробности."
-                                   Margin="0,10,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </Grid>
-                </Border>
-            </Popup>
-
-            <!-- Успешное всплывающее уведомление -->
-            <Border Panel.ZIndex="120"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Width="460"
-                    Margin="0,14,0,0"
-                    Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{Binding ToastBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="12">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsToastVisible}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <DockPanel LastChildFill="True">
-                    <Button DockPanel.Dock="Right"
-                            Margin="10,0,0,0"
-                            Style="{StaticResource NotificationCloseButtonStyle}"
-                            Click="CloseToast_Click"/>
-                    <StackPanel>
-                        <TextBlock Text="{Binding ToastTitle}"
-                                   FontWeight="SemiBold"
-                                   Foreground="{Binding ToastTitleForeground}"/>
-                        <TextBlock Text="{Binding ToastNotification.Timestamp, StringFormat=HH:mm:ss}"
-                                   Margin="0,2,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding ToastNotification.Message}"
-                                   Margin="0,6,0,0"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <Button Margin="0,10,0,0"
-                                HorizontalAlignment="Left"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Content="Открыть центр уведомлений"
-                                Click="OpenToastDetails_Click"/>
-                    </StackPanel>
-                </DockPanel>
-            </Border>
-
             <!-- Busy overlay (loading) -->
             <Grid Grid.RowSpan="3" Panel.ZIndex="90" IsHitTestVisible="False">
                 <Grid.Style>
@@ -1046,80 +874,7 @@
                 </Border>
             </Grid>
 
-            <!-- Automatic mode overlay -->
-            <Grid Grid.RowSpan="3" Panel.ZIndex="110" IsHitTestVisible="True">
-                <Grid.Style>
-                    <Style TargetType="{x:Type Grid}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
 
-                <Border Background="#4A0F172A"/>
-
-                <Border Style="{StaticResource CardStyle}"
-                        Padding="16,12"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Opacity="0.95">
-                    <Border.Triggers>
-                        <EventTrigger RoutedEvent="Loaded">
-                            <BeginStoryboard>
-                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                     From="0.88"
-                                                     To="1"
-                                                     Duration="0:0:0.8"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </EventTrigger>
-                    </Border.Triggers>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Grid Width="24" Height="24" Margin="0,0,10,0">
-                            <Ellipse Width="22"
-                                     Height="22"
-                                     Stroke="{DynamicResource SurfaceBorderBrush}"
-                                     StrokeThickness="3"
-                                     Opacity="0.55"/>
-
-                            <Path x:Name="AutomaticModeSpinnerArc"
-                                  Data="M 12,1 A 11,11 0 0 1 23,12"
-                                  Stroke="{DynamicResource AccentBrush}"
-                                  StrokeThickness="3"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  RenderTransformOrigin="0.5,0.5">
-                                <Path.RenderTransform>
-                                    <RotateTransform Angle="0"/>
-                                </Path.RenderTransform>
-                            </Path>
-
-                            <Grid.Triggers>
-                                <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard>
-                                        <Storyboard RepeatBehavior="Forever">
-                                            <DoubleAnimation Storyboard.TargetName="AutomaticModeSpinnerArc"
-                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                             From="0"
-                                                             To="360"
-                                                             Duration="0:0:1.1"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                            </Grid.Triggers>
-                        </Grid>
-
-                        <TextBlock Text="Автоматический режим"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
 
         </Grid>
     </Grid>

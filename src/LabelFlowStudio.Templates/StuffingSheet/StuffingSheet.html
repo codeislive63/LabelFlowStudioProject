@@ -161,8 +161,39 @@
         </tr>
     </table>
 </div>
-<div class="page-footer">
-    <span class="page-number"></span> страница из <span class="page-total"></span>
+<div class="page-footer" id="pageFooter">
+    <span class="page-number"></span> из <span class="page-total"></span>
 </div>
+
+<script>
+    (function () {
+        function getPrintablePageHeightPx() {
+            var millimetersToPixels = 96 / 25.4;
+            var pageHeightMm = 297;
+            var topMarginMm = 12;
+            var bottomMarginMm = 14;
+            return (pageHeightMm - topMarginMm - bottomMarginMm) * millimetersToPixels;
+        }
+
+        function updatePageFooterVisibility() {
+            var footer = document.getElementById('pageFooter');
+            if (!footer) {
+                return;
+            }
+
+            var printablePageHeight = getPrintablePageHeightPx();
+            var contentHeight = Math.max(
+                document.body.scrollHeight,
+                document.documentElement.scrollHeight
+            );
+
+            var pagesEstimate = Math.ceil(contentHeight / printablePageHeight);
+            footer.style.display = pagesEstimate > 1 ? 'block' : 'none';
+        }
+
+        window.addEventListener('load', updatePageFooterVisibility);
+        window.addEventListener('beforeprint', updatePageFooterVisibility);
+    })();
+</script>
 </body>
 </html>
