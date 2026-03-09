@@ -115,11 +115,26 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _toastNotification, value))
             {
                 OnPropertyChanged(nameof(IsToastVisible));
+                OnPropertyChanged(nameof(ToastTitle));
+                OnPropertyChanged(nameof(ToastTitleForeground));
+                OnPropertyChanged(nameof(ToastBorderBrush));
             }
         }
     }
 
     public bool IsToastVisible => ToastNotification is not null;
+
+    public string ToastTitle => ToastNotification?.IsError == true
+        ? "⚠ Ошибка печати"
+        : "✅ Отправлено в печать";
+
+    public string ToastTitleForeground => ToastNotification?.IsError == true
+        ? "#FFB00020"
+        : "#FF30884E";
+
+    public string ToastBorderBrush => ToastNotification?.IsError == true
+        ? "#66B00020"
+        : "#6630884E";
 
     public bool IsNotificationCenterOpen
     {

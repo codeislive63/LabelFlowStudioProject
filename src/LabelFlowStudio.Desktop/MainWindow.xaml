@@ -946,7 +946,7 @@
                     Width="460"
                     Margin="0,14,0,0"
                     Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="#6630884E"
+                    BorderBrush="{Binding ToastBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="12">
@@ -966,9 +966,9 @@
                             Style="{StaticResource NotificationCloseButtonStyle}"
                             Click="CloseToast_Click"/>
                     <StackPanel>
-                        <TextBlock Text="✅ Отправлено в печать"
+                        <TextBlock Text="{Binding ToastTitle}"
                                    FontWeight="SemiBold"
-                                   Foreground="#FF30884E"/>
+                                   Foreground="{Binding ToastTitleForeground}"/>
                         <TextBlock Text="{Binding ToastNotification.Timestamp, StringFormat=HH:mm:ss}"
                                    Margin="0,2,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -986,7 +986,7 @@
             </Border>
 
             <!-- Busy overlay (loading) -->
-            <Grid Grid.RowSpan="3" Panel.ZIndex="100" IsHitTestVisible="False">
+            <Grid Grid.RowSpan="3" Panel.ZIndex="90" IsHitTestVisible="False">
                 <Grid.Style>
                     <Style TargetType="{x:Type Grid}">
                         <Setter Property="Visibility" Value="Collapsed"/>
