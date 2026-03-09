@@ -12,6 +12,8 @@ namespace LabelFlowStudio.Desktop.Templates;
 
 public static class StuffingSheetHtmlTemplateRenderer
 {
+    private const int DefaultRowsPerPage = 41;
+
     // Supports both:
     //   {% for product in products %}...{% endfor %} (legacy)
     //   {% for record in Records %}...{% endfor %} (unified)
@@ -94,12 +96,72 @@ public static class StuffingSheetHtmlTemplateRenderer
         result = ReplaceEncodedToken(result, "sum", sumBstText);
         result = ReplaceRawToken(result, "barcode", barcodeDataUrl);
 
-        result = RenderLoop(result, records);
+        result = RenderPaginatedDocument(result, records);
 
         return result;
     }
 
-    private static string RenderLoop(string html, IReadOnlyList<LabelRecord> records)
+    private static string RenderPaginatedDocument(string templateHtml, IReadOnlyList<LabelRecord> records)
+    {
+        var loopMatch = LoopRegex.Match(templateHtml);
+        if (!loopMatch.Success)
+        {
+            return templateHtml;
+        }
+
+        var pages = records
+            .Select((record, index) => new { record, index })
+            .GroupBy(item => item.index / DefaultRowsPerPage)
+            .Select(group => group.Select(item => item.record).ToList())
+            .ToList();
+
+        if (pages.Count == 0)
+        {
+            pages.Add(new List<LabelRecord>());
+        }
+
+        if (pages.Count == 1)
+        {
+            var singlePage = ReplacePageTokens(templateHtml, currentPage: 1, totalPages: 1);
+            return RenderLoop(singlePage, pages[0], rowOffset: 0);
+        }
+
+        var bodyRegex = new Regex(@"<body[^>]*>(?<body>.*)</body>", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var bodyMatch = bodyRegex.Match(templateHtml);
+        if (!bodyMatch.Success)
+        {
+            var singlePage = ReplacePageTokens(templateHtml, currentPage: 1, totalPages: 1);
+            return RenderLoop(singlePage, pages[0], rowOffset: 0);
+        }
+
+        var bodyStart = bodyMatch.Index;
+        var bodyEnd = bodyMatch.Index + bodyMatch.Length;
+
+        var docStart = templateHtml[..bodyStart];
+        var docEnd = templateHtml[bodyEnd..];
+        var bodyTemplate = bodyMatch.Groups["body"].Value;
+
+        var pageBuilder = new StringBuilder();
+        for (var index = 0; index < pages.Count; index++)
+        {
+            var pageHtml = ReplacePageTokens(bodyTemplate, currentPage: index + 1, totalPages: pages.Count);
+            pageHtml = RenderLoop(pageHtml, pages[index], rowOffset: index * DefaultRowsPerPage);
+
+            pageBuilder.Append("<section class=\"lfs-sheet-page\">");
+            pageBuilder.Append(pageHtml);
+            pageBuilder.Append("</section>");
+        }
+
+        var paginationStyle = "<style>@media print {.lfs-sheet-page{page-break-after:always;}.lfs-sheet-page:last-child{page-break-after:auto;}}</style>";
+        if (docStart.Contains("</head>", StringComparison.OrdinalIgnoreCase))
+        {
+            docStart = Regex.Replace(docStart, "</head>", paginationStyle + "</head>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        return string.Concat(docStart, "<body>", pageBuilder, "</body>", docEnd);
+    }
+
+    private static string RenderLoop(string html, IReadOnlyList<LabelRecord> records, int rowOffset)
     {
         var match = LoopRegex.Match(html);
 
@@ -128,13 +190,13 @@ public static class StuffingSheetHtmlTemplateRenderer
             var row = rowTemplate;
 
             // Unified row tokens
-            row = ReplaceEncodedToken(row, "RowNumber", (index + 1).ToString(CultureInfo.InvariantCulture));
+            row = ReplaceEncodedToken(row, "RowNumber", (rowOffset + index + 1).ToString(CultureInfo.InvariantCulture));
             row = ReplaceEncodedToken(row, "Artnr", record.Artnr);
             row = ReplaceEncodedToken(row, "Artbez", record.Artbez);
             row = ReplaceEncodedToken(row, "Bstmg", FormatQuantity(record.Bstmg));
 
             // Legacy row tokens (keep working)
-            row = ReplaceEncodedToken(row, $"{varName}.ROWNUM", (index + 1).ToString(CultureInfo.InvariantCulture));
+            row = ReplaceEncodedToken(row, $"{varName}.ROWNUM", (rowOffset + index + 1).ToString(CultureInfo.InvariantCulture));
             row = ReplaceEncodedToken(row, $"{varName}.ARTNR", record.Artnr);
             row = ReplaceEncodedToken(row, $"{varName}.ARTBEZ", record.Artbez);
             row = ReplaceEncodedToken(row, $"{varName}.BSTMG", FormatQuantity(record.Bstmg));
@@ -146,6 +208,19 @@ public static class StuffingSheetHtmlTemplateRenderer
         var after = html[(match.Index + match.Length)..];
 
         return before + builder + after;
+    }
+
+    private static string ReplacePageTokens(string html, int currentPage, int totalPages)
+    {
+        var current = currentPage.ToString(CultureInfo.InvariantCulture);
+        var total = totalPages.ToString(CultureInfo.InvariantCulture);
+
+        html = ReplaceEncodedToken(html, "CurrentPage", current);
+        html = ReplaceEncodedToken(html, "TotalPages", total);
+        html = ReplaceEncodedToken(html, "PageNumber", current);
+        html = ReplaceEncodedToken(html, "PageCount", total);
+
+        return html;
     }
 
     private static string FormatMarket(string? market)
