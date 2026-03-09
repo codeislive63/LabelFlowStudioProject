@@ -110,6 +110,54 @@ public sealed class MainViewModelTests
         Assert.All(vm.FilteredNotifications, notification => Assert.True(notification.IsError));
     }
 
+    [Fact]
+    public async Task LoadRecordsCommand_AddsNotificationForSuccessfulProcessing()
+    {
+        var scanner = new FakeScanner();
+        var service = new FakeProcessingService
+        {
+            Response = CreateSuccessResponse(
+                message: "Данные загружены",
+                records: new List<LabelRecord>
+                {
+                    new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m }
+                }
+            )
+        };
+
+        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+        {
+            Tenam = "4340558"
+        };
+
+        vm.LoadRecordsCommand.Execute(null);
+
+        await service.WaitCalledAsync();
+        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+
+        Assert.NotEmpty(vm.Notifications);
+        Assert.Equal("Короб №4340558: Данные загружены", vm.Notifications[0].Message);
+        Assert.NotNull(vm.ToastNotification);
+    }
+
+    [Fact]
+    public async Task NotificationCenter_ShowsToastForErrorsToo()
+    {
+        var scanner = new FakeScanner();
+        var service = new ThrowingProcessingService();
+        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+        {
+            Tenam = "4340558"
+        };
+
+        vm.LoadRecordsCommand.Execute(null);
+
+        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+
+        Assert.NotNull(vm.ToastNotification);
+        Assert.True(vm.ToastNotification!.IsError);
+    }
+
     private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
     {
         return new BoxProcessingResponse(
