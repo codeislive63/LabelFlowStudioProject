@@ -10,7 +10,6 @@ public sealed class BoxProcessingService : IBoxProcessingService
 {
     private const string EmptyTenamMessage = "TENAM пустой";
     private const string DataNotFoundMessage = "Данных по коробу не найдено";
-    private const string AutoModeWithoutWeightMessage = "Нет веса в БД. Авто-режим: печатаю пустой лист сброса";
     private const string ManualModeWithoutWeightMessage = "Нет веса в БД. Поставьте короб на весы";
     private const string DataLoadedMessage = "Данные загружены";
 
@@ -44,9 +43,7 @@ public sealed class BoxProcessingService : IBoxProcessingService
 
         if (!TryGetValidWeight(records, out var weight))
         {
-            return request.Mode == WorkMode.Automatic
-                ? CreateAutomaticResponseWithoutWeight(records, request)
-                : CreateNeedWeightResponse(records);
+            return CreateNeedWeightResponse(records);
         }
 
         return CreateSuccessResponse(records, request, weight);
@@ -96,20 +93,6 @@ public sealed class BoxProcessingService : IBoxProcessingService
             ShouldPrintDropSheet: false,
             ShouldPrintEmptyDropSheet: false,
             ShouldPrintEndLabels: false
-        );
-
-    // Формируем ответ для авто-режима без веса
-    private static BoxProcessingResponse CreateAutomaticResponseWithoutWeight(
-        IReadOnlyList<LabelRecord> records,
-        BoxProcessingRequest request) =>
-        new(
-            Status: BoxProcessingStatus.Success,
-            Message: AutoModeWithoutWeightMessage,
-            Records: records,
-            Weight: null,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: request.ShouldPrintStuffingSheet,
-            ShouldPrintEndLabels: request.ShouldPrintEndLabels
         );
 
     // Формируем ответ для ручного режима без веса

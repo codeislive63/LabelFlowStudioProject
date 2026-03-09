@@ -378,7 +378,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         string tenam,
         CancellationToken cancellationToken)
     {
-        var completion = new TaskCompletionSource<decimal?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var weightMonitorTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var scaleResponseTask = WaitForWeightFromScalesAsync(tenam, weightMonitorTokenSource.Token);
+
+        decimal? enteredWeight = null;
+        decimal? scaleWeight = null;
 
         await RunOnUiThreadAsync(() =>
         {
@@ -388,11 +392,46 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
+            _ = Task.Run(async () =>
+            {
+                var scaleWeightValue = await scaleResponseTask;
+                if (!scaleWeightValue.HasValue)
+                {
+                    return;
+                }
+
+                await RunOnUiThreadAsync(() =>
+                {
+                    if (dialog.IsVisible)
+                    {
+                        dialog.AcceptScaleWeight(scaleWeightValue.Value);
+                    }
+                });
+            }, CancellationToken.None);
+
             var accepted = dialog.ShowDialog() == true;
-            completion.SetResult(accepted ? dialog.EnteredWeight : null);
+            if (accepted)
+            {
+                enteredWeight = dialog.EnteredWeight;
+                scaleWeight = dialog.ScaleWeight;
+            }
         });
 
-        var enteredWeight = await completion.Task;
+        weightMonitorTokenSource.Cancel();
+
+        if (scaleWeight.HasValue)
+        {
+            var refreshed = await _boxProcessingService.ProcessAsync(
+                BuildRequest(tenam, WorkMode.Manual),
+                cancellationToken);
+
+            if (refreshed.Status == BoxProcessingStatus.Success && refreshed.Weight.HasValue && refreshed.Weight > 0)
+            {
+                return refreshed with { Message = "Вес получен с весов" };
+            }
+
+            return response with { Message = "Вес с весов получен, но данные не обновились. Повторите сканирование." };
+        }
 
         if (!enteredWeight.HasValue)
         {
@@ -428,6 +467,45 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             ShouldPrintEmptyDropSheet = false,
             ShouldPrintEndLabels = settings.PrintEndLabelEnabled
         };
+    }
+
+    private async Task<decimal?> WaitForWeightFromScalesAsync(string tenam, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var currentResponse = await _boxProcessingService.ProcessAsync(
+                    BuildRequest(tenam, WorkMode.Manual),
+                    cancellationToken);
+
+                if (currentResponse.Status == BoxProcessingStatus.Success
+                    && currentResponse.Weight.HasValue
+                    && currentResponse.Weight > 0)
+                {
+                    return currentResponse.Weight;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogDebug(exception, "Failed to refresh weight for TENAM {Tenam}", tenam);
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+
+        return null;
     }
 
     // Планирует обработку отложенного скана после завершения текущей команды
