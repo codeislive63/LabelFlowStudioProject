@@ -45,12 +45,6 @@
             </StackPanel>
 
             <DockPanel Grid.Row="2" Margin="0,18,0,0" LastChildFill="False">
-                <Button Content="Отмена"
-                        MinWidth="120"
-                        Height="36"
-                        Margin="0,0,8,0"
-                        Click="CancelButton_Click"
-                        Style="{StaticResource ToolbarSecondaryButtonStyle}"/>
                 <Button Content="Сохранить вес"
                         MinWidth="150"
                         Height="36"

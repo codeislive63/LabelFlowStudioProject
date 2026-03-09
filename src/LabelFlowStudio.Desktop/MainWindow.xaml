@@ -417,10 +417,14 @@
                     Command="{Binding OpenStuffingSheetPreviewCommand}" />
                     </Grid>
 
-                    <Border Panel.ZIndex="20"
+                    <Border x:Name="TopPanelAutomaticModeOverlay"
+                Panel.ZIndex="20"
                 Background="#4A0F172A"
+                BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="1"
                 CornerRadius="10"
-                IsHitTestVisible="True">
+                IsHitTestVisible="True"
+                Opacity="0.45">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -431,6 +435,20 @@
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
+
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeOverlay"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.38"
+                                                         To="0.62"
+                                                         Duration="0:0:1.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
 
                         <Border Style="{StaticResource CardStyle}"
                     Padding="14,10"
@@ -544,7 +562,8 @@
                                 Background="Transparent"
                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
-                                ToolTip="Новые уведомления">
+                                ToolTip="Новые уведомления"
+                                Click="NotificationCenterButton_Click">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="NotificationButtonBorder"
@@ -609,6 +628,67 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
+
+                    <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
+                           Placement="Bottom"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           PopupAnimation="Fade"
+                           Closed="NotificationCenterPopup_Closed"
+                           DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                           IsOpen="{Binding IsNotificationCenterOpen, Mode=TwoWay}">
+                        <Border Width="520"
+                                MaxHeight="420"
+                                Margin="0,8,0,0"
+                                Padding="12"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                            <DockPanel>
+                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10" LastChildFill="False">
+                                    <TextBlock Text="Уведомления"
+                                               FontSize="16"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                    <Button Content="✕"
+                                            Style="{StaticResource NotificationCloseButtonStyle}"
+                                            Margin="8,0,0,0"
+                                            Click="NotificationCenterCloseButton_Click"/>
+                                </DockPanel>
+
+                                <TabControl Style="{StaticResource NotificationTabControlStyle}"
+                                            SelectedIndex="{Binding NotificationTabIndex}">
+                                    <TabItem Header="Все" Style="{StaticResource NotificationTabItemStyle}"/>
+                                    <TabItem Header="Ошибки" Style="{StaticResource NotificationTabItemStyle}"/>
+                                </TabControl>
+
+                                <ListBox ItemsSource="{Binding FilteredNotifications}"
+                                         SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                                         Margin="0,12,0,0"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         ItemContainerStyle="{StaticResource NotificationListItemStyle}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Padding="10" Margin="0,0,0,8" CornerRadius="8" BorderThickness="1"
+                                                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                                    Background="{DynamicResource SurfaceAltBrush}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Timestamp, StringFormat={}{0:dd.MM.yyyy HH:mm:ss}}"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               FontSize="12"/>
+                                                    <TextBlock Text="{Binding Message}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </Popup>
 
                         <Border Background="{DynamicResource SurfaceAltBrush}"
                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"

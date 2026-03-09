@@ -119,7 +119,7 @@ public sealed class BoxProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessAsync_WeightMissing_Automatic_PrintsEmptyDropSheet()
+    public async Task ProcessAsync_WeightMissing_Automatic_ReturnsNeedWeight()
     {
         var records = new[]
         {
@@ -134,12 +134,12 @@ public sealed class BoxProcessingServiceTests
             CancellationToken.None
         );
 
-        Assert.Equal(BoxProcessingStatus.Success, response.Status);
-        Assert.Equal("Нет веса в БД. Авто-режим: печатаю пустой лист сброса", response.Message);
+        Assert.Equal(BoxProcessingStatus.NeedWeight, response.Status);
+        Assert.Equal("Нет веса в БД. Поставьте короб на весы", response.Message);
         Assert.Single(response.Records);
         Assert.False(response.ShouldPrintDropSheet);
-        Assert.True(response.ShouldPrintEmptyDropSheet);
-        Assert.True(response.ShouldPrintEndLabels);
+        Assert.False(response.ShouldPrintEmptyDropSheet);
+        Assert.False(response.ShouldPrintEndLabels);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public sealed class BoxProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessAsync_WeightMissing_Automatic_StuffingSheetDisabled_DoesNotPrintEmptyDropSheet()
+    public async Task ProcessAsync_WeightMissing_Automatic_StuffingSheetDisabled_StillRequestsWeight()
     {
         var records = new[]
         {
@@ -206,10 +206,10 @@ public sealed class BoxProcessingServiceTests
             CancellationToken.None
         );
 
-        Assert.Equal(BoxProcessingStatus.Success, response.Status);
+        Assert.Equal(BoxProcessingStatus.NeedWeight, response.Status);
         Assert.False(response.ShouldPrintDropSheet);
         Assert.False(response.ShouldPrintEmptyDropSheet);
-        Assert.True(response.ShouldPrintEndLabels);
+        Assert.False(response.ShouldPrintEndLabels);
     }
 
     [Fact]
