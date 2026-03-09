@@ -427,7 +427,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             if (refreshed.Status == BoxProcessingStatus.Success && refreshed.Weight.HasValue && refreshed.Weight > 0)
             {
-                return refreshed with { Message = "Вес получен с весов" };
+                var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+                return refreshed with
+                {
+                    Message = "Вес получен с весов",
+                    ShouldPrintDropSheet = settings.PrintStuffingSheetEnabled,
+                    ShouldPrintEmptyDropSheet = false,
+                    ShouldPrintEndLabels = settings.PrintEndLabelEnabled
+                };
             }
 
             return response with { Message = "Вес с весов получен, но данные не обновились. Повторите сканирование." };
