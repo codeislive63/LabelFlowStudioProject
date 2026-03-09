@@ -31,6 +31,9 @@
 
         .page-footer {
             display: none;
+            color: #222;
+            font-size: 10pt;
+            letter-spacing: 0.2px;
         }
 
         @page {
@@ -55,12 +58,11 @@
 
             .page-footer {
                 display: block;
-                position: fixed;
-                bottom: 4mm;
-                left: 0;
-                right: 0;
+                position: static;
                 text-align: center;
-                font-size: 10pt;
+                border-top: 1px solid #000;
+                padding-top: 2mm;
+                margin-top: 4mm;
             }
 
         }
@@ -155,7 +157,7 @@
     </table>
 </div>
 <div class="page-footer">
-    {{CurrentPage}} из {{TotalPages}}
+    Страница {{CurrentPage}} из {{TotalPages}}
 </div>
 </body>
 </html>
