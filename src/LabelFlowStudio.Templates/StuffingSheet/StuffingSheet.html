@@ -63,25 +63,6 @@
                 font-size: 10pt;
             }
 
-            .page-footer .page-number::before {
-                content: counter(page);
-            }
-
-            .page-footer .page-total::before {
-                content: counter(pages);
-            }
-
-            .page-footer .page-total-fallback {
-                display: none;
-            }
-
-            .page-footer.use-fallback .page-total {
-                display: none;
-            }
-
-            .page-footer.use-fallback .page-total-fallback {
-                display: inline;
-            }
         }
 
         @media screen {
@@ -173,46 +154,8 @@
         </tr>
     </table>
 </div>
-<div class="page-footer" id="pageFooter">
-    <span class="page-number"></span> из <span class="page-total"></span><span class="page-total-fallback"></span>
+<div class="page-footer">
+    {{CurrentPage}} из {{TotalPages}}
 </div>
-
-<script>
-    (function () {
-        function getPrintablePageHeightPx() {
-            var millimetersToPixels = 96 / 25.4;
-            var pageHeightMm = 297;
-            var topMarginMm = 12;
-            var bottomMarginMm = 18;
-            return (pageHeightMm - topMarginMm - bottomMarginMm) * millimetersToPixels;
-        }
-
-        function updatePageFooterVisibility() {
-            var footer = document.getElementById('pageFooter');
-            var fallbackTotal = footer ? footer.querySelector('.page-total-fallback') : null;
-            if (!footer) {
-                return;
-            }
-
-            var printablePageHeight = getPrintablePageHeightPx();
-            var contentHeight = Math.max(
-                document.body.scrollHeight,
-                document.documentElement.scrollHeight
-            );
-
-            var pagesEstimate = Math.ceil(contentHeight / printablePageHeight);
-
-            if (fallbackTotal) {
-                fallbackTotal.textContent = pagesEstimate > 0 ? String(pagesEstimate) : '1';
-            }
-
-            footer.classList.toggle('use-fallback', pagesEstimate > 1);
-            footer.style.display = pagesEstimate > 1 ? 'block' : 'none';
-        }
-
-        window.addEventListener('load', updatePageFooterVisibility);
-        window.addEventListener('beforeprint', updatePageFooterVisibility);
-    })();
-</script>
 </body>
 </html>
