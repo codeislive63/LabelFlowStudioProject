@@ -419,12 +419,13 @@
 
                     <Border x:Name="TopPanelAutomaticModeOverlay"
                 Panel.ZIndex="20"
+                Margin="-14"
                 Background="#4A0F172A"
                 BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1"
-                CornerRadius="10"
+                CornerRadius="12"
                 IsHitTestVisible="True"
-                Opacity="0.45">
+                Opacity="0.52">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -442,8 +443,8 @@
                                     <Storyboard RepeatBehavior="Forever" AutoReverse="True">
                                         <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeOverlay"
                                                          Storyboard.TargetProperty="Opacity"
-                                                         From="0.38"
-                                                         To="0.62"
+                                                         From="0.44"
+                                                         To="0.66"
                                                          Duration="0:0:1.2"/>
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -454,14 +455,14 @@
                     Padding="14,10"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Opacity="0.96">
+                    Opacity="1">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Grid Width="22" Height="22" Margin="0,0,10,0">
                                     <Ellipse Width="20"
                                  Height="20"
                                  Stroke="{DynamicResource SurfaceBorderBrush}"
                                  StrokeThickness="3"
-                                 Opacity="0.55"/>
+                                 Opacity="0.85"/>
 
                                     <Path x:Name="TopPanelAutomaticModeSpinnerArc"
                               Data="M 11,1 A 10,10 0 0 1 21,11"
@@ -491,6 +492,7 @@
                                 </Grid>
 
                                 <TextBlock Text="Автоматический режим"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                             </StackPanel>
@@ -631,14 +633,15 @@
 
                     <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
                            Placement="Bottom"
+                           HorizontalOffset="-472"
                            StaysOpen="False"
                            AllowsTransparency="True"
                            PopupAnimation="Fade"
                            Closed="NotificationCenterPopup_Closed"
                            DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
                            IsOpen="{Binding IsNotificationCenterOpen, Mode=TwoWay}">
-                        <Border Width="520"
-                                MaxHeight="420"
+                        <Border Width="460"
+                                MaxHeight="360"
                                 Margin="0,8,0,0"
                                 Padding="12"
                                 Background="{DynamicResource SurfaceBrush}"
@@ -668,6 +671,8 @@
                                          Margin="0,12,0,0"
                                          BorderThickness="0"
                                          Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
                                          ItemContainerStyle="{StaticResource NotificationListItemStyle}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
