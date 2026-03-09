@@ -56,9 +56,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private bool _isNotificationCenterOpen;
     private UiNotification? _selectedNotification;
-    private UiNotification? _toastNotification;
     private int _notificationTabIndex;
     private int _unreadNotificationsCount;
+    private bool _hasUnreadErrorNotifications;
     private bool _disposed;
 
     /// <summary>
@@ -107,35 +107,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _selectedNotification, value);
     }
 
-    public UiNotification? ToastNotification
-    {
-        get => _toastNotification;
-        private set
-        {
-            if (SetProperty(ref _toastNotification, value))
-            {
-                OnPropertyChanged(nameof(IsToastVisible));
-                OnPropertyChanged(nameof(ToastTitle));
-                OnPropertyChanged(nameof(ToastTitleForeground));
-                OnPropertyChanged(nameof(ToastBorderBrush));
-            }
-        }
-    }
-
-    public bool IsToastVisible => ToastNotification is not null;
-
-    public string ToastTitle => ToastNotification?.IsError == true
-        ? "⚠ Ошибка печати"
-        : "✅ Отправлено в печать";
-
-    public string ToastTitleForeground => ToastNotification?.IsError == true
-        ? "#FFB00020"
-        : "#FF30884E";
-
-    public string ToastBorderBrush => ToastNotification?.IsError == true
-        ? "#66B00020"
-        : "#6630884E";
-
     public bool IsNotificationCenterOpen
     {
         get => _isNotificationCenterOpen;
@@ -149,6 +120,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (value)
             {
                 UnreadNotificationsCount = 0;
+                HasUnreadErrorNotifications = false;
                 if (SelectedNotification is null)
                 {
                     SelectedNotification = Notifications.FirstOrDefault();
@@ -180,6 +152,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         get => _unreadNotificationsCount;
         private set => SetProperty(ref _unreadNotificationsCount, value);
+    }
+
+    public bool HasUnreadErrorNotifications
+    {
+        get => _hasUnreadErrorNotifications;
+        private set => SetProperty(ref _hasUnreadErrorNotifications, value);
     }
 
     /// <summary>
@@ -960,11 +938,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
 
-        ToastNotification = Notifications[0];
-
         if (!IsNotificationCenterOpen)
         {
             UnreadNotificationsCount++;
+            if (isError)
+            {
+                HasUnreadErrorNotifications = true;
+            }
         }
 
         if (SelectedNotification is null)
@@ -1001,11 +981,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         IsNotificationCenterOpen = !IsNotificationCenterOpen;
     }
 
-    public void CloseToast()
-    {
-        ToastNotification = null;
-    }
-
     public void OpenNotificationDetails(UiNotification? notification)
     {
         if (notification is null)
@@ -1015,7 +990,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         SelectedNotification = notification;
         IsNotificationCenterOpen = true;
-        ToastNotification = null;
     }
 
     private void OnNotificationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
