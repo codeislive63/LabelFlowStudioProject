@@ -317,6 +317,31 @@ public partial class MainWindow : Window
         }
     }
 
+
+    private void NotificationCenterButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.ToggleNotificationCenter();
+        }
+    }
+
+    private void NotificationCenterCloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.IsNotificationCenterOpen = false;
+        }
+    }
+
+    private void NotificationCenterPopup_Closed(object? sender, EventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.IsNotificationCenterOpen = false;
+        }
+    }
+
     private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e) => ToggleMaximizeRestore();
