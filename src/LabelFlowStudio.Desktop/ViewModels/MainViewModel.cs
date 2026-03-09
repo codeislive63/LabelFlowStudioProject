@@ -17,7 +17,7 @@ namespace LabelFlowStudio.Desktop.ViewModels;
 /// <summary>
 /// Основная модель представления экрана обработки коробов
 /// </summary>
-public sealed class MainViewModel : ViewModelBase
+public sealed class MainViewModel : ViewModelBase, IDisposable
 {
     private static readonly TimeSpan ScannerDeduplicationWindow = TimeSpan.FromSeconds(2);
     private const int MaxNotifications = 50;
@@ -59,6 +59,7 @@ public sealed class MainViewModel : ViewModelBase
     private UiNotification? _toastNotification;
     private int _notificationTabIndex;
     private int _unreadNotificationsCount;
+    private bool _disposed;
 
     /// <summary>
     /// Создает модель представления главного экрана
@@ -529,6 +530,7 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         StatusMessage = response.Message;
+        AddNotification(BuildProcessingNotification(response, tenamSnapshot), response.Status is BoxProcessingStatus.Error);
 
         if (response.Records.Count > 0)
         {
@@ -943,7 +945,7 @@ public sealed class MainViewModel : ViewModelBase
 
         Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
 
-        ToastNotification = isError ? null : Notifications[0];
+        ToastNotification = Notifications[0];
 
         if (!IsNotificationCenterOpen)
         {
@@ -1009,5 +1011,46 @@ public sealed class MainViewModel : ViewModelBase
         {
             SelectedNotification = Notifications.FirstOrDefault();
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        Notifications.CollectionChanged -= OnNotificationsCollectionChanged;
+
+        if (_isScannerSubscribed)
+        {
+            _boxScanner.BoxNumberReceived -= OnBoxNumberReceived;
+            _isScannerSubscribed = false;
+        }
+
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = null;
+
+        _scannerGate.Dispose();
+        _requestGate.Dispose();
+    }
+
+    private static string BuildProcessingNotification(BoxProcessingResponse response, string tenam)
+    {
+        if (string.IsNullOrWhiteSpace(tenam))
+        {
+            return response.Message;
+        }
+
+        return response.Status switch
+        {
+            BoxProcessingStatus.Success => $"Короб №{tenam}: {response.Message}",
+            BoxProcessingStatus.NotFound => $"Короб №{tenam}: данные не найдены",
+            BoxProcessingStatus.NeedWeight => $"Короб №{tenam}: требуется ввод веса",
+            _ => $"Короб №{tenam}: {response.Message}"
+        };
     }
 }
