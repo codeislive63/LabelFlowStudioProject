@@ -114,6 +114,41 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         Assert.Contains("<div>45 ART-045</div>", html, StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public void Render_UsesConservativePageCapacity_ToAvoidOrphanFooterPage()
+    {
+        var records = Enumerable.Range(1, 41)
+            .Select(index => new LabelFlowStudio.Core.Models.LabelRecord
+            {
+                Lndnam = "RU",
+                Tenam = "4340558",
+                Artnr = $"ART-{index:000}",
+                Artbez = $"Name {index:000}",
+                Bstmg = index
+            })
+            .ToArray();
+
+        var response = new BoxProcessingResponse(
+            BoxProcessingStatus.Success,
+            Message: "ok",
+            Records: records,
+            Weight: null,
+            ShouldPrintDropSheet: true,
+            ShouldPrintEmptyDropSheet: false,
+            ShouldPrintEndLabels: true
+        );
+
+        const string template = "<html><head></head><body>{% for record in Records %}<div>{{RowNumber}} {{Artnr}}</div>{% endfor %}<footer class=\"page-footer\">{{CurrentPage}}/{{TotalPages}}</footer></body></html>";
+
+        var html = StaTestRunner.Run(() => StuffingSheetHtmlTemplateRenderer.Render(template, response, tenam: "4340558"));
+
+        Assert.Equal(2, Regex.Matches(html, "<section class=\"lfs-sheet-page\">", RegexOptions.CultureInvariant).Count);
+        Assert.Contains("<footer class=\"page-footer\">1/2</footer>", html, StringComparison.Ordinal);
+        Assert.Contains("<footer class=\"page-footer\">2/2</footer>", html, StringComparison.Ordinal);
+        Assert.Contains("<div>41 ART-041</div>", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Render_HtmlEncodesHeaderFields()
     {
