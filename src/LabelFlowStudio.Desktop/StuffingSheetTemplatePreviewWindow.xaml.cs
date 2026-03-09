@@ -56,6 +56,8 @@ public partial class StuffingSheetTemplatePreviewWindow : Window
         new("{{Aufid}}", "{{Aufid}}", "AUFID"),
         new("{{CurrentDate}}", "{{CurrentDate}}", "Текущая дата"),
         new("{{CurrentTime}}", "{{CurrentTime}}", "Текущее время"),
+        new("{{CurrentPage}}", "{{CurrentPage}}", "Текущая страница"),
+        new("{{TotalPages}}", "{{TotalPages}}", "Всего страниц"),
         new("{{SumBst}}", "{{SumBst}}", "Итого штук"),
         new("{{RowNumber}}", "{{RowNumber}}", "№ строки"),
         new("{{Artnr}}", "{{Artnr}}", "Артикул"),
