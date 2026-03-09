@@ -34,7 +34,7 @@
         }
 
         @page {
-            margin: 12mm 10mm 14mm 10mm;
+            margin: 12mm 10mm 18mm 10mm;
         }
 
         @media print {
@@ -56,7 +56,7 @@
             .page-footer {
                 display: block;
                 position: fixed;
-                bottom: 0;
+                bottom: 4mm;
                 left: 0;
                 right: 0;
                 text-align: center;
@@ -69,6 +69,18 @@
 
             .page-footer .page-total::before {
                 content: counter(pages);
+            }
+
+            .page-footer .page-total-fallback {
+                display: none;
+            }
+
+            .page-footer.use-fallback .page-total {
+                display: none;
+            }
+
+            .page-footer.use-fallback .page-total-fallback {
+                display: inline;
             }
         }
 
@@ -162,7 +174,7 @@
     </table>
 </div>
 <div class="page-footer" id="pageFooter">
-    <span class="page-number"></span> из <span class="page-total"></span>
+    <span class="page-number"></span> из <span class="page-total"></span><span class="page-total-fallback"></span>
 </div>
 
 <script>
@@ -171,12 +183,13 @@
             var millimetersToPixels = 96 / 25.4;
             var pageHeightMm = 297;
             var topMarginMm = 12;
-            var bottomMarginMm = 14;
+            var bottomMarginMm = 18;
             return (pageHeightMm - topMarginMm - bottomMarginMm) * millimetersToPixels;
         }
 
         function updatePageFooterVisibility() {
             var footer = document.getElementById('pageFooter');
+            var fallbackTotal = footer ? footer.querySelector('.page-total-fallback') : null;
             if (!footer) {
                 return;
             }
@@ -188,6 +201,12 @@
             );
 
             var pagesEstimate = Math.ceil(contentHeight / printablePageHeight);
+
+            if (fallbackTotal) {
+                fallbackTotal.textContent = pagesEstimate > 0 ? String(pagesEstimate) : '1';
+            }
+
+            footer.classList.toggle('use-fallback', pagesEstimate > 1);
             footer.style.display = pagesEstimate > 1 ? 'block' : 'none';
         }
 
