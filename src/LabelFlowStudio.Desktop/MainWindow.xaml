@@ -376,107 +376,109 @@
 
             <!-- Верхняя панель -->
             <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="14" Margin="0,0,0,12">
-                <Grid VerticalAlignment="Top">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="260"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                <Grid>
+                    <Grid VerticalAlignment="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0"
-                               Text="TENAM"
-                               VerticalAlignment="Center"
-                               Margin="0,0,10,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="0"
+                       Text="TENAM"
+                       VerticalAlignment="Center"
+                       Margin="0,0,10,0"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontWeight="SemiBold"/>
 
-                    <TextBox x:Name="TenamTextBox"
-                             Grid.Column="1"
-                             Style="{StaticResource AppTextBoxStyle}"
-                             Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
-                             Margin="0,0,12,0"
-                             PreviewTextInput="TenamTextBox_PreviewTextInput"
-                             PreviewKeyDown="TenamTextBox_PreviewKeyDown"
-                             DataObject.Pasting="TenamTextBox_Pasting"
-                             GotKeyboardFocus="TenamTextBox_GotKeyboardFocus">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter" Command="{Binding LoadRecordsCommand}" />
-                        </TextBox.InputBindings>
-                    </TextBox>
+                        <TextBox x:Name="TenamTextBox"
+                     Grid.Column="1"
+                     Style="{StaticResource AppTextBoxStyle}"
+                     Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,0,12,0"
+                     PreviewTextInput="TenamTextBox_PreviewTextInput"
+                     PreviewKeyDown="TenamTextBox_PreviewKeyDown"
+                     DataObject.Pasting="TenamTextBox_Pasting"
+                     GotKeyboardFocus="TenamTextBox_GotKeyboardFocus">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding LoadRecordsCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
 
-                    <Button Grid.Column="2"
-                            Style="{StaticResource EndLabelButtonStyle}"
-                            Command="{Binding OpenEndLabelPreviewCommand}"
-                            Margin="0,0,10,0"/>
+                        <Button Grid.Column="2"
+                    Style="{StaticResource EndLabelButtonStyle}"
+                    Command="{Binding OpenEndLabelPreviewCommand}"
+                    Margin="0,0,10,0"/>
 
-                    <Button Grid.Column="3"
-                            Style="{StaticResource StuffingSheetButtonStyle}"
-                            Command="{Binding OpenStuffingSheetPreviewCommand}" />
-                </Grid>
+                        <Button Grid.Column="3"
+                    Style="{StaticResource StuffingSheetButtonStyle}"
+                    Command="{Binding OpenStuffingSheetPreviewCommand}" />
+                    </Grid>
 
-                <Border Panel.ZIndex="20"
-                        Background="#4A0F172A"
-                        CornerRadius="10"
-                        IsHitTestVisible="True">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                    <Border Panel.ZIndex="20"
+                Background="#4A0F172A"
+                CornerRadius="10"
+                IsHitTestVisible="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
 
-                    <Border Style="{StaticResource CardStyle}"
-                            Padding="14,10"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Opacity="0.96">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Grid Width="22" Height="22" Margin="0,0,10,0">
-                                <Ellipse Width="20"
-                                         Height="20"
-                                         Stroke="{DynamicResource SurfaceBorderBrush}"
-                                         StrokeThickness="3"
-                                         Opacity="0.55"/>
+                        <Border Style="{StaticResource CardStyle}"
+                    Padding="14,10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Opacity="0.96">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Grid Width="22" Height="22" Margin="0,0,10,0">
+                                    <Ellipse Width="20"
+                                 Height="20"
+                                 Stroke="{DynamicResource SurfaceBorderBrush}"
+                                 StrokeThickness="3"
+                                 Opacity="0.55"/>
 
-                                <Path x:Name="TopPanelAutomaticModeSpinnerArc"
-                                      Data="M 11,1 A 10,10 0 0 1 21,11"
-                                      Stroke="{DynamicResource AccentBrush}"
-                                      StrokeThickness="3"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      RenderTransformOrigin="0.5,0.5">
-                                    <Path.RenderTransform>
-                                        <RotateTransform Angle="0"/>
-                                    </Path.RenderTransform>
-                                </Path>
+                                    <Path x:Name="TopPanelAutomaticModeSpinnerArc"
+                              Data="M 11,1 A 10,10 0 0 1 21,11"
+                              Stroke="{DynamicResource AccentBrush}"
+                              StrokeThickness="3"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              RenderTransformOrigin="0.5,0.5">
+                                        <Path.RenderTransform>
+                                            <RotateTransform Angle="0"/>
+                                        </Path.RenderTransform>
+                                    </Path>
 
-                                <Grid.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeSpinnerArc"
-                                                                 Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                 From="0"
-                                                                 To="360"
-                                                                 Duration="0:0:1.1"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Grid.Triggers>
-                            </Grid>
+                                    <Grid.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeSpinnerArc"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="0"
+                                                         To="360"
+                                                         Duration="0:0:1.1"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Grid.Triggers>
+                                </Grid>
 
-                            <TextBlock Text="Автоматический режим"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
+                                <TextBlock Text="Автоматический режим"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                     </Border>
-                </Border>
+                </Grid>
             </Border>
 
             <!-- Статус + центрированный TENAM + счётчик -->
