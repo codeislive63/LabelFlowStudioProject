@@ -1,7 +1,6 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.BoxProcessing;
-using LabelFlowStudio.Desktop;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
@@ -62,6 +61,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private bool _hasUnreadErrorNotifications;
     private bool _disposed;
 
+    private bool _canRequestManualWeight;
+    private string _tenamAwaitingWeight = string.Empty;
+
     /// <summary>
     /// Создает модель представления главного экрана
     /// </summary>
@@ -82,6 +84,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
         OpenStuffingSheetPreviewCommand = new AsyncCommand(OpenStuffingSheetPreviewAsync, CanOpenStuffingSheetPreview, HandleCommandException);
+        RequestManualWeightCommand = new AsyncCommand(RequestManualWeightAgainAsync, CanRequestManualWeightAgain, HandleCommandException);
 
         var settings = PrintSettingsStore.LoadOrDefault();
         _currentWorkMode = settings?.WorkMode ?? WorkMode.Manual;
@@ -106,6 +109,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         get => _selectedNotification;
         set => SetProperty(ref _selectedNotification, value);
+    }
+
+    public bool CanRequestManualWeight
+    {
+        get => _canRequestManualWeight;
+        private set
+        {
+            if (SetProperty(ref _canRequestManualWeight, value))
+            {
+                RequestManualWeightCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public bool IsNotificationCenterOpen
@@ -157,6 +172,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         get => _hasUnreadErrorNotifications;
         private set => SetProperty(ref _hasUnreadErrorNotifications, value);
     }
+
+    public AsyncCommand RequestManualWeightCommand { get; }
 
     /// <summary>
     /// Команда загрузки записей по введенному TENAM
@@ -214,6 +231,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 LoadRecordsCommand.RaiseCanExecuteChanged();
                 OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
                 OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+                RequestManualWeightCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -300,6 +318,87 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         });
     }
 
+    private bool CanRequestManualWeightAgain()
+    {
+        if (IsBusy)
+        {
+            return false;
+        }
+
+        return CanRequestManualWeight && !string.IsNullOrWhiteSpace(_tenamAwaitingWeight);
+    }
+
+    private async Task RequestManualWeightAgainAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_tenamAwaitingWeight))
+        {
+            return;
+        }
+
+        var tenamSnapshot = _tenamAwaitingWeight;
+        var cancellationToken = StartNewLoadCancellation();
+
+        IsBusy = true;
+        StatusMessage = "Проверка веса";
+
+        try
+        {
+            var response = await ProcessRequestWithoutUiBlockingAsync(
+                BuildRequest(tenamSnapshot, WorkMode.Manual),
+                cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (response.Status != BoxProcessingStatus.NeedWeight)
+            {
+                ApplyResponseState(response, tenamSnapshot);
+
+                if (response.Status == BoxProcessingStatus.Success)
+                {
+                    _tenamAwaitingWeight = string.Empty;
+                    CanRequestManualWeight = false;
+                }
+
+                return;
+            }
+
+            IsBusy = false;
+            StatusMessage = "Ожидание ввода веса";
+
+            var updatedResponse = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ApplyResponseState(updatedResponse, tenamSnapshot);
+
+            if (updatedResponse.Status == BoxProcessingStatus.Success)
+            {
+                _tenamAwaitingWeight = string.Empty;
+                CanRequestManualWeight = false;
+            }
+            else
+            {
+                _tenamAwaitingWeight = tenamSnapshot;
+                CanRequestManualWeight = true;
+                StatusMessage = "Нет веса в БД. Поставьте короб на весы или нажмите Ввести вес";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Операция отменена";
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to request manual weight again for TENAM {Tenam}", tenamSnapshot);
+            StatusMessage = "Не удалось повторно запросить ввод веса";
+            AddNotification($"Не удалось повторно запросить ввод веса для короба №{tenamSnapshot}: {exception.Message}", isError: true);
+        }
+        finally
+        {
+            IsBusy = false;
+            RequestManualWeightCommand.RaiseCanExecuteChanged();
+        }
+    }
+
     private WorkMode ResolveNextRequestMode()
     {
         if (CurrentWorkMode == WorkMode.Automatic)
@@ -356,6 +455,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         Records.Clear();
         Tenam = string.Empty;
 
+        // Сбрасываем возможность повторного ввода веса для предыдущего короба
+        _tenamAwaitingWeight = string.Empty;
+        CanRequestManualWeight = false;
+
         try
         {
             var request = BuildRequest(tenamSnapshot, requestMode);
@@ -368,8 +471,21 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
             if (requiredManualWeight)
             {
+                _tenamAwaitingWeight = tenamSnapshot;
+                CanRequestManualWeight = true;
+
+                IsBusy = false;
+                StatusMessage = "Нет веса в БД. Поставьте короб на весы или нажмите «Ввести вес».";
+
                 response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
+
+                if (response.Status == BoxProcessingStatus.Success)
+                {
+                    _tenamAwaitingWeight = string.Empty;
+                    CanRequestManualWeight = false;
+                    IsBusy = true;
+                }
             }
 
             ApplyResponseState(response, tenamSnapshot);
@@ -464,7 +580,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (!enteredWeight.HasValue)
         {
-            return response;
+            return response with
+            {
+                Message = "Ввод веса отменен. Нажмите «Ввести вес», чтобы повторить."
+            };
         }
 
         var manualWeight = Math.Round(enteredWeight.Value, 3, MidpointRounding.AwayFromZero);
@@ -671,8 +790,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _lastSuccessfulTenam = string.Empty;
         LastProcessedTenam = string.Empty;
 
+        _tenamAwaitingWeight = string.Empty;
+        CanRequestManualWeight = false;
+
         OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
         OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+        RequestManualWeightCommand.RaiseCanExecuteChanged();
     }
 
     // Выполняет бесшумную автопечать после успешной обработки
