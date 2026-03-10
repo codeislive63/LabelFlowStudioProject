@@ -121,10 +121,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 UnreadNotificationsCount = 0;
                 HasUnreadErrorNotifications = false;
-                if (SelectedNotification is null)
-                {
-                    SelectedNotification = Notifications.FirstOrDefault();
-                }
+                SelectedNotification ??= Notifications.FirstOrDefault();
             }
         }
     }
@@ -1036,10 +1033,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             }
         }
 
-        if (SelectedNotification is null)
-        {
-            SelectedNotification = Notifications[0];
-        }
+        SelectedNotification ??= Notifications[0];
 
         while (Notifications.Count > MaxNotifications)
         {
