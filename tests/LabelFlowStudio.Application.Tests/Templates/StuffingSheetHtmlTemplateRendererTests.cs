@@ -44,7 +44,7 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         Assert.Matches(new Regex(@"DATE=\d{2}\.\d{2}\.\d{4} TIME=\d{2}:\d{2}:\d{2}", RegexOptions.CultureInvariant), html);
 
         Assert.Matches(new Regex(@"\b1\b", RegexOptions.CultureInvariant), html);
-        Assert.Contains(records[0].Artnr, html, StringComparison.Ordinal);
+        Assert.Contains(records[0].Artnr!, html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         Assert.DoesNotContain("{{", html, StringComparison.Ordinal);
         Assert.Contains("te=4340559", html, StringComparison.Ordinal);
         Assert.Contains("data:image/png;base64,", html, StringComparison.Ordinal);
-        Assert.Contains(records[0].Artnr, html, StringComparison.Ordinal);
+        Assert.Contains(records[0].Artnr!, html, StringComparison.Ordinal);
     }
 
 

@@ -98,7 +98,7 @@ public sealed class MainViewModelTests
         await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
         Assert.True(vm.UnreadNotificationsCount > 0);
-        Assert.NotNull(vm.ToastNotification);
+        Assert.NotEmpty(vm.Notifications);
 
         vm.ToggleNotificationCenter();
 
@@ -137,7 +137,7 @@ public sealed class MainViewModelTests
 
         Assert.NotEmpty(vm.Notifications);
         Assert.Equal("Короб №4340558: Данные загружены", vm.Notifications[0].Message);
-        Assert.NotNull(vm.ToastNotification);
+        Assert.NotEmpty(vm.Notifications);
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public sealed class MainViewModelTests
 
         await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.NotNull(vm.ToastNotification);
-        Assert.True(vm.ToastNotification!.IsError);
+        Assert.NotEmpty(vm.Notifications);
+        Assert.True(vm.Notifications[0].IsError);
     }
 
     private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
