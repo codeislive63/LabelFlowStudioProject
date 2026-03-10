@@ -397,50 +397,45 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     private async Task<BoxProcessingResponse> RequestManualWeightAsync(
-        BoxProcessingResponse response,
-        string tenam,
-        CancellationToken cancellationToken)
+    BoxProcessingResponse response,
+    string tenam,
+    CancellationToken cancellationToken)
     {
-        var weightMonitorTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var scaleResponseTask = WaitForWeightFromScalesAsync(tenam, weightMonitorTokenSource.Token);
+        using var weightMonitorTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        decimal? enteredWeight = null;
-        decimal? scaleWeight = null;
+        var scaleResponseTask = Task.Run(
+            () => WaitForWeightFromScalesAsync(tenam, weightMonitorTokenSource.Token),
+            CancellationToken.None);
 
-        await RunOnUiThreadAsync(() =>
+        var dialog = new ManualWeightInputWindow(tenam)
         {
-            var dialog = new ManualWeightInputWindow(tenam)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+            Owner = System.Windows.Application.Current?.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
 
-            _ = Task.Run(async () =>
+        _ = Task.Run(async () =>
+        {
+            var scaleWeightValue = await scaleResponseTask.ConfigureAwait(false);
+            if (!scaleWeightValue.HasValue)
             {
-                var scaleWeightValue = await scaleResponseTask;
-                if (!scaleWeightValue.HasValue)
-                {
-                    return;
-                }
-
-                await RunOnUiThreadAsync(() =>
-                {
-                    if (dialog.IsVisible)
-                    {
-                        dialog.AcceptScaleWeight(scaleWeightValue.Value);
-                    }
-                });
-            }, CancellationToken.None);
-
-            var accepted = dialog.ShowDialog() == true;
-            if (accepted)
-            {
-                enteredWeight = dialog.EnteredWeight;
-                scaleWeight = dialog.ScaleWeight;
+                return;
             }
-        });
+
+            await RunOnUiThreadAsync(() =>
+            {
+                if (dialog.IsVisible)
+                {
+                    dialog.AcceptScaleWeight(scaleWeightValue.Value);
+                }
+            });
+        }, CancellationToken.None);
+
+        var accepted = dialog.ShowDialog() == true;
 
         weightMonitorTokenSource.Cancel();
+
+        decimal? enteredWeight = accepted ? dialog.EnteredWeight : null;
+        decimal? scaleWeight = accepted ? dialog.ScaleWeight : null;
 
         if (scaleWeight.HasValue)
         {
@@ -451,7 +446,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (refreshed.Status == BoxProcessingStatus.Success && refreshed.Weight.HasValue && refreshed.Weight > 0)
             {
                 var printSettings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
-                
+
                 return refreshed with
                 {
                     Message = "Вес получен с весов",
@@ -461,9 +456,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 };
             }
 
-            return response with 
+            return response with
             {
-                Message = "Вес с весов получен, но данные не обновились. Повторите сканирование." 
+                Message = "Вес с весов получен, но данные не обновились. Повторите сканирование."
             };
         }
 
@@ -477,8 +472,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (!saved)
         {
-            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД (возможен недостаток прав на обновление представления).", isError: true);
-            return response with { Message = "Не удалось сохранить вес в БД: недостаточно прав или обновление запрещено" };
+            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД.", isError: true);
+            return response with { Message = "Не удалось сохранить вес в БД" };
         }
 
         var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
@@ -511,7 +506,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 var currentResponse = await _boxProcessingService.ProcessAsync(
                     BuildRequest(tenam, WorkMode.Manual),
-                    cancellationToken);
+                    cancellationToken
+                ).ConfigureAwait(false);
 
                 if (currentResponse.Status == BoxProcessingStatus.Success
                     && currentResponse.Weight.HasValue
@@ -531,7 +527,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

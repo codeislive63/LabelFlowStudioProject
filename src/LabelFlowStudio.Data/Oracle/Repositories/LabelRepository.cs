@@ -56,21 +56,37 @@ public sealed class LabelRepository : ILabelRepository
         }
 
         string normalizedTenam = tenam.Trim();
+        decimal bruttoInDatabaseUnits = brutto * 1_000_000m;
 
         await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         try
         {
             var affectedRows = await dbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"UPDATE MLSOFT.LIST_FOR_TEKARTON_V SET BRUTTO = {brutto} WHERE TENAM = {normalizedTenam}",
+                $"UPDATE TE_T@WMS SET TEGEWBRU = {bruttoInDatabaseUnits} WHERE TENAM = {normalizedTenam}",
                 cancellationToken
+            );
+
+            _logger.LogInformation(
+                "Updated TEGEWBRU in TE_T@WMS for TENAM {Tenam}. Brutto: {Brutto}, Database value: {DatabaseValue}, Affected rows: {AffectedRows}",
+                normalizedTenam,
+                brutto,
+                bruttoInDatabaseUnits,
+                affectedRows
             );
 
             return affectedRows > 0;
         }
-        catch (OracleException exception) when (exception.Number == 1732)
+        catch (OracleException exception)
         {
-            _logger.LogWarning(exception, "Insufficient permissions to update view MLSOFT.LIST_FOR_TEKARTON_V for TENAM {Tenam}", normalizedTenam);
+            _logger.LogWarning(
+                exception,
+                "Failed to update TE_T@WMS for TENAM {Tenam}. Brutto: {Brutto}, Database value: {DatabaseValue}",
+                normalizedTenam,
+                brutto,
+                bruttoInDatabaseUnits
+            );
+
             return false;
         }
     }
