@@ -7,8 +7,6 @@ namespace LabelFlowStudio.Desktop;
 
 public partial class ManualWeightInputWindow : Window
 {
-    private bool _isCompletionAccepted;
-
     public ManualWeightInputWindow(string tenam)
     {
         InitializeComponent();
@@ -19,7 +17,6 @@ public partial class ManualWeightInputWindow : Window
             WeightTextBox.Focus();
             WeightTextBox.SelectAll();
         };
-        Closing += ManualWeightInputWindow_Closing;
     }
 
     public string PromptMessage { get; }
@@ -41,7 +38,6 @@ public partial class ManualWeightInputWindow : Window
         }
 
         EnteredWeight = weight;
-        _isCompletionAccepted = true;
         DialogResult = true;
     }
 
@@ -53,18 +49,7 @@ public partial class ManualWeightInputWindow : Window
         }
 
         ScaleWeight = weight;
-        _isCompletionAccepted = true;
         DialogResult = true;
-    }
-
-    private void ManualWeightInputWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
-    {
-        if (_isCompletionAccepted)
-        {
-            return;
-        }
-
-        e.Cancel = true;
     }
 
     private void WeightTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)

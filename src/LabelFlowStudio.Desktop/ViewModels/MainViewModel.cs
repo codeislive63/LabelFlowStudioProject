@@ -39,6 +39,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private WorkMode _nextRequestMode = WorkMode.Manual;
     private WorkMode _currentWorkMode = WorkMode.Manual;
+    private int _automaticDrainRequestsRemaining;
 
     private EndLabelTemplatePreviewWindow? _endLabelPreviewWindow;
     private StuffingSheetTemplatePreviewWindow? _stuffingSheetPreviewWindow;
@@ -239,9 +240,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         get => _currentWorkMode;
         set
         {
+            var previousMode = _currentWorkMode;
+
             if (!SetProperty(ref _currentWorkMode, value))
             {
                 return;
+            }
+
+            if (previousMode == WorkMode.Automatic && value == WorkMode.Manual)
+            {
+                _automaticDrainRequestsRemaining = 1;
+                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", isError: false);
             }
 
             OnPropertyChanged(nameof(IsAutomaticMode));
@@ -281,7 +290,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            _nextRequestMode = CurrentWorkMode == WorkMode.Automatic ? WorkMode.Automatic : WorkMode.Manual;
+            _nextRequestMode = ResolveNextRequestMode();
             Tenam = digitsOnly;
 
             if (LoadRecordsCommand.CanExecute(null))
@@ -289,6 +298,22 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 LoadRecordsCommand.Execute(null);
             }
         });
+    }
+
+    private WorkMode ResolveNextRequestMode()
+    {
+        if (CurrentWorkMode == WorkMode.Automatic)
+        {
+            return WorkMode.Automatic;
+        }
+
+        if (_automaticDrainRequestsRemaining <= 0)
+        {
+            return WorkMode.Manual;
+        }
+
+        _automaticDrainRequestsRemaining--;
+        return WorkMode.Automatic;
     }
 
     // Сохраняет выбранный режим работы в настройках
@@ -340,7 +365,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (response.Status == BoxProcessingStatus.NeedWeight)
+            var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
+            if (requiredManualWeight)
             {
                 response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
@@ -348,7 +374,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             ApplyResponseState(response, tenamSnapshot);
 
-            if (requestMode == WorkMode.Automatic && response is not null)
+            if (response is not null && (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success)))
             {
                 await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken);
             }
@@ -451,8 +477,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (!saved)
         {
-            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД", isError: true);
-            return response with { Message = "Не удалось сохранить вес в БД" };
+            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД (возможен недостаток прав на обновление представления).", isError: true);
+            return response with { Message = "Не удалось сохранить вес в БД: недостаточно прав или обновление запрещено" };
         }
 
         var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();

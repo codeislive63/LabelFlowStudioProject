@@ -1,6 +1,8 @@
 ﻿using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Oracle.ManagedDataAccess.Client;
 
 namespace LabelFlowStudio.Data.Oracle.Repositories;
 
@@ -10,13 +12,15 @@ namespace LabelFlowStudio.Data.Oracle.Repositories;
 public sealed class LabelRepository : ILabelRepository
 {
     private readonly IDbContextFactory<LabelDbContext> _dbContextFactory;
+    private readonly ILogger<LabelRepository> _logger;
 
     /// <summary>
     /// Создает репозиторий с фабрикой контекста базы данных
     /// </summary>
-    public LabelRepository(IDbContextFactory<LabelDbContext> dbContextFactory)
+    public LabelRepository(IDbContextFactory<LabelDbContext> dbContextFactory, ILogger<LabelRepository> logger)
     {
         _dbContextFactory = dbContextFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -55,11 +59,19 @@ public sealed class LabelRepository : ILabelRepository
 
         await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var affectedRows = await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"UPDATE MLSOFT.LIST_FOR_TEKARTON_V SET BRUTTO = {brutto} WHERE TENAM = {normalizedTenam}",
-            cancellationToken
-        );
+        try
+        {
+            var affectedRows = await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE MLSOFT.LIST_FOR_TEKARTON_V SET BRUTTO = {brutto} WHERE TENAM = {normalizedTenam}",
+                cancellationToken
+            );
 
-        return affectedRows > 0;
+            return affectedRows > 0;
+        }
+        catch (OracleException exception) when (exception.Number == 1732)
+        {
+            _logger.LogWarning(exception, "Insufficient permissions to update view MLSOFT.LIST_FOR_TEKARTON_V for TENAM {Tenam}", normalizedTenam);
+            return false;
+        }
     }
 }
