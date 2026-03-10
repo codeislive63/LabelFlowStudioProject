@@ -103,6 +103,19 @@
             <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса"/>
         </Style>
 
+        <Style x:Key="ManualWeightButtonStyle"
+       TargetType="Button"
+       BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
+            <Setter Property="Content" Value="Ввести вес"/>
+            <Setter Property="ToolTip" Value="Повторно открыть окно ручного ввода веса"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CanRequestManualWeight}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="NotificationCloseButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="30"/>
@@ -378,6 +391,7 @@
                             <ColumnDefinition Width="260"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -410,6 +424,11 @@
                         <Button Grid.Column="3"
                                 Style="{StaticResource StuffingSheetButtonStyle}"
                                 Command="{Binding OpenStuffingSheetPreviewCommand}" />
+
+                        <Button Grid.Column="4"
+                                Style="{StaticResource ManualWeightButtonStyle}"
+                                Command="{Binding RequestManualWeightCommand}"
+                                Margin="10,0,0,0"/>
                     </Grid>
 
                     <!-- Автоматический режим -->
