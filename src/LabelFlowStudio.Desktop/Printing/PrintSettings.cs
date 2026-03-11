@@ -13,6 +13,7 @@ public sealed class PrintSettings
 
     public int EndLabelCopies { get; set; } = 2;
     public int StuffingSheetCopies { get; set; } = 1;
+    public bool UseScales { get; set; } = true;
 
     public WorkMode WorkMode { get; set; } = WorkMode.Manual;
 

@@ -44,4 +44,12 @@ public sealed class PrintSettingsTests
 
         Assert.True(settings.IsComplete);
     }
+
+    [Fact]
+    public void UseScales_DefaultValue_IsTrue()
+    {
+        var settings = new PrintSettings();
+
+        Assert.True(settings.UseScales);
+    }
 }

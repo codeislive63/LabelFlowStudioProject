@@ -22,6 +22,7 @@ public partial class PrinterSetupWindow : Window
 
         PrintEndLabelCheckBox.IsChecked = _settings.PrintEndLabelEnabled;
         PrintStuffingSheetCheckBox.IsChecked = _settings.PrintStuffingSheetEnabled;
+        UseScalesCheckBox.IsChecked = _settings.UseScales;
 
         if (_printers.Length > 0)
         {
@@ -71,6 +72,7 @@ public partial class PrinterSetupWindow : Window
 
         _settings.PrintEndLabelEnabled = PrintEndLabelCheckBox.IsChecked == true;
         _settings.PrintStuffingSheetEnabled = PrintStuffingSheetCheckBox.IsChecked == true;
+        _settings.UseScales = UseScalesCheckBox.IsChecked == true;
 
         var selected = PrintersComboBox.SelectedItem as string;
         var printerRequired = _stepIndex == 0
@@ -134,6 +136,11 @@ public partial class PrinterSetupWindow : Window
             PrintersComboBox.IsEnabled = _settings.PrintStuffingSheetEnabled;
             ValidationText.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void OnUseScalesChecked(object sender, RoutedEventArgs e)
+    {
+        _settings.UseScales = UseScalesCheckBox.IsChecked == true;
     }
 
     private void UpdateStepUi()
