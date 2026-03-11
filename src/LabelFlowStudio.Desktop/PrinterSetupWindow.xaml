@@ -62,9 +62,14 @@
                     <CheckBox x:Name="PrintStuffingSheetCheckBox"
                               Style="{StaticResource SetupCheckBoxStyle}"
                               Content="Печатать лист сброса"
-                              Margin="0"
                               Checked="OnPrintStuffingSheetChecked"
                               Unchecked="OnPrintStuffingSheetChecked"/>
+                    <CheckBox x:Name="UseScalesCheckBox"
+                              Style="{StaticResource SetupCheckBoxStyle}"
+                              Margin="0"
+                              Content="Использовать весы"
+                              Checked="OnUseScalesChecked"
+                              Unchecked="OnUseScalesChecked"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,12">

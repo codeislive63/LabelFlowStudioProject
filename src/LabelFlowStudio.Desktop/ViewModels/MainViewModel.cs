@@ -471,20 +471,35 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
             if (requiredManualWeight)
             {
-                _tenamAwaitingWeight = tenamSnapshot;
-                CanRequestManualWeight = true;
+                var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+                var shouldRequestManualWeight = requestMode == WorkMode.Manual || settings.UseScales;
 
-                IsBusy = false;
-                StatusMessage = "Нет веса в БД. Поставьте короб на весы или нажмите «Ввести вес».";
-
-                response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (response.Status == BoxProcessingStatus.Success)
+                if (shouldRequestManualWeight)
                 {
-                    _tenamAwaitingWeight = string.Empty;
-                    CanRequestManualWeight = false;
-                    IsBusy = true;
+                    _tenamAwaitingWeight = tenamSnapshot;
+                    CanRequestManualWeight = true;
+
+                    IsBusy = false;
+                    StatusMessage = "Нет веса в БД. Поставьте короб на весы или нажмите «Ввести вес».";
+
+                    response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (response.Status == BoxProcessingStatus.Success)
+                    {
+                        _tenamAwaitingWeight = string.Empty;
+                        CanRequestManualWeight = false;
+                        IsBusy = true;
+                    }
+                }
+                else
+                {
+                    response = response with
+                    {
+                        ShouldPrintDropSheet = false,
+                        ShouldPrintEmptyDropSheet = settings.PrintStuffingSheetEnabled,
+                        ShouldPrintEndLabels = false
+                    };
                 }
             }
 
