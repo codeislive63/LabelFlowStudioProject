@@ -58,7 +58,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private UiNotification? _selectedNotification;
     private int _notificationTabIndex;
     private int _unreadNotificationsCount;
-    private bool _hasUnreadErrorNotifications;
+    private int _unreadErrorNotificationsCount;
+    private int _unreadWarningNotificationsCount;
+    private int _unreadSuccessNotificationsCount;
     private bool _disposed;
 
     private bool _canRequestManualWeight;
@@ -101,9 +103,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<UiNotification> Notifications { get; }
 
-    public IEnumerable<UiNotification> FilteredNotifications => NotificationTabIndex == 1
-        ? Notifications.Where(notification => notification.IsError)
-        : Notifications;
+    public IEnumerable<UiNotification> FilteredNotifications => NotificationTabIndex switch
+    {
+        1 => Notifications.Where(notification => notification.Category == NotificationCategory.Error),
+        2 => Notifications.Where(notification => notification.Category == NotificationCategory.Warning),
+        3 => Notifications.Where(notification => notification.Category == NotificationCategory.Success),
+        _ => Notifications
+    };
 
     public UiNotification? SelectedNotification
     {
@@ -136,7 +142,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (value)
             {
                 UnreadNotificationsCount = 0;
-                HasUnreadErrorNotifications = false;
+                UnreadErrorNotificationsCount = 0;
+                UnreadWarningNotificationsCount = 0;
+                UnreadSuccessNotificationsCount = 0;
+                OnPropertyChanged(nameof(HasUnreadErrorNotifications));
+                OnPropertyChanged(nameof(HasUnreadWarningNotifications));
+                OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
+                OnPropertyChanged(nameof(NotificationBadgeColor));
+                OnPropertyChanged(nameof(NotificationBadgeTextColor));
                 SelectedNotification ??= Notifications.FirstOrDefault();
             }
         }
@@ -154,9 +167,26 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             OnPropertyChanged(nameof(FilteredNotifications));
 
-            if (SelectedNotification is not null && value == 1 && !SelectedNotification.IsError)
+            if (SelectedNotification is null)
             {
-                SelectedNotification = Notifications.FirstOrDefault(notification => notification.IsError);
+                return;
+            }
+
+            if (value == 1 && SelectedNotification.Category != NotificationCategory.Error)
+            {
+                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Error);
+                return;
+            }
+
+            if (value == 2 && SelectedNotification.Category != NotificationCategory.Warning)
+            {
+                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Warning);
+                return;
+            }
+
+            if (value == 3 && SelectedNotification.Category != NotificationCategory.Success)
+            {
+                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Success);
             }
         }
     }
@@ -167,11 +197,41 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _unreadNotificationsCount, value);
     }
 
-    public bool HasUnreadErrorNotifications
+    public int UnreadErrorNotificationsCount
     {
-        get => _hasUnreadErrorNotifications;
-        private set => SetProperty(ref _hasUnreadErrorNotifications, value);
+        get => _unreadErrorNotificationsCount;
+        private set => SetProperty(ref _unreadErrorNotificationsCount, value);
     }
+
+    public int UnreadWarningNotificationsCount
+    {
+        get => _unreadWarningNotificationsCount;
+        private set => SetProperty(ref _unreadWarningNotificationsCount, value);
+    }
+
+    public int UnreadSuccessNotificationsCount
+    {
+        get => _unreadSuccessNotificationsCount;
+        private set => SetProperty(ref _unreadSuccessNotificationsCount, value);
+    }
+
+    public bool HasUnreadErrorNotifications => UnreadErrorNotificationsCount > 0;
+
+    public bool HasUnreadWarningNotifications => UnreadWarningNotificationsCount > 0;
+
+    public bool HasUnreadSuccessNotifications => UnreadSuccessNotificationsCount > 0;
+
+    public string NotificationBadgeColor => HasUnreadErrorNotifications
+        ? "#FFB00020"
+        : HasUnreadWarningNotifications
+            ? "#FFAF7A00"
+            : "#FF2E7D32";
+
+    public string NotificationBadgeTextColor => HasUnreadErrorNotifications
+        ? "White"
+        : HasUnreadWarningNotifications
+            ? "#FF1F1400"
+            : "#FFF1FFF5";
 
     public AsyncCommand RequestManualWeightCommand { get; }
 
@@ -268,7 +328,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (previousMode == WorkMode.Automatic && value == WorkMode.Manual)
             {
                 _automaticDrainRequestsRemaining = 1;
-                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", isError: false);
+                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", NotificationCategory.Success);
             }
 
             OnPropertyChanged(nameof(IsAutomaticMode));
@@ -390,7 +450,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogWarning(exception, "Failed to request manual weight again for TENAM {Tenam}", tenamSnapshot);
             StatusMessage = "Не удалось повторно запросить ввод веса";
-            AddNotification($"Не удалось повторно запросить ввод веса для короба №{tenamSnapshot}: {exception.Message}", isError: true);
+            AddNotification($"Не удалось повторно запросить ввод веса для короба №{tenamSnapshot}: {exception.Message}", NotificationCategory.Error);
         }
         finally
         {
@@ -494,6 +554,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 }
                 else
                 {
+                    AddNotification($"Короб №{tenamSnapshot}: вес не найден в БД в автоматическом режиме и отключены весы.", NotificationCategory.Warning);
+
                     response = response with
                     {
                         ShouldPrintDropSheet = false,
@@ -606,7 +668,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (!saved)
         {
-            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД.", isError: true);
+            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД.", NotificationCategory.Error);
             return response with { Message = "Не удалось сохранить вес в БД" };
         }
 
@@ -765,7 +827,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
 
         StatusMessage = response.Message;
-        AddNotification(BuildProcessingNotification(response, tenamSnapshot), response.Status is BoxProcessingStatus.Error);
+        AddNotification(BuildProcessingNotification(response, tenamSnapshot), ResolveProcessingNotificationCategory(response));
 
         if (response.Records.Count > 0)
         {
@@ -848,11 +910,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 var reason = ResolvePrintFailureReason(settings.StuffingSheetPrinterName);
                 StatusMessage = "Не удалось напечатать лист сброса";
-                AddNotification($"Лист сброса №{tenam} не отправлен на печать. {reason}", isError: true);
+                AddNotification($"Лист сброса №{tenam} не отправлен на печать. {reason}", NotificationCategory.Error);
                 return;
             }
 
-            AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", isError: false);
+            AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
         }
 
         if (settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
@@ -871,11 +933,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 var reason = ResolvePrintFailureReason(settings.EndLabelPrinterName);
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
-                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать. {reason}", isError: true);
+                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать. {reason}", NotificationCategory.Error);
                 return;
             }
 
-            AddNotification($"Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", isError: false);
+            AddNotification($"Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", NotificationCategory.Success);
         }
 
         StatusMessage = "Отправлено на печать";
@@ -1098,19 +1160,19 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogInformation(exception, "Box scanner configuration is invalid, fallback to keyboard scanner");
             await FailScannerStartAsync();
-            AddNotification("Не удалось запустить COM-сканер: неверная конфигурация", isError: true);
+            AddNotification("Не удалось запустить COM-сканер: неверная конфигурация", NotificationCategory.Error);
         }
         catch (InvalidOperationException exception)
         {
             _logger.LogInformation(exception, "Box scanner is not configured, fallback to keyboard scanner");
             await FailScannerStartAsync();
-            AddNotification("COM-сканер не настроен, активирован ввод с клавиатуры", isError: true);
+            AddNotification("COM-сканер не настроен, активирован ввод с клавиатуры", NotificationCategory.Error);
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Failed to start box scanner, fallback to keyboard scanner");
             await FailScannerStartAsync();
-            AddNotification($"Ошибка запуска COM-сканера: {exception.Message}", isError: true);
+            AddNotification($"Ошибка запуска COM-сканера: {exception.Message}", NotificationCategory.Error);
         }
     }
 
@@ -1171,26 +1233,40 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _ = RunOnUiThreadAsync(() =>
         {
             StatusMessage = exception.Message;
-            AddNotification($"Ошибка: {exception.Message}", isError: true);
+            AddNotification($"Ошибка: {exception.Message}", NotificationCategory.Error);
         });
     }
 
-    private void AddNotification(string message, bool isError)
+    private void AddNotification(string message, NotificationCategory category)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             return;
         }
 
-        Notifications.Insert(0, new UiNotification(DateTime.Now, message, isError));
+        Notifications.Insert(0, new UiNotification(DateTime.Now, message, category));
 
         if (!IsNotificationCenterOpen)
         {
             UnreadNotificationsCount++;
-            if (isError)
+            switch (category)
             {
-                HasUnreadErrorNotifications = true;
+                case NotificationCategory.Error:
+                    UnreadErrorNotificationsCount++;
+                    break;
+                case NotificationCategory.Warning:
+                    UnreadWarningNotificationsCount++;
+                    break;
+                default:
+                    UnreadSuccessNotificationsCount++;
+                    break;
             }
+
+            OnPropertyChanged(nameof(HasUnreadErrorNotifications));
+            OnPropertyChanged(nameof(HasUnreadWarningNotifications));
+            OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
+            OnPropertyChanged(nameof(NotificationBadgeColor));
+            OnPropertyChanged(nameof(NotificationBadgeTextColor));
         }
 
         SelectedNotification ??= Notifications[0];
@@ -1201,6 +1277,22 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
 
         OnPropertyChanged(nameof(FilteredNotifications));
+    }
+
+
+    private static NotificationCategory ResolveProcessingNotificationCategory(BoxProcessingResponse response)
+    {
+        if (response.Status == BoxProcessingStatus.Error)
+        {
+            return NotificationCategory.Error;
+        }
+
+        if (response.Status == BoxProcessingStatus.NeedWeight)
+        {
+            return NotificationCategory.Warning;
+        }
+
+        return NotificationCategory.Success;
     }
 
 
