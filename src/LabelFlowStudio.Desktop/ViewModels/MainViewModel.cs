@@ -68,6 +68,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private bool _canRequestManualWeight;
     private string _tenamAwaitingWeight = string.Empty;
+    private long _requestSequence;
 
     /// <summary>
     /// Создает модель представления главного экрана
@@ -757,6 +758,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         await _requestGate.WaitAsync(cancellationToken);
 
+        var requestId = Interlocked.Increment(ref _requestSequence);
+        var startedAtUtc = DateTime.UtcNow;
+
         try
         {
             _logger.LogDebug("Start processing TENAM {Tenam} from {Origin} in mode {Mode}", request.Tenam, origin, request.Mode);
@@ -1259,6 +1263,27 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RefreshFilteredNotifications();
     }
 
+    private void RefreshFilteredNotifications()
+    {
+        FilteredNotificationsView.Refresh();
+        OnPropertyChanged(nameof(FilteredNotificationsView));
+    }
+
+    private void EnsureSelectedNotificationMatchesCurrentTab()
+    {
+        if (FilteredNotificationsView.IsEmpty)
+        {
+            SelectedNotification = null;
+            return;
+        }
+
+        if (SelectedNotification is UiNotification current && FilterNotificationByCurrentTab(current))
+        {
+            return;
+        }
+
+        SelectedNotification = FilteredNotificationsView.Cast<UiNotification>().FirstOrDefault();
+    }
 
 
     private bool FilterNotificationByCurrentTab(object item)
