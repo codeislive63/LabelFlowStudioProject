@@ -3,6 +3,8 @@ using LabelFlowStudio.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Oracle.ManagedDataAccess.Client;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace LabelFlowStudio.Data.Oracle.Repositories;
 
@@ -13,6 +15,10 @@ public sealed class LabelRepository : ILabelRepository
 {
     private readonly IDbContextFactory<LabelDbContext> _dbContextFactory;
     private readonly ILogger<LabelRepository> _logger;
+
+    private static readonly TimeSpan QueryBurstWindow = TimeSpan.FromSeconds(30);
+    private static readonly ConcurrentDictionary<string, QueryBurstTracker> QueryBurstTrackers = new(StringComparer.Ordinal);
+
 
     /// <summary>
     /// Создает репозиторий с фабрикой контекста базы данных
@@ -34,13 +40,46 @@ public sealed class LabelRepository : ILabelRepository
         }
 
         string normalizedTenam = tenam.Trim();
+        var startedAtUtc = DateTime.UtcNow;
+        var stopwatch = Stopwatch.StartNew();
+        var queryCount = RegisterQueryHit(normalizedTenam, startedAtUtc, out var windowStartedAtUtc);
+
+        _logger.LogInformation(
+            "DB query started for TENAM {Tenam}. Hit {QueryCount} within {WindowSeconds}s window (window started at {WindowStartedAtUtc:O}).",
+            normalizedTenam,
+            queryCount,
+            QueryBurstWindow.TotalSeconds,
+            windowStartedAtUtc);
 
         await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        return await dbContext.LabelRecords
+        var records = await dbContext.LabelRecords
             .AsNoTracking()
             .Where(record => record.Tenam == normalizedTenam)
             .ToListAsync(cancellationToken);
+
+        stopwatch.Stop();
+
+        if (queryCount >= 3)
+        {
+            _logger.LogWarning(
+                "Repeated DB reads detected for TENAM {Tenam}: {QueryCount} queries within {WindowSeconds}s. Latest query returned {RecordCount} rows in {ElapsedMs} ms.",
+                normalizedTenam,
+                queryCount,
+                QueryBurstWindow.TotalSeconds,
+                records.Count,
+                stopwatch.ElapsedMilliseconds);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "DB query completed for TENAM {Tenam}. Returned {RecordCount} rows in {ElapsedMs} ms.",
+                normalizedTenam,
+                records.Count,
+                stopwatch.ElapsedMilliseconds);
+        }
+
+        return records;
     }
 
     public async Task<bool> UpdateBruttoByTenamAsync(string tenam, decimal brutto, CancellationToken cancellationToken)
@@ -90,4 +129,34 @@ public sealed class LabelRepository : ILabelRepository
             return false;
         }
     }
+
+
+    private static int RegisterQueryHit(string tenam, DateTime startedAtUtc, out DateTime windowStartedAtUtc)
+    {
+        var tracker = QueryBurstTrackers.AddOrUpdate(
+            tenam,
+            _ => new QueryBurstTracker(startedAtUtc, 1),
+            (_, current) => current.TryRegister(startedAtUtc, QueryBurstWindow));
+
+        windowStartedAtUtc = tracker.WindowStartedAtUtc;
+        return tracker.Count;
+    }
+
+    private sealed record QueryBurstTracker(DateTime WindowStartedAtUtc, int Count)
+    {
+        public QueryBurstTracker TryRegister(DateTime startedAtUtc, TimeSpan window)
+        {
+            if ((startedAtUtc - WindowStartedAtUtc) > window)
+            {
+                return this with
+                {
+                    WindowStartedAtUtc = startedAtUtc,
+                    Count = 1
+                };
+            }
+
+            return this with { Count = Count + 1 };
+        }
+    }
+
 }

@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Data;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -19,6 +21,7 @@ namespace LabelFlowStudio.Desktop.ViewModels;
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
     private static readonly TimeSpan ScannerDeduplicationWindow = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ScaleWeightPollingInterval = TimeSpan.FromSeconds(2);
     private const int MaxNotifications = 50;
 
     private readonly IBoxProcessingService _boxProcessingService;
@@ -65,6 +68,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private bool _canRequestManualWeight;
     private string _tenamAwaitingWeight = string.Empty;
+    private long _requestSequence;
 
     /// <summary>
     /// Создает модель представления главного экрана
@@ -82,6 +86,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         Records = new ObservableCollection<LabelRecord>();
         Notifications = new ObservableCollection<UiNotification>();
         Notifications.CollectionChanged += OnNotificationsCollectionChanged;
+        FilteredNotificationsView = CollectionViewSource.GetDefaultView(Notifications);
+        FilteredNotificationsView.Filter = FilterNotificationByCurrentTab;
 
         LoadRecordsCommand = new AsyncCommand(LoadRecordsAsync, CanLoadRecords, HandleCommandException);
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
@@ -103,13 +109,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<UiNotification> Notifications { get; }
 
-    public IEnumerable<UiNotification> FilteredNotifications => NotificationTabIndex switch
-    {
-        1 => Notifications.Where(notification => notification.Category == NotificationCategory.Error),
-        2 => Notifications.Where(notification => notification.Category == NotificationCategory.Warning),
-        3 => Notifications.Where(notification => notification.Category == NotificationCategory.Success),
-        _ => Notifications
-    };
+    public ICollectionView FilteredNotificationsView { get; }
 
     public UiNotification? SelectedNotification
     {
@@ -150,7 +150,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
                 OnPropertyChanged(nameof(NotificationBadgeColor));
                 OnPropertyChanged(nameof(NotificationBadgeTextColor));
-                SelectedNotification ??= Notifications.FirstOrDefault();
+                EnsureSelectedNotificationMatchesCurrentTab();
             }
         }
     }
@@ -165,29 +165,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            OnPropertyChanged(nameof(FilteredNotifications));
-
-            if (SelectedNotification is null)
-            {
-                return;
-            }
-
-            if (value == 1 && SelectedNotification.Category != NotificationCategory.Error)
-            {
-                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Error);
-                return;
-            }
-
-            if (value == 2 && SelectedNotification.Category != NotificationCategory.Warning)
-            {
-                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Warning);
-                return;
-            }
-
-            if (value == 3 && SelectedNotification.Category != NotificationCategory.Success)
-            {
-                SelectedNotification = Notifications.FirstOrDefault(notification => notification.Category == NotificationCategory.Success);
-            }
+            RefreshFilteredNotifications();
+            EnsureSelectedNotificationMatchesCurrentTab();
         }
     }
 
@@ -405,7 +384,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             var response = await ProcessRequestWithoutUiBlockingAsync(
                 BuildRequest(tenamSnapshot, WorkMode.Manual),
-                cancellationToken);
+                cancellationToken,
+                "RequestManualWeightAgain");
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -525,7 +505,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             await Task.Yield();
 
-            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken);
+            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken, "LoadRecords");
             cancellationToken.ThrowIfCancellationRequested();
 
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
@@ -632,9 +612,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         if (scaleWeight.HasValue)
         {
-            var refreshed = await _boxProcessingService.ProcessAsync(
+            var refreshed = await ProcessRequestWithoutUiBlockingAsync(
                 BuildRequest(tenam, WorkMode.Manual),
-                cancellationToken);
+                cancellationToken,
+                "ScaleWeightRefresh");
 
             if (refreshed.Status == BoxProcessingStatus.Success && refreshed.Weight.HasValue && refreshed.Weight > 0)
             {
@@ -700,10 +681,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             try
             {
-                var currentResponse = await _boxProcessingService.ProcessAsync(
+                await Task.Delay(ScaleWeightPollingInterval, cancellationToken).ConfigureAwait(false);
+
+                var currentResponse = await ProcessRequestWithoutUiBlockingAsync(
                     BuildRequest(tenam, WorkMode.Manual),
-                    cancellationToken
-                ).ConfigureAwait(false);
+                    cancellationToken,
+                    "ScaleWeightPolling").ConfigureAwait(false);
 
                 if (currentResponse.Status == BoxProcessingStatus.Success
                     && currentResponse.Weight.HasValue
@@ -721,14 +704,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 _logger.LogDebug(exception, "Failed to refresh weight for TENAM {Tenam}", tenam);
             }
 
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
         }
 
         return null;
@@ -778,16 +753,37 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // Выполняет обработку TENAM вне UI потока
     private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
         BoxProcessingRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string origin)
     {
         await _requestGate.WaitAsync(cancellationToken);
 
+        var requestId = Interlocked.Increment(ref _requestSequence);
+        var startedAtUtc = DateTime.UtcNow;
+
         try
         {
-            return await Task.Run(
+            _logger.LogInformation(
+                "Process request #{RequestId} started from {Origin} for TENAM {Tenam} in mode {Mode} at {StartedAtUtc:O}.",
+                requestId,
+                origin,
+                request.Tenam,
+                request.Mode,
+                startedAtUtc);
+
+            var response = await Task.Run(
                 () => _boxProcessingService.ProcessAsync(request, cancellationToken), 
                 cancellationToken
             );
+
+            _logger.LogInformation(
+                "Process request #{RequestId} completed from {Origin} for TENAM {Tenam} with status {Status} in {ElapsedMs} ms.",
+                requestId,
+                origin,
+                request.Tenam,
+                response.Status,
+                (long)(DateTime.UtcNow - startedAtUtc).TotalMilliseconds);
+            return response;
         }
         finally
         {
@@ -1269,16 +1265,55 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(NotificationBadgeTextColor));
         }
 
-        SelectedNotification ??= Notifications[0];
+        EnsureSelectedNotificationMatchesCurrentTab();
 
         while (Notifications.Count > MaxNotifications)
         {
             Notifications.RemoveAt(Notifications.Count - 1);
         }
 
-        OnPropertyChanged(nameof(FilteredNotifications));
+        RefreshFilteredNotifications();
     }
 
+
+
+    private bool FilterNotificationByCurrentTab(object item)
+    {
+        if (item is not UiNotification notification)
+        {
+            return false;
+        }
+
+        return NotificationTabIndex switch
+        {
+            1 => notification.Category == NotificationCategory.Error,
+            2 => notification.Category == NotificationCategory.Warning,
+            3 => notification.Category == NotificationCategory.Success,
+            _ => true
+        };
+    }
+
+    private void RefreshFilteredNotifications()
+    {
+        FilteredNotificationsView.Refresh();
+        OnPropertyChanged(nameof(FilteredNotificationsView));
+    }
+
+    private void EnsureSelectedNotificationMatchesCurrentTab()
+    {
+        if (FilteredNotificationsView.IsEmpty)
+        {
+            SelectedNotification = null;
+            return;
+        }
+
+        if (SelectedNotification is UiNotification current && FilterNotificationByCurrentTab(current))
+        {
+            return;
+        }
+
+        SelectedNotification = FilteredNotificationsView.Cast<UiNotification>().FirstOrDefault();
+    }
 
     private static NotificationCategory ResolveProcessingNotificationCategory(BoxProcessingResponse response)
     {
@@ -1329,12 +1364,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void OnNotificationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
     {
-        OnPropertyChanged(nameof(FilteredNotifications));
+        RefreshFilteredNotifications();
 
-        if (SelectedNotification is not null && !Notifications.Contains(SelectedNotification))
-        {
-            SelectedNotification = Notifications.FirstOrDefault();
-        }
+        EnsureSelectedNotificationMatchesCurrentTab();
     }
 
     public void Dispose()
