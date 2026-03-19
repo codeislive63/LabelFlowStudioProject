@@ -763,26 +763,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         try
         {
-            _logger.LogInformation(
-                "Process request #{RequestId} started from {Origin} for TENAM {Tenam} in mode {Mode} at {StartedAtUtc:O}.",
-                requestId,
-                origin,
-                request.Tenam,
-                request.Mode,
-                startedAtUtc);
+            _logger.LogDebug("Start processing TENAM {Tenam} from {Origin} in mode {Mode}", request.Tenam, origin, request.Mode);
 
             var response = await Task.Run(
                 () => _boxProcessingService.ProcessAsync(request, cancellationToken), 
                 cancellationToken
             );
 
-            _logger.LogInformation(
-                "Process request #{RequestId} completed from {Origin} for TENAM {Tenam} with status {Status} in {ElapsedMs} ms.",
-                requestId,
-                origin,
-                request.Tenam,
-                response.Status,
-                (long)(DateTime.UtcNow - startedAtUtc).TotalMilliseconds);
+            _logger.LogDebug("Completed processing TENAM {Tenam} from {Origin} with status {Status}", request.Tenam, origin, response.Status);
             return response;
         }
         finally
@@ -1275,6 +1263,27 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RefreshFilteredNotifications();
     }
 
+    private void RefreshFilteredNotifications()
+    {
+        FilteredNotificationsView.Refresh();
+        OnPropertyChanged(nameof(FilteredNotificationsView));
+    }
+
+    private void EnsureSelectedNotificationMatchesCurrentTab()
+    {
+        if (FilteredNotificationsView.IsEmpty)
+        {
+            SelectedNotification = null;
+            return;
+        }
+
+        if (SelectedNotification is UiNotification current && FilterNotificationByCurrentTab(current))
+        {
+            return;
+        }
+
+        SelectedNotification = FilteredNotificationsView.Cast<UiNotification>().FirstOrDefault();
+    }
 
 
     private bool FilterNotificationByCurrentTab(object item)

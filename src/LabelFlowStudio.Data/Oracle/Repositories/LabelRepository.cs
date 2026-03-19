@@ -53,33 +53,10 @@ public sealed class LabelRepository : ILabelRepository
 
         await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var records = await dbContext.LabelRecords
-            .AsNoTracking()
-            .Where(record => record.Tenam == normalizedTenam)
-            .ToListAsync(cancellationToken);
-
-        stopwatch.Stop();
-
-        if (queryCount >= 3)
-        {
-            _logger.LogWarning(
-                "Repeated DB reads detected for TENAM {Tenam}: {QueryCount} queries within {WindowSeconds}s. Latest query returned {RecordCount} rows in {ElapsedMs} ms.",
-                normalizedTenam,
-                queryCount,
-                QueryBurstWindow.TotalSeconds,
-                records.Count,
-                stopwatch.ElapsedMilliseconds);
-        }
-        else
-        {
-            _logger.LogInformation(
-                "DB query completed for TENAM {Tenam}. Returned {RecordCount} rows in {ElapsedMs} ms.",
-                normalizedTenam,
-                records.Count,
-                stopwatch.ElapsedMilliseconds);
-        }
-
-        return records;
+        return await dbContext.LabelRecords
+                              .AsNoTracking()
+                              .Where(record => record.Tenam == normalizedTenam)
+                              .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> UpdateBruttoByTenamAsync(string tenam, decimal brutto, CancellationToken cancellationToken)
