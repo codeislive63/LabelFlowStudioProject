@@ -107,7 +107,32 @@ public sealed class MainViewModelTests
 
         vm.NotificationTabIndex = 1;
 
-        Assert.All(vm.FilteredNotifications, notification => Assert.True(notification.IsError));
+        Assert.All(vm.FilteredNotificationsView.Cast<UiNotification>(), notification => Assert.True(notification.IsError));
+    }
+
+
+    [Fact]
+    public void NotificationCenter_WarningTabReflectsNewWarnings()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var scanner = new FakeScanner();
+            var service = new FakeProcessingService();
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+
+            vm.NotificationTabIndex = 2;
+
+            var addNotification = typeof(MainViewModel).GetMethod("AddNotification", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(addNotification);
+
+            addNotification!.Invoke(vm, new object[] { "Тестовое предупреждение", NotificationCategory.Warning });
+
+            var filtered = vm.FilteredNotificationsView.Cast<UiNotification>().ToList();
+
+            Assert.Single(filtered);
+            Assert.True(filtered[0].IsWarning);
+            Assert.Same(filtered[0], vm.SelectedNotification);
+        });
     }
 
     [Fact]
