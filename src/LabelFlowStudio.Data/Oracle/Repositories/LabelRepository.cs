@@ -38,9 +38,9 @@ public sealed class LabelRepository : ILabelRepository
         await using LabelDbContext dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         return await dbContext.LabelRecords
-            .AsNoTracking()
-            .Where(record => record.Tenam == normalizedTenam)
-            .ToListAsync(cancellationToken);
+                              .AsNoTracking()
+                              .Where(record => record.Tenam == normalizedTenam)
+                              .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> UpdateBruttoByTenamAsync(string tenam, decimal brutto, CancellationToken cancellationToken)
