@@ -765,7 +765,11 @@
                                             </DataTemplate>
                                         </TabControl.Resources>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="🗂" Margin="0,0,6,0"/><TextBlock Text="Все"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="Все"/>
+                                                </StackPanel>
+                                            </TabItem.Header>
                                             <Grid>
                                                 <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
@@ -784,7 +788,7 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⛔" Margin="0,0,6,0"/><TextBlock Text="Ошибки"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⛔" Margin="0,0,2,0"/><TextBlock Text="Ошибки"/></StackPanel></TabItem.Header>
                                             <Grid>
                                                 <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
@@ -803,7 +807,7 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⚠" Margin="0,0,6,0"/><TextBlock Text="Предупреждения"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⚠" Margin="0,0,2,0"/><TextBlock Text="Warnings"/></StackPanel></TabItem.Header>
                                             <Grid>
                                                 <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
@@ -822,7 +826,7 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="✔" Margin="0,0,6,0"/><TextBlock Text="Успех"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="✔" Margin="0,0,2,0"/><TextBlock Text="Успех"/></StackPanel></TabItem.Header>
                                             <Grid>
                                                 <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotifications}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
