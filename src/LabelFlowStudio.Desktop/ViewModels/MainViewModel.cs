@@ -765,10 +765,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogDebug("Start processing TENAM {Tenam} from {Origin} in mode {Mode}", request.Tenam, origin, request.Mode);
 
-            var response = await Task.Run(
-                () => _boxProcessingService.ProcessAsync(request, cancellationToken), 
-                cancellationToken
-            );
+            var response = await _boxProcessingService.ProcessAsync(request, cancellationToken);
 
             _logger.LogDebug("Completed processing TENAM {Tenam} from {Origin} with status {Status}", request.Tenam, origin, response.Status);
             return response;
@@ -1300,28 +1297,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             3 => notification.Category == NotificationCategory.Success,
             _ => true
         };
-    }
-
-    private void RefreshFilteredNotifications()
-    {
-        FilteredNotificationsView.Refresh();
-        OnPropertyChanged(nameof(FilteredNotificationsView));
-    }
-
-    private void EnsureSelectedNotificationMatchesCurrentTab()
-    {
-        if (FilteredNotificationsView.IsEmpty)
-        {
-            SelectedNotification = null;
-            return;
-        }
-
-        if (SelectedNotification is UiNotification current && FilterNotificationByCurrentTab(current))
-        {
-            return;
-        }
-
-        SelectedNotification = FilteredNotificationsView.Cast<UiNotification>().FirstOrDefault();
     }
 
     private static NotificationCategory ResolveProcessingNotificationCategory(BoxProcessingResponse response)
