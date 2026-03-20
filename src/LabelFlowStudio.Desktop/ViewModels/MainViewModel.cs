@@ -503,7 +503,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             var request = BuildRequest(tenamSnapshot, requestMode);
 
-            await Task.Yield();
+            await WaitForUiToRenderAsync();
 
             BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken, "LoadRecords");
             cancellationToken.ThrowIfCancellationRequested();
@@ -645,7 +645,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
 
         var manualWeight = Math.Round(enteredWeight.Value, 3, MidpointRounding.AwayFromZero);
-        var saved = await _boxProcessingService.UpdateWeightAsync(tenam, manualWeight, cancellationToken);
+        var saved = await Task.Run(
+            () => _boxProcessingService.UpdateWeightAsync(tenam, manualWeight, cancellationToken),
+            CancellationToken.None);
 
         if (!saved)
         {
@@ -751,6 +753,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     // Выполняет обработку TENAM вне UI потока
+    private async Task WaitForUiToRenderAsync()
+    {
+        if (Application.Current?.Dispatcher is null)
+        {
+            await Task.Yield();
+            return;
+        }
+
+        await Application.Current.Dispatcher.InvokeAsync(
+            static () => { },
+            System.Windows.Threading.DispatcherPriority.Render,
+            CancellationToken.None);
+    }
+
     private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
         BoxProcessingRequest request,
         CancellationToken cancellationToken,
@@ -765,7 +781,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogDebug("Start processing TENAM {Tenam} from {Origin} in mode {Mode}", request.Tenam, origin, request.Mode);
 
-            var response = await _boxProcessingService.ProcessAsync(request, cancellationToken);
+            var response = await Task.Run(
+                () => _boxProcessingService.ProcessAsync(request, cancellationToken),
+                CancellationToken.None);
 
             _logger.LogDebug("Completed processing TENAM {Tenam} from {Origin} with status {Status}", request.Tenam, origin, response.Status);
             return response;
