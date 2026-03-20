@@ -1,4 +1,5 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+using System.Diagnostics;
+using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.ViewModels;
@@ -38,6 +39,27 @@ public sealed class MainViewModelTests
 
         Assert.Equal(2, vm.Records.Count);
         Assert.Equal("OK", vm.StatusMessage);
+    }
+
+    [Fact]
+    public void LoadRecordsCommand_DoesNotBlockCallingThread_WhileProcessingStarts()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var scanner = new FakeScanner();
+            var service = new BlockingProcessingService(TimeSpan.FromMilliseconds(250));
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+            {
+                Tenam = "4340558"
+            };
+
+            var stopwatch = Stopwatch.StartNew();
+            vm.LoadRecordsCommand.Execute(null);
+            stopwatch.Stop();
+
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(150), $"Execute blocked for {stopwatch.Elapsed}.");
+            Assert.True(vm.IsBusy);
+        });
     }
 
     [Fact]
@@ -308,4 +330,27 @@ public sealed class MainViewModelTests
             return Task.FromResult(true);
         }
     }
+
+    private sealed class BlockingProcessingService : IBoxProcessingService
+    {
+        private readonly TimeSpan _delay;
+
+        public BlockingProcessingService(TimeSpan delay)
+        {
+            _delay = delay;
+        }
+
+        public Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        {
+            Thread.Sleep(_delay);
+            return Task.FromResult(CreateSuccessResponse("OK", new List<LabelRecord>()));
+        }
+
+        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
+        {
+            Thread.Sleep(_delay);
+            return Task.FromResult(true);
+        }
+    }
+
 }
