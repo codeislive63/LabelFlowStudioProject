@@ -52,4 +52,12 @@ public sealed class PrintSettingsTests
 
         Assert.True(settings.UseScales);
     }
+
+    [Fact]
+    public void ManualScanAutoPrintEndLabelEnabled_DefaultValue_IsFalse()
+    {
+        var settings = new PrintSettings();
+
+        Assert.False(settings.ManualScanAutoPrintEndLabelEnabled);
+    }
 }
