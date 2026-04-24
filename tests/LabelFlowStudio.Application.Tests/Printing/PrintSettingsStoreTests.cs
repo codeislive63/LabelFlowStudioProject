@@ -29,7 +29,8 @@ public sealed class PrintSettingsStoreTests
             StuffingSheetCopies = 2,
             PrintStuffingSheetEnabled = true,
             PrintEndLabelEnabled = true,
-            UseScales = false
+            UseScales = false,
+            ManualScanAutoPrintEndLabelEnabled = true
         };
 
         await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
@@ -43,6 +44,7 @@ public sealed class PrintSettingsStoreTests
         Assert.Equal(3, loaded.EndLabelCopies);
         Assert.Equal(2, loaded.StuffingSheetCopies);
         Assert.False(loaded.UseScales);
+        Assert.True(loaded.ManualScanAutoPrintEndLabelEnabled);
     }
 
     [Fact]
@@ -78,6 +80,7 @@ public sealed class PrintSettingsStoreTests
         Assert.Equal(2, settings.EndLabelCopies);
         Assert.Equal(1, settings.StuffingSheetCopies);
         Assert.True(settings.UseScales);
+        Assert.False(settings.ManualScanAutoPrintEndLabelEnabled);
     }
 
     private static void ResetCache()
