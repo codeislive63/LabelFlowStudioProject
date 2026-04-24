@@ -23,7 +23,6 @@ public partial class PrinterSetupWindow : Window
         PrintEndLabelCheckBox.IsChecked = _settings.PrintEndLabelEnabled;
         PrintStuffingSheetCheckBox.IsChecked = _settings.PrintStuffingSheetEnabled;
         UseScalesCheckBox.IsChecked = _settings.UseScales;
-        ManualScanAutoPrintEndLabelCheckBox.IsChecked = _settings.ManualScanAutoPrintEndLabelEnabled;
         EndLabelCopiesTextBox.Text = _settings.EndLabelCopies > 0 ? _settings.EndLabelCopies.ToString() : "2";
         StuffingSheetCopiesTextBox.Text = _settings.StuffingSheetCopies > 0 ? _settings.StuffingSheetCopies.ToString() : "1";
 
@@ -76,8 +75,6 @@ public partial class PrinterSetupWindow : Window
         _settings.PrintEndLabelEnabled = PrintEndLabelCheckBox.IsChecked == true;
         _settings.PrintStuffingSheetEnabled = PrintStuffingSheetCheckBox.IsChecked == true;
         _settings.UseScales = UseScalesCheckBox.IsChecked == true;
-        _settings.ManualScanAutoPrintEndLabelEnabled = ManualScanAutoPrintEndLabelCheckBox.IsChecked == true;
-
         _settings.EndLabelCopies = ParseCopies(EndLabelCopiesTextBox.Text, defaultValue: 2);
         _settings.StuffingSheetCopies = ParseCopies(StuffingSheetCopiesTextBox.Text, defaultValue: 1);
 

@@ -109,10 +109,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <CheckBox x:Name="ManualScanAutoPrintEndLabelCheckBox"
-                              Style="{StaticResource SetupCheckBoxStyle}"
-                              Margin="0,12,0,0"
-                              Content="Полуавтомат торцевой этикетки (скан → печать)"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
