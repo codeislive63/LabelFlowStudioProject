@@ -82,6 +82,37 @@
                                Foreground="{DynamicResource ErrorBrush}"
                                Margin="0,8,0,0"
                                Text="Нужно выбрать принтер"/>
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock FontSize="13" FontWeight="SemiBold" Opacity="0.85" Text="Копий торцевой этикетки"/>
+                            <TextBox x:Name="EndLabelCopiesTextBox"
+                                     Margin="0,8,0,0"
+                                     Padding="10,6"
+                                     MinHeight="38"
+                                     Text="2"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock FontSize="13" FontWeight="SemiBold" Opacity="0.85" Text="Копий листа сброса"/>
+                            <TextBox x:Name="StuffingSheetCopiesTextBox"
+                                     Margin="0,8,0,0"
+                                     Padding="10,6"
+                                     MinHeight="38"
+                                     Text="1"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox x:Name="ManualScanAutoPrintEndLabelCheckBox"
+                              Style="{StaticResource SetupCheckBoxStyle}"
+                              Margin="0,12,0,0"
+                              Content="Полуавтомат торцевой этикетки (скан → печать)"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
