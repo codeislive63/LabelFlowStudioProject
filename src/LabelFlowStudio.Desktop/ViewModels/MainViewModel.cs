@@ -515,8 +515,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
             if (requiredManualWeight)
             {
-                var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
-                var shouldRequestManualWeight = requestMode == WorkMode.Manual || settings.UseScales;
+                var printSettings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+                var shouldRequestManualWeight = requestMode == WorkMode.Manual || printSettings.UseScales;
 
                 if (shouldRequestManualWeight)
                 {
@@ -543,7 +543,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                     response = response with
                     {
                         ShouldPrintDropSheet = false,
-                        ShouldPrintEmptyDropSheet = settings.PrintStuffingSheetEnabled,
+                        ShouldPrintEmptyDropSheet = printSettings.PrintStuffingSheetEnabled,
                         ShouldPrintEndLabels = false
                     };
                 }
