@@ -384,8 +384,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             var response = await ProcessRequestWithoutUiBlockingAsync(
                 BuildRequest(tenamSnapshot, WorkMode.Manual),
-                cancellationToken,
-                "RequestManualWeightAgain");
+                "RequestManualWeightAgain",
+                cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -505,7 +505,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             await WaitForUiToRenderAsync();
 
-            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, cancellationToken, "LoadRecords");
+            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, "LoadRecords", cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
@@ -614,8 +614,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             var refreshed = await ProcessRequestWithoutUiBlockingAsync(
                 BuildRequest(tenam, WorkMode.Manual),
-                cancellationToken,
-                "ScaleWeightRefresh");
+                "ScaleWeightRefresh",
+                cancellationToken);
 
             if (refreshed.Status == BoxProcessingStatus.Success && refreshed.Weight.HasValue && refreshed.Weight > 0)
             {
@@ -687,8 +687,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
                 var currentResponse = await ProcessRequestWithoutUiBlockingAsync(
                     BuildRequest(tenam, WorkMode.Manual),
-                    cancellationToken,
-                    "ScaleWeightPolling").ConfigureAwait(false);
+                    "ScaleWeightPolling",
+                    cancellationToken).ConfigureAwait(false);
 
                 if (currentResponse.Status == BoxProcessingStatus.Success
                     && currentResponse.Weight.HasValue
@@ -753,15 +753,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     // Выполняет обработку TENAM вне UI потока
-    private async Task WaitForUiToRenderAsync()
+    private static async Task WaitForUiToRenderAsync()
     {
-        if (Application.Current?.Dispatcher is null)
+        if (System.Windows.Application.Current?.Dispatcher is null)
         {
             await Task.Yield();
             return;
         }
 
-        await Application.Current.Dispatcher.InvokeAsync(
+        await System.Windows.Application.Current.Dispatcher.InvokeAsync(
             static () => { },
             System.Windows.Threading.DispatcherPriority.Render,
             CancellationToken.None);
@@ -769,8 +769,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
         BoxProcessingRequest request,
-        CancellationToken cancellationToken,
-        string origin)
+        string origin,
+        CancellationToken cancellationToken)
     {
         await _requestGate.WaitAsync(cancellationToken);
 
