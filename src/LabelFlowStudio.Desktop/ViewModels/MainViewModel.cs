@@ -68,6 +68,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private bool _disposed;
 
     private bool _canRequestManualWeight;
+    private bool _isManualScanAutoPrintEndLabelEnabled;
     private string _tenamAwaitingWeight = string.Empty;
     private long _requestSequence;
 
@@ -97,6 +98,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         var settings = PrintSettingsStore.LoadOrDefault();
         _currentWorkMode = settings?.WorkMode ?? WorkMode.Manual;
+        _isManualScanAutoPrintEndLabelEnabled = settings?.ManualScanAutoPrintEndLabelEnabled ?? false;
 
         StatusMessage = "Введите или отсканируйте TENAM и нажмите Enter";
 
@@ -317,6 +319,23 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Включает печать торцевой этикетки сразу после сканирования в ручном режиме.
+    /// </summary>
+    public bool IsManualScanAutoPrintEndLabelEnabled
+    {
+        get => _isManualScanAutoPrintEndLabelEnabled;
+        set
+        {
+            if (!SetProperty(ref _isManualScanAutoPrintEndLabelEnabled, value))
+            {
+                return;
+            }
+
+            _ = SaveManualScanAutoPrintModeAsync(value);
+        }
+    }
+
+    /// <summary>
     /// Принимает TENAM от сканера и запускает обработку
     /// </summary>
     public void ReceiveTenamFromScanner(string boxNumber)
@@ -472,6 +491,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private async Task SaveManualScanAutoPrintModeAsync(bool enabled)
+    {
+        try
+        {
+            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+            settings.ManualScanAutoPrintEndLabelEnabled = enabled;
+            await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Failed to persist semi-automatic end label setting");
+        }
+    }
+
     // Проверяет возможность запуска загрузки
     private bool CanLoadRecords()
     {
@@ -554,7 +587,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
             var shouldAutoPrintInSemiAutomaticMode = requestMode == WorkMode.Manual
                                                      && requestTriggeredByScanner
-                                                     && settings.ManualScanAutoPrintEndLabelEnabled
+                                                     && IsManualScanAutoPrintEndLabelEnabled
                                                      && response.Status == BoxProcessingStatus.Success
                                                      && response.ShouldPrintEndLabels;
 

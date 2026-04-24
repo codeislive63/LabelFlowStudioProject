@@ -339,6 +339,10 @@
                                   IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
                                   Checked="OnAutomaticModeMenuItemChecked"
                                   Unchecked="OnAutomaticModeMenuItemUnchecked"/>
+                        <MenuItem Header="Полуавтомат торцевой этикетки (скан → печать)"
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  IsCheckable="True"
+                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </MenuItem>
 
                 </Menu>
