@@ -40,6 +40,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private string _lastLoadedTenam = string.Empty;
 
     private WorkMode _nextRequestMode = WorkMode.Manual;
+    private bool _nextRequestTriggeredByScanner;
     private WorkMode _currentWorkMode = WorkMode.Manual;
     private int _automaticDrainRequestsRemaining;
 
@@ -348,6 +349,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             }
 
             _nextRequestMode = ResolveNextRequestMode();
+            _nextRequestTriggeredByScanner = true;
             Tenam = digitsOnly;
 
             if (LoadRecordsCommand.CanExecute(null))
@@ -485,7 +487,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private async Task LoadRecordsAsync()
     {
         var requestMode = _nextRequestMode;
+        var requestTriggeredByScanner = _nextRequestTriggeredByScanner;
         _nextRequestMode = WorkMode.Manual;
+        _nextRequestTriggeredByScanner = false;
 
         var tenamSnapshot = Tenam?.Trim() ?? string.Empty;
         var cancellationToken = StartNewLoadCancellation();
@@ -547,9 +551,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             ApplyResponseState(response, tenamSnapshot);
 
+            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+            var shouldAutoPrintInSemiAutomaticMode = requestMode == WorkMode.Manual
+                                                     && requestTriggeredByScanner
+                                                     && settings.ManualScanAutoPrintEndLabelEnabled
+                                                     && response.Status == BoxProcessingStatus.Success
+                                                     && response.ShouldPrintEndLabels;
+
             if (response is not null && (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success)))
             {
-                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken);
+                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: true, printEndLabel: true);
+            }
+            else if (response is not null && shouldAutoPrintInSemiAutomaticMode)
+            {
+                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: false, printEndLabel: true);
             }
         }
         catch (OperationCanceledException)
@@ -875,7 +890,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     // Выполняет бесшумную автопечать после успешной обработки
-    private async Task TryAutoPrintAsync(BoxProcessingResponse response, string tenam, CancellationToken cancellationToken)
+    private async Task TryAutoPrintAsync(
+        BoxProcessingResponse response,
+        string tenam,
+        CancellationToken cancellationToken,
+        bool printDropSheet,
+        bool printEndLabel)
     {
         // В fast-режиме никаких попапов, только статус
         var settings = PrintSettingsStore.LoadOrDefault();
@@ -886,14 +906,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (!settings.PrintEndLabelEnabled && !settings.PrintStuffingSheetEnabled)
+        if ((!settings.PrintEndLabelEnabled || !printEndLabel) && (!settings.PrintStuffingSheetEnabled || !printDropSheet))
         {
             StatusMessage = "Автопечать отключена в настройках";
             return;
         }
 
         // Сначала печатаем лист сброса (если включено), затем торцевую этикетку.
-        if (settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
+        if (printDropSheet && settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
         {
             StatusMessage = "Печать листа сброса";
 
@@ -916,7 +936,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
         }
 
-        if (settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
+        if (printEndLabel && settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
         {
             StatusMessage = "Печать торцевой этикетки";
 
