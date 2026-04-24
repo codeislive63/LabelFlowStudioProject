@@ -7,7 +7,7 @@ public sealed class BoxScannerOptions
 {
     public bool IsEnabled { get; set; } = true;
 
-    public string PortName { get; set; } = "COM8";
+    public string PortName { get; set; } = "COM5";
 
     [Range(1200, 115200)]
     public int BaudRate { get; set; } = 9600;
