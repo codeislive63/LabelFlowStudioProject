@@ -66,20 +66,65 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="OverridesDefaultStyle" Value="False"/>
-            <Style.Triggers>
-                <Trigger Property="IsHighlighted" Value="True">
-                    <Setter Property="Background" Value="#1A3B82F6"/>
-                    <Setter Property="BorderBrush" Value="#663B82F6"/>
-                </Trigger>
-                <Trigger Property="IsSubmenuOpen" Value="True">
-                    <Setter Property="Background" Value="#223B82F6"/>
-                    <Setter Property="BorderBrush" Value="#883B82F6"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Grid SnapsToDevicePixels="True">
+                            <Border x:Name="TopLevelBorder"
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="9">
+                                <ContentPresenter ContentSource="Header"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                   IsOpen="{TemplateBinding IsSubmenuOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Margin="0,6,0,0"
+                                        Padding="6"
+                                        Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Effect="{DynamicResource SoftDropShadowEffect}">
+                                    <StackPanel IsItemsHost="True"
+                                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="TopLevelBorder"
+                                        Property="Background"
+                                        Value="#1A3B82F6"/>
+                                <Setter TargetName="TopLevelBorder"
+                                        Property="BorderBrush"
+                                        Value="#663B82F6"/>
+                            </Trigger>
+                            <Trigger Property="IsSubmenuOpen" Value="True">
+                                <Setter TargetName="TopLevelBorder"
+                                        Property="Background"
+                                        Value="#223B82F6"/>
+                                <Setter TargetName="TopLevelBorder"
+                                        Property="BorderBrush"
+                                        Value="#883B82F6"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground"
+                                        Value="{DynamicResource TextDisabledBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="VsMenuDropItemStyle" TargetType="MenuItem">
