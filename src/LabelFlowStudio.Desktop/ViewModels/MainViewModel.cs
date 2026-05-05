@@ -585,11 +585,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             ApplyResponseState(response, tenamSnapshot);
 
             var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
+            var canAutoPrintAnyDocument = (settings.PrintEndLabelEnabled && response.ShouldPrintEndLabels)
+                                          || (settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet));
             var shouldAutoPrintInSemiAutomaticMode = requestMode == WorkMode.Manual
                                                      && requestTriggeredByScanner
                                                      && IsManualScanAutoPrintEndLabelEnabled
                                                      && response.Status == BoxProcessingStatus.Success
-                                                     && response.ShouldPrintEndLabels;
+                                                     && canAutoPrintAnyDocument;
 
             if (response is not null && (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success)))
             {
@@ -597,7 +599,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             }
             else if (response is not null && shouldAutoPrintInSemiAutomaticMode)
             {
-                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: false, printEndLabel: true);
+                await TryAutoPrintAsync(
+                    response,
+                    tenamSnapshot,
+                    cancellationToken,
+                    printDropSheet: settings.PrintStuffingSheetEnabled,
+                    printEndLabel: settings.PrintEndLabelEnabled);
             }
         }
         catch (OperationCanceledException)
