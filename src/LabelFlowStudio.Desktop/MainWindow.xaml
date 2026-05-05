@@ -26,7 +26,7 @@
         Activated="MainWindow_Activated">
 
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="44"
+        <shell:WindowChrome CaptionHeight="54"
                             CornerRadius="0"
                             ResizeBorderThickness="8"
                             GlassFrameThickness="0"
@@ -440,11 +440,26 @@
             </Setter>
         </Style>
 
+
+        <Style x:Key="VsTopMenuItemStyle"
+       TargetType="MenuItem"
+       BasedOn="{StaticResource VsMenuItemStyle}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="14,0,14,2"/>
+
+            <!-- Чуть приподнимает визуально -->
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="-2"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="44"/>
+            <RowDefinition Height="54"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -464,26 +479,34 @@
                 </Grid.ColumnDefinitions>
 
                 <Menu Grid.Column="0"
-                      Style="{StaticResource VsMenuStyle}"
-                      shell:WindowChrome.IsHitTestVisibleInChrome="True">
+      Style="{StaticResource VsMenuStyle}"
+      shell:WindowChrome.IsHitTestVisibleInChrome="True"
+      Margin="2,0,0,0">
 
-                    <MenuItem Header="Печать" Style="{StaticResource VsMenuItemStyle}">
-                        <MenuItem Header="Настройки печати..."
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Click="OnOpenPrintSettingsClick"/>
+                    <MenuItem Header="Печать"
+              Style="{StaticResource VsTopMenuItemStyle}"
+              Width="70"
+                              Height="30">
+                        <MenuItem Header="Настройки печати"
+                  Style="{StaticResource VsMenuDropItemStyle}"
+                  Click="OnOpenPrintSettingsClick"/>
                     </MenuItem>
 
-                    <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
+                    <MenuItem Header="Режим работы"
+              Style="{StaticResource VsTopMenuItemStyle}"
+              Width="117"
+                              Height="30">
                         <MenuItem Header="Автоматический режим"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  IsCheckable="True"
-                                  IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
-                                  Checked="OnAutomaticModeMenuItemChecked"
-                                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
-                        <MenuItem Header="Полуавтомат торцевой этикетки"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  IsCheckable="True"
-                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                  Style="{StaticResource VsMenuDropItemStyle}"
+                  IsCheckable="True"
+                  IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
+                  Checked="OnAutomaticModeMenuItemChecked"
+                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
+
+                        <MenuItem Header="Полуавтоматический режим"
+                  Style="{StaticResource VsMenuDropItemStyle}"
+                  IsCheckable="True"
+                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </MenuItem>
 
                 </Menu>
@@ -873,8 +896,12 @@
                                                                     <Style TargetType="Border">
                                                                         <Setter Property="Background" Value="#1630884E"/>
                                                                         <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsWarning}" Value="True"><Setter Property="Background" Value="#1AAF7A00"/></DataTrigger>
-                                                                            <DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Background" Value="#1AB00020"/></DataTrigger>
+                                                                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                                <Setter Property="Background" Value="#1AAF7A00"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                <Setter Property="Background" Value="#1AB00020"/>
+                                                                            </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
                                                                 </Border.Style>
@@ -885,8 +912,12 @@
                                                                             <Style TargetType="TextBlock">
                                                                                 <Setter Property="Foreground" Value="#FF30884E"/>
                                                                                 <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding IsWarning}" Value="True"><Setter Property="Foreground" Value="#FFAF7A00"/></DataTrigger>
-                                                                                    <DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Foreground" Value="#FFB00020"/></DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                                        <Setter Property="Foreground" Value="#FFAF7A00"/>
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                                        <Setter Property="Foreground" Value="#FFB00020"/>
+                                                                                    </DataTrigger>
                                                                                 </Style.Triggers>
                                                                             </Style>
                                                                         </TextBlock.Style>
@@ -899,8 +930,12 @@
                                                                 <Style TargetType="TextBlock">
                                                                     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                                                     <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsWarning}" Value="True"><Setter Property="Foreground" Value="#FFAF7A00"/></DataTrigger>
-                                                                        <DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Foreground" Value="#FFB00020"/></DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                            <Setter Property="Foreground" Value="#FFAF7A00"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                            <Setter Property="Foreground" Value="#FFB00020"/>
+                                                                        </DataTrigger>
                                                                     </Style.Triggers>
                                                                 </Style>
                                                             </TextBlock.Style>
@@ -916,7 +951,10 @@
                                                 </StackPanel>
                                             </TabItem.Header>
                                             <Grid>
-                                                <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="3*"/>
+                                                    <RowDefinition Height="2*"/>
+                                                </Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                                                 <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -933,9 +971,17 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⛔" Margin="0,0,2,0"/><TextBlock Text="Ошибки"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="⛔" Margin="0,0,2,0"/>
+                                                    <TextBlock Text="Ошибки"/>
+                                                </StackPanel>
+                                            </TabItem.Header>
                                             <Grid>
-                                                <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="3*"/>
+                                                    <RowDefinition Height="2*"/>
+                                                </Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                                                 <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -952,9 +998,17 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="⚠" Margin="0,0,2,0"/><TextBlock Text="Warnings"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="⚠" Margin="0,0,2,0"/>
+                                                    <TextBlock Text="Warnings"/>
+                                                </StackPanel>
+                                            </TabItem.Header>
                                             <Grid>
-                                                <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="3*"/>
+                                                    <RowDefinition Height="2*"/>
+                                                </Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                                                 <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -971,9 +1025,17 @@
                                             </Grid>
                                         </TabItem>
                                         <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header><StackPanel Orientation="Horizontal"><TextBlock Text="✔" Margin="0,0,2,0"/><TextBlock Text="Успех"/></StackPanel></TabItem.Header>
+                                            <TabItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="✔" Margin="0,0,2,0"/>
+                                                    <TextBlock Text="Успех"/>
+                                                </StackPanel>
+                                            </TabItem.Header>
                                             <Grid>
-                                                <Grid.RowDefinitions><RowDefinition Height="3*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="3*"/>
+                                                    <RowDefinition Height="2*"/>
+                                                </Grid.RowDefinitions>
                                                 <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                                                 <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
