@@ -51,7 +51,22 @@
 
         <Style x:Key="VsMenuDropItemStyle" TargetType="MenuItem">
             <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Margin" Value="2"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="RichToolTipStyle" TargetType="ToolTip">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="FontSize" Value="13"/>
         </Style>
 
         <!-- Window buttons -->
@@ -88,6 +103,9 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+
+        
 
         <Style x:Key="EndLabelButtonStyle"
                TargetType="Button"
@@ -338,11 +356,23 @@
                                   IsCheckable="True"
                                   IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
                                   Checked="OnAutomaticModeMenuItemChecked"
-                                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
-                        <MenuItem Header="Полуавтомат торцевой этикетки"
+                                  Unchecked="OnAutomaticModeMenuItemUnchecked">
+                            <MenuItem.ToolTip>
+                                <ToolTip Style="{StaticResource RichToolTipStyle}">
+                                    <TextBlock Text="После сканирования короб обрабатывается и печатается автоматически: лист сброса и торцевая этикетка по настройкам печати." TextWrapping="Wrap" MaxWidth="320"/>
+                                </ToolTip>
+                            </MenuItem.ToolTip>
+                        </MenuItem>
+                        <MenuItem Header="Полуавтоматический режим"
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
-                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <MenuItem.ToolTip>
+                                <ToolTip Style="{StaticResource RichToolTipStyle}">
+                                    <TextBlock Text="После сканирования печатаются документы, разрешённые в настройках: торцевая этикетка, лист сброса или оба." TextWrapping="Wrap" MaxWidth="320"/>
+                                </ToolTip>
+                            </MenuItem.ToolTip>
+                        </MenuItem>
                     </MenuItem>
 
                 </Menu>
@@ -515,10 +545,12 @@
                                     </Grid.Triggers>
                                 </Grid>
 
-                                <TextBlock Text="Автоматический режим"
+                                <StackPanel>
+                                    <TextBlock Text="Автоматический режим"
                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>
