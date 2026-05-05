@@ -465,15 +465,16 @@
 
                 <Menu Grid.Column="0"
                       Style="{StaticResource VsMenuStyle}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
                       shell:WindowChrome.IsHitTestVisibleInChrome="True">
 
-                    <MenuItem Header="Печать" Style="{StaticResource VsMenuItemStyle}">
+                    <MenuItem Header="Печать">
                         <MenuItem Header="Настройки печати..."
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   Click="OnOpenPrintSettingsClick"/>
                     </MenuItem>
 
-                    <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
+                    <MenuItem Header="Режим работы">
                         <MenuItem Header="Автоматический режим"
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
