@@ -498,13 +498,19 @@
                               Height="30">
                         <MenuItem Header="Автоматический режим"
                   Style="{StaticResource VsMenuDropItemStyle}"
+                  MinWidth="360"
+                  ToolTipService.ShowDuration="20000"
+                  ToolTip="Короб приезжает на сканер, обработка и печать выполняются автоматически по настройкам печати."
                   IsCheckable="True"
                   IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
                   Checked="OnAutomaticModeMenuItemChecked"
                   Unchecked="OnAutomaticModeMenuItemUnchecked"/>
 
-                        <MenuItem Header="Полуавтоматический режим"
+                        <MenuItem Header="Полуавтоматический режим (только торцевая этикетка)"
                   Style="{StaticResource VsMenuDropItemStyle}"
+                  MinWidth="360"
+                  ToolTipService.ShowDuration="20000"
+                  ToolTip="Оператор сканирует короб вручную. В этом режиме автоматически печатается только торцевая этикетка."
                   IsCheckable="True"
                   IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </MenuItem>
