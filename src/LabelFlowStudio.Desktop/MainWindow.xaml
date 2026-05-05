@@ -464,25 +464,22 @@
                 </Grid.ColumnDefinitions>
 
                 <Menu Grid.Column="0"
-                      Style="{StaticResource VsMenuStyle}"
+                      Background="Transparent"
                       Foreground="{DynamicResource TextPrimaryBrush}"
                       shell:WindowChrome.IsHitTestVisibleInChrome="True">
 
                     <MenuItem Header="Печать">
                         <MenuItem Header="Настройки печати..."
-                                  Style="{StaticResource VsMenuDropItemStyle}"
                                   Click="OnOpenPrintSettingsClick"/>
                     </MenuItem>
 
                     <MenuItem Header="Режим работы">
                         <MenuItem Header="Автоматический режим"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
                                   IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
                                   Checked="OnAutomaticModeMenuItemChecked"
                                   Unchecked="OnAutomaticModeMenuItemUnchecked"/>
                         <MenuItem Header="Полуавтомат торцевой этикетки"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
                                   IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </MenuItem>
