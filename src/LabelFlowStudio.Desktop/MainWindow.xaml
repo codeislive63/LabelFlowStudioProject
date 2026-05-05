@@ -105,7 +105,15 @@
         </Style>
 
 
-        
+        <Style x:Key="MenuHelpIconStyle" TargetType="Border">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
 
         <Style x:Key="EndLabelButtonStyle"
                TargetType="Button"
@@ -351,27 +359,33 @@
                     </MenuItem>
 
                     <MenuItem Header="Режим работы" Style="{StaticResource VsMenuItemStyle}">
-                        <MenuItem Header="Автоматический режим"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
+                        <MenuItem Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
                                   IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
                                   Checked="OnAutomaticModeMenuItemChecked"
-                                  Unchecked="OnAutomaticModeMenuItemUnchecked">
-                            <MenuItem.ToolTip>
-                                <ToolTip Style="{StaticResource RichToolTipStyle}">
-                                    <TextBlock Text="После сканирования короб обрабатывается и печатается автоматически: лист сброса и торцевая этикетка по настройкам печати." TextWrapping="Wrap" MaxWidth="320"/>
-                                </ToolTip>
-                            </MenuItem.ToolTip>
+                                  Unchecked="OnAutomaticModeMenuItemUnchecked"
+                                  ToolTip="После сканирования короб обрабатывается и печатается автоматически: лист сброса и торцевая этикетка по настройкам печати.">
+                            <MenuItem.Header>
+                                <TextBlock Text="Автоматический режим"/>
+                            </MenuItem.Header>
+                            <MenuItem.Icon>
+                                <Border Style="{StaticResource MenuHelpIconStyle}">
+                                    <TextBlock Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </Border>
+                            </MenuItem.Icon>
                         </MenuItem>
-                        <MenuItem Header="Полуавтоматический режим"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
+                        <MenuItem Style="{StaticResource VsMenuDropItemStyle}"
                                   IsCheckable="True"
-                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                            <MenuItem.ToolTip>
-                                <ToolTip Style="{StaticResource RichToolTipStyle}">
-                                    <TextBlock Text="После сканирования печатаются документы, разрешённые в настройках: торцевая этикетка, лист сброса или оба." TextWrapping="Wrap" MaxWidth="320"/>
-                                </ToolTip>
-                            </MenuItem.ToolTip>
+                                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="Полуавтомат: после сканирования печатаются документы, разрешённые в настройках печати (лист сброса, торцевая этикетка или оба).">
+                            <MenuItem.Header>
+                                <TextBlock Text="Полуавтоматический режим"/>
+                            </MenuItem.Header>
+                            <MenuItem.Icon>
+                                <Border Style="{StaticResource MenuHelpIconStyle}">
+                                    <TextBlock Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </Border>
+                            </MenuItem.Icon>
                         </MenuItem>
                     </MenuItem>
 
@@ -550,6 +564,10 @@
                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"/>
+                                    <TextBlock Text="Сканируйте короб — система сама обработает и отправит на печать по активным настройкам."
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="12"
+                                               Margin="0,2,0,0"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
