@@ -1,4 +1,4 @@
-﻿namespace LabelFlowStudio.Application.BoxProcessing;
+﻿namespace LabelFlowStudio.Application.BoxProcessing.Weight;
 
 /// <summary>
 /// Описывает результат определения веса короба по строкам данных

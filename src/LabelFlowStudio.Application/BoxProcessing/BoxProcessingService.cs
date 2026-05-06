@@ -1,29 +1,40 @@
-﻿using LabelFlowStudio.Core.Abstractions;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.BoxProcessing.Policies;
+using LabelFlowStudio.Application.BoxProcessing.Weight;
+using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Core.Models;
 
 namespace LabelFlowStudio.Application.BoxProcessing;
 
 /// <summary>
-/// Обрабатывает отсканированный короб и определяет сценарий печати
+/// Обрабатывает отсканированный короб и определяет сценарий дальнейших действий
 /// </summary>
 public sealed class BoxProcessingService : IBoxProcessingService
 {
     private const string EmptyTenamMessage = "TENAM пустой";
     private const string DataNotFoundMessage = "Данных по коробу не найдено";
-    private const string ManualModeWithoutWeightMessage = "Нет веса в БД. Поставьте короб на весы";
     private const string DataLoadedMessage = "Данные загружены";
 
     private readonly ILabelRepository _labelRepository;
+    private readonly IBoxWeightResolver _weightResolver;
+    private readonly IBoxProcessingPolicy _processingPolicy;
 
-    public BoxProcessingService(ILabelRepository labelRepository)
+    public BoxProcessingService(
+        ILabelRepository labelRepository,
+        IBoxWeightResolver weightResolver,
+        IBoxProcessingPolicy processingPolicy)
     {
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
+        _weightResolver = weightResolver ?? throw new ArgumentNullException(nameof(weightResolver));
+        _processingPolicy = processingPolicy ?? throw new ArgumentNullException(nameof(processingPolicy));
     }
 
     /// <summary>
     /// Выполняет обработку данных короба и возвращает итоговое действие для печати
     /// </summary>
-    public async Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+    public async Task<BoxProcessingResponse> ProcessAsync(
+        BoxProcessingRequest request,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -31,7 +42,7 @@ public sealed class BoxProcessingService : IBoxProcessingService
 
         if (string.IsNullOrWhiteSpace(normalizedTenam))
         {
-            return CreateErrorResponse(EmptyTenamMessage);
+            return CreateErrorResponse(EmptyTenamMessage, Array.Empty<LabelRecord>());
         }
 
         var records = await _labelRepository.GetByTenamAsync(normalizedTenam, cancellationToken);
@@ -41,84 +52,69 @@ public sealed class BoxProcessingService : IBoxProcessingService
             return CreateNotFoundResponse(records);
         }
 
-        if (!TryGetValidWeight(records, out var weight))
+        var weightResolution = _weightResolver.Resolve(records);
+
+        if (weightResolution.HasConflict)
         {
-            return CreateNeedWeightResponse(records);
+            return CreateErrorResponse(weightResolution.Message, records);
         }
 
-        return CreateSuccessResponse(records, request, weight);
-    }
-
-    public async Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
-    {
-        var normalizedTenam = NormalizeTenam(tenam);
-
-        if (string.IsNullOrWhiteSpace(normalizedTenam) || weight <= 0)
+        if (!weightResolution.HasWeight)
         {
-            return false;
+            return CreateNeedWeightResponse(records, request, weightResolution.Message);
         }
 
-        return await _labelRepository.UpdateBruttoByTenamAsync(normalizedTenam, weight, cancellationToken);
+        return CreateSuccessResponse(records, request, weightResolution.Weight!.Value);
     }
 
-    // Нормализуем код короба перед обращением в репозиторий
+    // Нормализует код короба перед обращением к данным
     private static string NormalizeTenam(string tenam) => (tenam ?? string.Empty).Trim();
 
-    // Проверяем, что вес присутствует и больше нуля
-    private static bool TryGetValidWeight(IReadOnlyList<LabelRecord> records, out decimal? weight)
-    {
-        weight = records[0].Brutto;
-        return weight.HasValue && weight.Value > 0;
-    }
-
-    // Формируем ответ, когда входные данные некорректны
-    private static BoxProcessingResponse CreateErrorResponse(string message) =>
+    // Формирует ответ ошибки
+    private static BoxProcessingResponse CreateErrorResponse(
+        string message,
+        IReadOnlyList<LabelRecord> records) =>
         new(
             Status: BoxProcessingStatus.Error,
             Message: message,
-            Records: Array.Empty<LabelRecord>(),
+            Records: records,
             Weight: null,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false
+            PrintPlan: PrintPlan.None
         );
 
-    // Формируем ответ, когда записи по коробу не найдены
+    // Формирует ответ, когда записи по коробу не найдены
     private static BoxProcessingResponse CreateNotFoundResponse(IReadOnlyList<LabelRecord> records) =>
         new(
             Status: BoxProcessingStatus.NotFound,
             Message: DataNotFoundMessage,
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false
+            PrintPlan: PrintPlan.None
         );
 
-    // Формируем ответ для ручного режима без веса
-    private static BoxProcessingResponse CreateNeedWeightResponse(IReadOnlyList<LabelRecord> records) =>
-        new(
-            Status: BoxProcessingStatus.NeedWeight,
-            Message: ManualModeWithoutWeightMessage,
-            Records: records,
-            Weight: null,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false
-        );
-
-    // Формируем успешный ответ, когда данные и вес получены
-    private static BoxProcessingResponse CreateSuccessResponse(
+    // Формирует ответ для случая, когда вес не найден
+    private BoxProcessingResponse CreateNeedWeightResponse(
         IReadOnlyList<LabelRecord> records,
         BoxProcessingRequest request,
-        decimal? weight) =>
+        string message) =>
+        new(
+            Status: BoxProcessingStatus.NeedWeight,
+            Message: message,
+            Records: records,
+            Weight: null,
+            PrintPlan: _processingPolicy.CreateMissingWeightPrintPlan(request)
+        );
+
+    // Формирует успешный ответ, когда данные и вес получены
+    private BoxProcessingResponse CreateSuccessResponse(
+        IReadOnlyList<LabelRecord> records,
+        BoxProcessingRequest request,
+        decimal weight) =>
         new(
             Status: BoxProcessingStatus.Success,
             Message: DataLoadedMessage,
             Records: records,
             Weight: weight,
-            ShouldPrintDropSheet: request.ShouldPrintStuffingSheet,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: request.ShouldPrintEndLabels
+            PrintPlan: _processingPolicy.CreateSuccessPrintPlan(request)
         );
 }

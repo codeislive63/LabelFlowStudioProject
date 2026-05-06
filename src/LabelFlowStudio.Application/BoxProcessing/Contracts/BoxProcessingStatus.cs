@@ -1,4 +1,4 @@
-﻿namespace LabelFlowStudio.Application.BoxProcessing;
+﻿namespace LabelFlowStudio.Application.BoxProcessing.Contracts;
 
 /// <summary>
 /// Итоговый статус обработки короба
