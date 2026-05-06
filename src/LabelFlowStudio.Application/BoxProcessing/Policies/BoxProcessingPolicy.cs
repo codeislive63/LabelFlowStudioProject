@@ -28,7 +28,9 @@ public sealed class BoxProcessingPolicy : IBoxProcessingPolicy
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.Mode == WorkMode.Automatic)
+        // Если короб идет в автоматическом режиме без весов,
+        // печатаем только пустой лист сброса, чтобы не останавливать поток.
+        if (request.Mode == WorkMode.Automatic && !request.UseScales)
         {
             return new PrintPlan(
                 PrintDropSheet: false,
