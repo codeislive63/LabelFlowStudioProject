@@ -1,4 +1,6 @@
-﻿namespace LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
+
+namespace LabelFlowStudio.Application.BoxProcessing.Policies;
 
 /// <summary>
 /// Реализует правила обработки короба для ручного и автоматического режима

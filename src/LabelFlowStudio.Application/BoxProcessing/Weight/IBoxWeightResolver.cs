@@ -1,6 +1,6 @@
 ﻿using LabelFlowStudio.Core.Models;
 
-namespace LabelFlowStudio.Application.BoxProcessing;
+namespace LabelFlowStudio.Application.BoxProcessing.Weight;
 
 /// <summary>
 /// Определяет вес короба по найденным строкам данных
