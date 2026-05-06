@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using System.Text.Json.Serialization;
 
 namespace LabelFlowStudio.Desktop.Printing;

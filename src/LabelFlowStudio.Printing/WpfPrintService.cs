@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Printing;

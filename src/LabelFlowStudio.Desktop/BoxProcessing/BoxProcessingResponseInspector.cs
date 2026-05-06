@@ -1,21 +1,18 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 
 namespace LabelFlowStudio.Desktop.BoxProcessing;
 
 /// <summary>
 /// Утилита для проверки содержимого ответа обработки короба
 /// </summary>
-internal static class BoxProcessingResponseInspector
+public static class BoxProcessingResponseInspector
 {
     /// <summary>
     /// Определяет наличие валидного веса в ответе
     /// </summary>
     public static bool HasWeight(BoxProcessingResponse response)
     {
-        if (response is null)
-        {
-            throw new ArgumentNullException(nameof(response));
-        }
+        ArgumentNullException.ThrowIfNull(response);
 
         if (response.Weight.HasValue && response.Weight.Value > 0)
         {
@@ -27,7 +24,13 @@ internal static class BoxProcessingResponseInspector
             return false;
         }
 
-        var brutto = response.Records[0].Brutto;
-        return brutto.HasValue && brutto.Value > 0;
+        var weights = response.Records
+            .Select(record => record.Brutto)
+            .Where(weight => weight.HasValue && weight.Value > 0)
+            .Select(weight => weight!.Value)
+            .Distinct()
+            .ToArray();
+
+        return weights.Length == 1;
     }
 }

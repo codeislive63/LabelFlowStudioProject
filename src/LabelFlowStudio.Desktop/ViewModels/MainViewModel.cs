@@ -1,4 +1,6 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.BoxProcessing.Weight;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.BoxProcessing;
 using LabelFlowStudio.Desktop.Commands;
@@ -25,6 +27,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private const int MaxNotifications = 50;
 
     private readonly IBoxProcessingService _boxProcessingService;
+    private readonly IBoxWeightService _boxWeightService;
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
 
@@ -70,17 +73,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private bool _canRequestManualWeight;
     private bool _isManualScanAutoPrintEndLabelEnabled;
     private string _tenamAwaitingWeight = string.Empty;
-    private long _requestSequence;
 
     /// <summary>
     /// Создает модель представления главного экрана
     /// </summary>
     public MainViewModel(
         IBoxProcessingService boxProcessingService,
+        IBoxWeightService boxWeightService,
         IBoxScanner boxScanner,
         ILogger<MainViewModel> logger)
     {
         _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
+        _boxWeightService = boxWeightService ?? throw new ArgumentNullException(nameof(boxWeightService));
         _boxScanner = boxScanner ?? throw new ArgumentNullException(nameof(boxScanner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _uiContext = SynchronizationContext.Current;
@@ -110,16 +114,28 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     /// </summary>
     public ObservableCollection<LabelRecord> Records { get; }
 
+    /// <summary>
+    /// Коллекция уведомлений пользователя
+    /// </summary>
     public ObservableCollection<UiNotification> Notifications { get; }
 
+    /// <summary>
+    /// Отфильтрованное представление уведомлений
+    /// </summary>
     public ICollectionView FilteredNotificationsView { get; }
 
+    /// <summary>
+    /// Выбранное уведомление
+    /// </summary>
     public UiNotification? SelectedNotification
     {
         get => _selectedNotification;
         set => SetProperty(ref _selectedNotification, value);
     }
 
+    /// <summary>
+    /// Возвращает признак доступности повторного ввода веса
+    /// </summary>
     public bool CanRequestManualWeight
     {
         get => _canRequestManualWeight;
@@ -132,6 +148,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Возвращает или задает признак открытого центра уведомлений
+    /// </summary>
     public bool IsNotificationCenterOpen
     {
         get => _isNotificationCenterOpen;
@@ -149,6 +168,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Индекс выбранной вкладки уведомлений
+    /// </summary>
     public int NotificationTabIndex
     {
         get => _notificationTabIndex;
@@ -164,48 +186,78 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>
+    /// Количество непрочитанных уведомлений
+    /// </summary>
     public int UnreadNotificationsCount
     {
         get => _unreadNotificationsCount;
         private set => SetProperty(ref _unreadNotificationsCount, value);
     }
 
+    /// <summary>
+    /// Количество непрочитанных ошибок
+    /// </summary>
     public int UnreadErrorNotificationsCount
     {
         get => _unreadErrorNotificationsCount;
         private set => SetProperty(ref _unreadErrorNotificationsCount, value);
     }
 
+    /// <summary>
+    /// Количество непрочитанных предупреждений
+    /// </summary>
     public int UnreadWarningNotificationsCount
     {
         get => _unreadWarningNotificationsCount;
         private set => SetProperty(ref _unreadWarningNotificationsCount, value);
     }
 
+    /// <summary>
+    /// Количество непрочитанных успешных уведомлений
+    /// </summary>
     public int UnreadSuccessNotificationsCount
     {
         get => _unreadSuccessNotificationsCount;
         private set => SetProperty(ref _unreadSuccessNotificationsCount, value);
     }
 
+    /// <summary>
+    /// Возвращает признак непрочитанных ошибок
+    /// </summary>
     public bool HasUnreadErrorNotifications => UnreadErrorNotificationsCount > 0;
 
+    /// <summary>
+    /// Возвращает признак непрочитанных предупреждений
+    /// </summary>
     public bool HasUnreadWarningNotifications => UnreadWarningNotificationsCount > 0;
 
+    /// <summary>
+    /// Возвращает признак непрочитанных успешных уведомлений
+    /// </summary>
     public bool HasUnreadSuccessNotifications => UnreadSuccessNotificationsCount > 0;
 
+    /// <summary>
+    /// Цвет бейджа уведомлений
+    /// </summary>
     public string NotificationBadgeColor => HasUnreadErrorNotifications
         ? "#FFB00020"
         : HasUnreadWarningNotifications
             ? "#FFAF7A00"
             : "#FF2E7D32";
 
+    /// <summary>
+    /// Цвет текста бейджа уведомлений
+    /// </summary>
     public string NotificationBadgeTextColor => HasUnreadErrorNotifications
         ? "White"
         : HasUnreadWarningNotifications
             ? "#FF1F1400"
             : "#FFF1FFF5";
 
+    /// <summary>
+    /// Команда повторного запроса ручного веса
+    /// </summary>
     public AsyncCommand RequestManualWeightCommand { get; }
 
     /// <summary>
@@ -310,7 +362,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Включает печать торцевой этикетки сразу после сканирования в ручном режиме.
+    /// Включает печать торцевой этикетки сразу после сканирования в ручном режиме
     /// </summary>
     public bool IsManualScanAutoPrintEndLabelEnabled
     {
@@ -482,6 +534,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    // Сохраняет признак полуавтоматической печати торцевой этикетки
     private async Task SaveManualScanAutoPrintModeAsync(bool enabled)
     {
         try
@@ -533,14 +586,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             await WaitForUiToRenderAsync();
 
-            BoxProcessingResponse? response = await ProcessRequestWithoutUiBlockingAsync(request, "LoadRecords", cancellationToken);
+            var response = await ProcessRequestWithoutUiBlockingAsync(request, "LoadRecords", cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
             if (requiredManualWeight)
             {
-                var printSettings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
-                var shouldRequestManualWeight = requestMode == WorkMode.Manual || printSettings.UseScales;
+                var shouldRequestManualWeight = response.PrintPlan.IsEmpty;
 
                 if (shouldRequestManualWeight)
                 {
@@ -562,31 +614,25 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 }
                 else
                 {
-                    AddNotification($"Короб №{tenamSnapshot}: вес не найден в БД в автоматическом режиме и отключены весы.", NotificationCategory.Warning);
-
-                    response = response with
-                    {
-                        ShouldPrintDropSheet = false,
-                        ShouldPrintEmptyDropSheet = printSettings.PrintStuffingSheetEnabled,
-                        ShouldPrintEndLabels = false
-                    };
+                    AddNotification(
+                        $"Короб №{tenamSnapshot}: вес не найден в БД в автоматическом режиме и отключены весы.",
+                        NotificationCategory.Warning);
                 }
             }
 
             ApplyResponseState(response, tenamSnapshot);
 
-            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
             var shouldAutoPrintInSemiAutomaticMode = requestMode == WorkMode.Manual
                                                      && requestTriggeredByScanner
                                                      && IsManualScanAutoPrintEndLabelEnabled
                                                      && response.Status == BoxProcessingStatus.Success
-                                                     && response.ShouldPrintEndLabels;
+                                                     && response.PrintPlan.PrintEndLabels;
 
-            if (response is not null && (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success)))
+            if (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success))
             {
                 await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: true, printEndLabel: true);
             }
-            else if (response is not null && shouldAutoPrintInSemiAutomaticMode)
+            else if (shouldAutoPrintInSemiAutomaticMode)
             {
                 await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: false, printEndLabel: true);
             }
@@ -609,9 +655,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     private async Task<BoxProcessingResponse> RequestManualWeightAsync(
-    BoxProcessingResponse response,
-    string tenam,
-    CancellationToken cancellationToken)
+        BoxProcessingResponse response,
+        string tenam,
+        CancellationToken cancellationToken)
     {
         using var weightMonitorTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -663,9 +709,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 return refreshed with
                 {
                     Message = "Вес получен с весов",
-                    ShouldPrintDropSheet = printSettings.PrintStuffingSheetEnabled,
-                    ShouldPrintEmptyDropSheet = false,
-                    ShouldPrintEndLabels = printSettings.PrintEndLabelEnabled
+                    PrintPlan = new PrintPlan(
+                        PrintDropSheet: printSettings.PrintStuffingSheetEnabled,
+                        PrintEmptyDropSheet: false,
+                        PrintEndLabels: printSettings.PrintEndLabelEnabled)
                 };
             }
 
@@ -684,14 +731,19 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
 
         var manualWeight = Math.Round(enteredWeight.Value, 3, MidpointRounding.AwayFromZero);
-        var saved = await Task.Run(
-            () => _boxProcessingService.UpdateWeightAsync(tenam, manualWeight, cancellationToken),
-            CancellationToken.None);
 
-        if (!saved)
+        var weightUpdateResult = await _boxWeightService.UpdateWeightAsync(
+            tenam,
+            manualWeight,
+            cancellationToken);
+
+        if (!weightUpdateResult.IsSuccess)
         {
-            AddNotification($"Не удалось сохранить вес для короба №{tenam} в БД.", NotificationCategory.Error);
-            return response with { Message = "Не удалось сохранить вес в БД" };
+            AddNotification(
+                $"Не удалось сохранить вес для короба №{tenam} в БД. {weightUpdateResult.Message}",
+                NotificationCategory.Error);
+
+            return response with { Message = weightUpdateResult.Message };
         }
 
         var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
@@ -710,9 +762,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             Message = "Вес введен вручную и сохранен в БД",
             Weight = manualWeight,
             Records = updatedRecords,
-            ShouldPrintDropSheet = settings.PrintStuffingSheetEnabled,
-            ShouldPrintEmptyDropSheet = false,
-            ShouldPrintEndLabels = settings.PrintEndLabelEnabled
+            PrintPlan = new PrintPlan(
+                PrintDropSheet: settings.PrintStuffingSheetEnabled,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: settings.PrintEndLabelEnabled)
         };
     }
 
@@ -744,7 +797,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 _logger.LogDebug(exception, "Failed to refresh weight for TENAM {Tenam}", tenam);
             }
-
         }
 
         return null;
@@ -813,18 +865,24 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         await _requestGate.WaitAsync(cancellationToken);
 
-        var requestId = Interlocked.Increment(ref _requestSequence);
-        var startedAtUtc = DateTime.UtcNow;
-
         try
         {
-            _logger.LogDebug("Start processing TENAM {Tenam} from {Origin} in mode {Mode}", request.Tenam, origin, request.Mode);
+            _logger.LogDebug(
+                "Start processing TENAM {Tenam} from {Origin} in mode {Mode}",
+                request.Tenam,
+                origin,
+                request.Mode);
 
             var response = await Task.Run(
                 () => _boxProcessingService.ProcessAsync(request, cancellationToken),
                 CancellationToken.None);
 
-            _logger.LogDebug("Completed processing TENAM {Tenam} from {Origin} with status {Status}", request.Tenam, origin, response.Status);
+            _logger.LogDebug(
+                "Completed processing TENAM {Tenam} from {Origin} with status {Status}",
+                request.Tenam,
+                origin,
+                response.Status);
+
             return response;
         }
         finally
@@ -852,7 +910,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             Tenam: tenam,
             Mode: requestMode,
             ShouldPrintEndLabels: settings.PrintEndLabelEnabled,
-            ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled
+            ShouldPrintStuffingSheet: settings.PrintStuffingSheetEnabled,
+            UseScales: settings.UseScales
         );
     }
 
@@ -938,8 +997,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Сначала печатаем лист сброса (если включено), затем торцевую этикетку.
-        if (printDropSheet && settings.PrintStuffingSheetEnabled && (response.ShouldPrintDropSheet || response.ShouldPrintEmptyDropSheet))
+        // Сначала печатаем лист сброса, затем торцевую этикетку
+        if (printDropSheet
+            && settings.PrintStuffingSheetEnabled
+            && (response.PrintPlan.PrintDropSheet || response.PrintPlan.PrintEmptyDropSheet))
         {
             StatusMessage = "Печать листа сброса";
 
@@ -962,7 +1023,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
         }
 
-        if (printEndLabel && settings.PrintEndLabelEnabled && response.Status == BoxProcessingStatus.Success && response.ShouldPrintEndLabels)
+        if (printEndLabel
+            && settings.PrintEndLabelEnabled
+            && response.Status == BoxProcessingStatus.Success
+            && response.PrintPlan.PrintEndLabels)
         {
             StatusMessage = "Печать торцевой этикетки";
 
@@ -1311,6 +1375,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RefreshFilteredNotifications();
     }
 
+    /// <summary>
+    /// Помечает уведомление как прочитанное
+    /// </summary>
     public void MarkNotificationAsRead(UiNotification? notification)
     {
         if (notification is null || notification.IsRead)
@@ -1398,7 +1465,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         SelectedNotification = FilteredNotificationsView.Cast<UiNotification>().FirstOrDefault();
     }
 
-
     private bool FilterNotificationByCurrentTab(object item)
     {
         if (item is not UiNotification notification)
@@ -1430,7 +1496,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         return NotificationCategory.Success;
     }
 
-
     private static string ResolvePrintFailureReason(string printerName)
     {
         if (string.IsNullOrWhiteSpace(printerName))
@@ -1446,11 +1511,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         return "Причина: задание отклонено драйвером или очередью печати. Проверьте состояние принтера и очередь заданий.";
     }
 
+    /// <summary>
+    /// Переключает отображение центра уведомлений
+    /// </summary>
     public void ToggleNotificationCenter()
     {
         IsNotificationCenterOpen = !IsNotificationCenterOpen;
     }
 
+    /// <summary>
+    /// Открывает детали уведомления
+    /// </summary>
     public void OpenNotificationDetails(UiNotification? notification)
     {
         if (notification is null)
@@ -1470,6 +1541,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         EnsureSelectedNotificationMatchesCurrentTab();
     }
 
+    /// <summary>
+    /// Освобождает ресурсы модели представления
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)

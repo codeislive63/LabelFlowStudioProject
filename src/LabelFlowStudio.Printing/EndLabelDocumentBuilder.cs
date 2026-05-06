@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using Microsoft.Extensions.Options;
 using System.Windows;
 using System.Windows.Documents;
@@ -6,6 +6,9 @@ using System.Windows.Media;
 
 namespace LabelFlowStudio.Printing;
 
+/// <summary>
+/// Создает WPF-документ торцевой этикетки для печати
+/// </summary>
 public sealed class EndLabelDocumentBuilder
 {
     private readonly IOptionsMonitor<PrintingOptions> _optionsMonitor;
@@ -15,12 +18,12 @@ public sealed class EndLabelDocumentBuilder
         _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
     }
 
+    /// <summary>
+    /// Создает документ торцевой этикетки
+    /// </summary>
     public FixedDocument Build(BoxProcessingResponse response, string tenam)
     {
-        if (response is null)
-        {
-            throw new ArgumentNullException(nameof(response));
-        }
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(tenam))
         {
@@ -56,7 +59,7 @@ public sealed class EndLabelDocumentBuilder
         });
 
         var barcodeWidth = (int)Math.Max(1, Math.Round(pageWidth - margin.Left - margin.Right));
-        var barcodeHeight = 60;
+        const int barcodeHeight = 60;
 
         var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
 
@@ -90,6 +93,7 @@ public sealed class EndLabelDocumentBuilder
         return fixedDocument;
     }
 
+    // Переводит миллиметры в WPF DIP
     private static double MillimetersToDip(double millimeters)
     {
         return (millimeters / 25.4) * 96.0;
