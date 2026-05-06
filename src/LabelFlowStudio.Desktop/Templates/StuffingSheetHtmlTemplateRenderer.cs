@@ -1,4 +1,4 @@
-using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Printing;
 using System.Globalization;

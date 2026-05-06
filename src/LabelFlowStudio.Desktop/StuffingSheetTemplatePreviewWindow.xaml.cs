@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;

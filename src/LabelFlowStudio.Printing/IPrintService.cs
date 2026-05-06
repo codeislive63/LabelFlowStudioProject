@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 
 namespace LabelFlowStudio.Printing;
 

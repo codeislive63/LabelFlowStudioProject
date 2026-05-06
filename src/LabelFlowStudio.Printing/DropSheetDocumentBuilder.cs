@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Core.Models;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,14 +7,17 @@ using System.Windows.Media;
 
 namespace LabelFlowStudio.Printing;
 
+/// <summary>
+/// Создает WPF-документ листа сброса для печати
+/// </summary>
 public static class DropSheetDocumentBuilder
 {
+    /// <summary>
+    /// Создает лист сброса по результату обработки короба
+    /// </summary>
     public static FlowDocument Build(BoxProcessingResponse response, string tenam)
     {
-        if (response is null)
-        {
-            throw new ArgumentNullException(nameof(response));
-        }
+        ArgumentNullException.ThrowIfNull(response);
 
         if (string.IsNullOrWhiteSpace(tenam))
         {
@@ -30,8 +33,8 @@ public static class DropSheetDocumentBuilder
             Margin = new Thickness(0, 0, 0, 8)
         });
 
-        var barcodeWidth = 420;
-        var barcodeHeight = 80;
+        const int barcodeWidth = 420;
+        const int barcodeHeight = 80;
 
         var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
 
@@ -68,6 +71,9 @@ public static class DropSheetDocumentBuilder
         return document;
     }
 
+    /// <summary>
+    /// Создает пустой лист сброса для короба без веса
+    /// </summary>
     public static FlowDocument BuildEmpty(string tenam)
     {
         if (string.IsNullOrWhiteSpace(tenam))
@@ -84,8 +90,8 @@ public static class DropSheetDocumentBuilder
             Margin = new Thickness(0, 0, 0, 12)
         });
 
-        var barcodeWidth = 420;
-        var barcodeHeight = 80;
+        const int barcodeWidth = 420;
+        const int barcodeHeight = 80;
 
         var barcodeImage = BarcodeImageFactory.CreateCode128(tenam, barcodeWidth, barcodeHeight);
 
@@ -105,6 +111,7 @@ public static class DropSheetDocumentBuilder
         return document;
     }
 
+    // Создает базовый документ с общими настройками страницы
     private static FlowDocument CreateBaseDocument()
     {
         return new FlowDocument
@@ -116,6 +123,7 @@ public static class DropSheetDocumentBuilder
         };
     }
 
+    // Создает таблицу позиций листа сброса
     private static Block BuildTable(IReadOnlyList<LabelRecord> records)
     {
         var table = new Table
@@ -142,14 +150,15 @@ public static class DropSheetDocumentBuilder
             var row = new TableRow();
             group.Rows.Add(row);
 
-            AddBodyCell(row, record.Artnr);
-            AddBodyCell(row, record.Artbez);
+            AddBodyCell(row, record.Artnr ?? string.Empty);
+            AddBodyCell(row, record.Artbez ?? string.Empty);
             AddBodyCell(row, record.Bstmg?.ToString() ?? string.Empty);
         }
 
         return table;
     }
 
+    // Добавляет ячейку заголовка таблицы
     private static void AddHeaderCell(TableRow row, string text)
     {
         row.Cells.Add(new TableCell(new Paragraph(new Run(text)))
@@ -162,6 +171,7 @@ public static class DropSheetDocumentBuilder
         });
     }
 
+    // Добавляет ячейку тела таблицы
     private static void AddBodyCell(TableRow row, string text)
     {
         row.Cells.Add(new TableCell(new Paragraph(new Run(text)))

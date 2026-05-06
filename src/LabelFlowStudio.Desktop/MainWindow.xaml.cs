@@ -1,4 +1,5 @@
 ﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
 using System.Windows;
