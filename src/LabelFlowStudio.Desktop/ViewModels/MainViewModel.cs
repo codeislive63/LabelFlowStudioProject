@@ -144,15 +144,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             if (value)
             {
-                UnreadNotificationsCount = 0;
-                UnreadErrorNotificationsCount = 0;
-                UnreadWarningNotificationsCount = 0;
-                UnreadSuccessNotificationsCount = 0;
-                OnPropertyChanged(nameof(HasUnreadErrorNotifications));
-                OnPropertyChanged(nameof(HasUnreadWarningNotifications));
-                OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
-                OnPropertyChanged(nameof(NotificationBadgeColor));
-                OnPropertyChanged(nameof(NotificationBadgeTextColor));
                 EnsureSelectedNotificationMatchesCurrentTab();
             }
         }
@@ -917,6 +908,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _tenamAwaitingWeight = string.Empty;
         CanRequestManualWeight = false;
 
+        AddNotification($"Ошибка: {errorMessage}", NotificationCategory.Error);
+
         OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
         OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
         RequestManualWeightCommand.RaiseCanExecuteChanged();
@@ -1296,39 +1289,91 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        Notifications.Insert(0, new UiNotification(DateTime.Now, message, category));
+        var notification = new UiNotification(DateTime.Now, message, category);
 
-        if (!IsNotificationCenterOpen)
-        {
-            UnreadNotificationsCount++;
-            switch (category)
-            {
-                case NotificationCategory.Error:
-                    UnreadErrorNotificationsCount++;
-                    break;
-                case NotificationCategory.Warning:
-                    UnreadWarningNotificationsCount++;
-                    break;
-                default:
-                    UnreadSuccessNotificationsCount++;
-                    break;
-            }
-
-            OnPropertyChanged(nameof(HasUnreadErrorNotifications));
-            OnPropertyChanged(nameof(HasUnreadWarningNotifications));
-            OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
-            OnPropertyChanged(nameof(NotificationBadgeColor));
-            OnPropertyChanged(nameof(NotificationBadgeTextColor));
-        }
+        Notifications.Insert(0, notification);
+        IncreaseUnreadCounter(category);
 
         EnsureSelectedNotificationMatchesCurrentTab();
 
         while (Notifications.Count > MaxNotifications)
         {
+            var removedNotification = Notifications[^1];
+
+            if (removedNotification.IsUnread)
+            {
+                DecreaseUnreadCounter(removedNotification.Category);
+            }
+
             Notifications.RemoveAt(Notifications.Count - 1);
         }
 
         RefreshFilteredNotifications();
+    }
+
+    public void MarkNotificationAsRead(UiNotification? notification)
+    {
+        if (notification is null || notification.IsRead)
+        {
+            return;
+        }
+
+        notification.MarkAsRead();
+        DecreaseUnreadCounter(notification.Category);
+        RefreshFilteredNotifications();
+    }
+
+    private void IncreaseUnreadCounter(NotificationCategory category)
+    {
+        UnreadNotificationsCount++;
+
+        switch (category)
+        {
+            case NotificationCategory.Error:
+                UnreadErrorNotificationsCount++;
+                break;
+
+            case NotificationCategory.Warning:
+                UnreadWarningNotificationsCount++;
+                break;
+
+            default:
+                UnreadSuccessNotificationsCount++;
+                break;
+        }
+
+        NotifyUnreadNotificationStateChanged();
+    }
+
+    private void DecreaseUnreadCounter(NotificationCategory category)
+    {
+        UnreadNotificationsCount = Math.Max(0, UnreadNotificationsCount - 1);
+
+        switch (category)
+        {
+            case NotificationCategory.Error:
+                UnreadErrorNotificationsCount = Math.Max(0, UnreadErrorNotificationsCount - 1);
+                break;
+
+            case NotificationCategory.Warning:
+                UnreadWarningNotificationsCount = Math.Max(0, UnreadWarningNotificationsCount - 1);
+                break;
+
+            default:
+                UnreadSuccessNotificationsCount = Math.Max(0, UnreadSuccessNotificationsCount - 1);
+                break;
+        }
+
+        NotifyUnreadNotificationStateChanged();
+    }
+
+    private void NotifyUnreadNotificationStateChanged()
+    {
+        OnPropertyChanged(nameof(HasUnreadErrorNotifications));
+        OnPropertyChanged(nameof(HasUnreadWarningNotifications));
+        OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
+        OnPropertyChanged(nameof(NotificationBadgeColor));
+        OnPropertyChanged(nameof(NotificationBadgeTextColor));
     }
 
     private void RefreshFilteredNotifications()
@@ -1415,6 +1460,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         SelectedNotification = notification;
         IsNotificationCenterOpen = true;
+        MarkNotificationAsRead(notification);
     }
 
     private void OnNotificationsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)

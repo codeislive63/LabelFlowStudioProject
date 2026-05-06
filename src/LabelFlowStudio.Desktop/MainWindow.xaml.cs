@@ -317,7 +317,6 @@ public partial class MainWindow : Window
         }
     }
 
-
     private void NotificationCenterButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
@@ -339,6 +338,24 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.IsNotificationCenterOpen = false;
+        }
+    }
+
+    private void NotificationsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        if (!viewModel.IsNotificationCenterOpen)
+        {
+            return;
+        }
+
+        if (e.AddedItems.Count > 0 && e.AddedItems[0] is UiNotification notification)
+        {
+            viewModel.MarkNotificationAsRead(notification);
         }
     }
 
@@ -390,6 +407,4 @@ public partial class MainWindow : Window
             ? WindowState.Normal
             : WindowState.Maximized;
     }
-
-
 }

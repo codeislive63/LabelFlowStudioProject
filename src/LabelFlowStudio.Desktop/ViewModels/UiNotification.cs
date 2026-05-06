@@ -1,7 +1,12 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
 namespace LabelFlowStudio.Desktop.ViewModels;
 
-public sealed class UiNotification
+public sealed class UiNotification : INotifyPropertyChanged
 {
+    private bool _isRead;
+
     public UiNotification(DateTime timestamp, string message, NotificationCategory category)
     {
         Timestamp = timestamp;
@@ -9,11 +14,31 @@ public sealed class UiNotification
         Category = category;
     }
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public DateTime Timestamp { get; }
 
     public string Message { get; }
 
     public NotificationCategory Category { get; }
+
+    public bool IsRead
+    {
+        get => _isRead;
+        private set
+        {
+            if (_isRead == value)
+            {
+                return;
+            }
+
+            _isRead = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsUnread));
+        }
+    }
+
+    public bool IsUnread => !IsRead;
 
     public bool IsError => Category == NotificationCategory.Error;
 
@@ -36,6 +61,16 @@ public sealed class UiNotification
         NotificationCategory.Success => "✔",
         _ => "•"
     };
+
+    public void MarkAsRead()
+    {
+        IsRead = true;
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public enum NotificationCategory
