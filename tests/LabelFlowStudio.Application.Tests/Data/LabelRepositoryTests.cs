@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Data.Oracle;
 using LabelFlowStudio.Data.Oracle.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LabelFlowStudio.Application.Tests.Data;
 
@@ -10,7 +11,7 @@ public sealed class LabelRepositoryTests
     public async Task GetByTenamAsync_Throws_WhenTenamEmpty()
     {
         await using var context = CreateContext(nameof(GetByTenamAsync_Throws_WhenTenamEmpty));
-        var repository = new LabelRepository(new TestDbContextFactory(context));
+        var repository = new LabelRepository(new TestDbContextFactory(context), NullLogger<LabelRepository>.Instance);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             repository.GetByTenamAsync("  ", CancellationToken.None));
@@ -20,7 +21,7 @@ public sealed class LabelRepositoryTests
     public async Task GetByTenamAsync_TrimsInput_AndReturnsEmptyWhenNoRows()
     {
         await using var context = CreateContext(nameof(GetByTenamAsync_TrimsInput_AndReturnsEmptyWhenNoRows));
-        var repository = new LabelRepository(new TestDbContextFactory(context));
+        var repository = new LabelRepository(new TestDbContextFactory(context), NullLogger<LabelRepository>.Instance);
 
         var result = await repository.GetByTenamAsync(" 4340558 ", CancellationToken.None);
 
