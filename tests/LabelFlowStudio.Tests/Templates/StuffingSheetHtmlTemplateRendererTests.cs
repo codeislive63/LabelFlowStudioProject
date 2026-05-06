@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Application.Tests.TestData;
 using LabelFlowStudio.Desktop.Templates;
@@ -14,14 +14,14 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         var records = LabelRecordTestData.LoadByTenam("4340558");
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         var template = string.Join("\n", new[]
         {
@@ -53,14 +53,14 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         var records = LabelRecordTestData.LoadByTenam("4340559");
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         var template = string.Join("\n", new[]
         {
@@ -79,7 +79,6 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         Assert.Contains(records[0].Artnr!, html, StringComparison.Ordinal);
     }
 
-
     [Fact]
     public void Render_PaginatesRecords_AndReplacesPageTokens()
     {
@@ -95,14 +94,14 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
             .ToArray();
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         const string template = "<html><head></head><body>{% for record in Records %}<div>{{RowNumber}} {{Artnr}}</div>{% endfor %}<footer>{{CurrentPage}}/{{TotalPages}}</footer></body></html>";
 
@@ -113,7 +112,6 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
         Assert.Contains("<footer>2/2</footer>", html, StringComparison.Ordinal);
         Assert.Contains("<div>45 ART-045</div>", html, StringComparison.Ordinal);
     }
-
 
     [Fact]
     public void Render_UsesConservativePageCapacity_ToAvoidOrphanFooterPage()
@@ -130,14 +128,14 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
             .ToArray();
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         const string template = "<html><head></head><body>{% for record in Records %}<div>{{RowNumber}} {{Artnr}}</div>{% endfor %}<footer class=\"page-footer\">{{CurrentPage}}/{{TotalPages}}</footer></body></html>";
 
@@ -153,22 +151,22 @@ public sealed class StuffingSheetHtmlTemplateRendererTests
     public void Render_HtmlEncodesHeaderFields()
     {
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
-            Records: new[]
-            {
+            Records:
+            [
                 new LabelFlowStudio.Core.Models.LabelRecord
                 {
                     Tenam = "4340558",
                     Lndnam = "RU",
                     Gpbez = "A&B <C>"
                 }
-            },
+            ],
             Weight: null,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         var template = "place={{Gpbez}}";
 

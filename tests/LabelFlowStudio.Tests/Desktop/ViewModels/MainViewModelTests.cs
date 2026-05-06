@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.BoxProcessing.Weight;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.ViewModels;
@@ -19,18 +21,15 @@ public sealed class MainViewModelTests
             {
                 Response = CreateSuccessResponse(
                     message: "OK",
-                    records: new List<LabelRecord>
-                    {
+                    records:
+                    [
                         new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m },
                         new() { Tenam = "4340558", Artnr = "B", Artbez = "Y", Bstmg = 2m }
-                    }
-                )
+                    ])
             };
 
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-            {
-                Tenam = "4340558"
-            };
+            var vm = CreateViewModel(service, scanner);
+            vm.Tenam = "4340558";
 
             vm.LoadRecordsCommand.Execute(null);
 
@@ -48,10 +47,8 @@ public sealed class MainViewModelTests
         {
             var scanner = new FakeScanner();
             var service = new BlockingProcessingService(TimeSpan.FromMilliseconds(250));
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-            {
-                Tenam = "4340558"
-            };
+            var vm = CreateViewModel(service, scanner);
+            vm.Tenam = "4340558";
 
             var stopwatch = Stopwatch.StartNew();
             vm.LoadRecordsCommand.Execute(null);
@@ -68,7 +65,7 @@ public sealed class MainViewModelTests
         {
             var scanner = new FakeScanner();
             var service = new DelayedProcessingService();
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+            var vm = CreateViewModel(service, scanner);
 
             scanner.Raise("4340551");
             await service.WaitFirstCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
@@ -92,11 +89,10 @@ public sealed class MainViewModelTests
             {
                 Response = CreateSuccessResponse(
                     message: "Отправлено на печать",
-                    records: new List<LabelRecord>()
-                )
+                    records: [])
             };
 
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+            var vm = CreateViewModel(service, scanner);
 
             scanner.Raise("4340559");
 
@@ -112,10 +108,8 @@ public sealed class MainViewModelTests
         {
             var scanner = new FakeScanner();
             var service = new ThrowingProcessingService();
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-            {
-                Tenam = "4340558"
-            };
+            var vm = CreateViewModel(service, scanner);
+            vm.Tenam = "4340558";
 
             vm.LoadRecordsCommand.Execute(null);
 
@@ -148,7 +142,7 @@ public sealed class MainViewModelTests
         {
             var scanner = new FakeScanner();
             var service = new FakeProcessingService();
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+            var vm = CreateViewModel(service, scanner);
 
             vm.NotificationTabIndex = 2;
 
@@ -158,7 +152,7 @@ public sealed class MainViewModelTests
 
             Assert.NotNull(addNotification);
 
-            addNotification!.Invoke(vm, new object[] { "Тестовое предупреждение", NotificationCategory.Warning });
+            addNotification!.Invoke(vm, ["Тестовое предупреждение", NotificationCategory.Warning]);
 
             var filtered = vm.FilteredNotificationsView.Cast<UiNotification>().ToList();
 
@@ -177,17 +171,14 @@ public sealed class MainViewModelTests
             {
                 Response = CreateSuccessResponse(
                     message: "Данные загружены",
-                    records: new List<LabelRecord>
-                    {
+                    records:
+                    [
                         new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m }
-                    }
-                )
+                    ])
             };
 
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-            {
-                Tenam = "4340558"
-            };
+            var vm = CreateViewModel(service, scanner);
+            vm.Tenam = "4340558";
 
             vm.LoadRecordsCommand.Execute(null);
 
@@ -204,10 +195,8 @@ public sealed class MainViewModelTests
         {
             var scanner = new FakeScanner();
             var service = new ThrowingProcessingService();
-            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-            {
-                Tenam = "4340558"
-            };
+            var vm = CreateViewModel(service, scanner);
+            vm.Tenam = "4340558";
 
             vm.LoadRecordsCommand.Execute(null);
 
@@ -218,17 +207,29 @@ public sealed class MainViewModelTests
             Assert.Contains("Ошибка сервиса", vm.Notifications[0].Message);
         });
 
-    private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
+    private static MainViewModel CreateViewModel(
+        IBoxProcessingService processingService,
+        IBoxScanner scanner,
+        IBoxWeightService? weightService = null)
+    {
+        return new MainViewModel(
+            processingService,
+            weightService ?? new FakeBoxWeightService(),
+            scanner,
+            NullLogger<MainViewModel>.Instance);
+    }
+
+    private static BoxProcessingResponse CreateSuccessResponse(
+        string message,
+        IReadOnlyList<LabelRecord> records,
+        PrintPlan? printPlan = null)
     {
         return new BoxProcessingResponse(
             Status: BoxProcessingStatus.Success,
             Message: message,
             Records: records,
             Weight: null,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false
-        );
+            PrintPlan: printPlan ?? PrintPlan.None);
     }
 
     private sealed class FakeScanner : IBoxScanner, IDisposable
@@ -257,6 +258,17 @@ public sealed class MainViewModelTests
         }
     }
 
+    private sealed class FakeBoxWeightService : IBoxWeightService
+    {
+        public Task<BoxWeightUpdateResult> UpdateWeightAsync(
+            string tenam,
+            decimal weight,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(BoxWeightUpdateResult.Success());
+        }
+    }
+
     private sealed class FakeProcessingService : IBoxProcessingService
     {
         private readonly TaskCompletionSource<bool> _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -264,17 +276,16 @@ public sealed class MainViewModelTests
         public BoxProcessingRequest? LastRequest { get; private set; }
 
         public BoxProcessingResponse Response { get; set; } =
-            new BoxProcessingResponse(
+            new(
                 Status: BoxProcessingStatus.Success,
                 Message: "OK",
-                Records: new List<LabelRecord>(),
+                Records: [],
                 Weight: null,
-                ShouldPrintDropSheet: false,
-                ShouldPrintEmptyDropSheet: false,
-                ShouldPrintEndLabels: false
-            );
+                PrintPlan: PrintPlan.None);
 
-        public Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        public Task<BoxProcessingResponse> ProcessAsync(
+            BoxProcessingRequest request,
+            CancellationToken cancellationToken)
         {
             LastRequest = request;
             _called.TrySetResult(true);
@@ -285,23 +296,15 @@ public sealed class MainViewModelTests
         {
             return _called.Task;
         }
-
-        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(true);
-        }
     }
 
     private sealed class ThrowingProcessingService : IBoxProcessingService
     {
-        public Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        public Task<BoxProcessingResponse> ProcessAsync(
+            BoxProcessingRequest request,
+            CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("Ошибка сервиса");
-        }
-
-        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(false);
         }
     }
 
@@ -314,7 +317,9 @@ public sealed class MainViewModelTests
 
         public BoxProcessingRequest? LastRequest { get; private set; }
 
-        public async Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        public async Task<BoxProcessingResponse> ProcessAsync(
+            BoxProcessingRequest request,
+            CancellationToken cancellationToken)
         {
             LastRequest = request;
             _callCount++;
@@ -329,7 +334,7 @@ public sealed class MainViewModelTests
                 _secondCall.TrySetResult(true);
             }
 
-            return CreateSuccessResponse("OK", new List<LabelRecord>());
+            return CreateSuccessResponse("OK", []);
         }
 
         public Task WaitFirstCallAsync() => _firstCall.Task;
@@ -337,11 +342,6 @@ public sealed class MainViewModelTests
         public Task WaitSecondCallAsync() => _secondCall.Task;
 
         public void ReleaseFirstCall() => _releaseFirstCall.TrySetResult(true);
-
-        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(true);
-        }
     }
 
     private sealed class BlockingProcessingService : IBoxProcessingService
@@ -353,16 +353,12 @@ public sealed class MainViewModelTests
             _delay = delay;
         }
 
-        public Task<BoxProcessingResponse> ProcessAsync(BoxProcessingRequest request, CancellationToken cancellationToken)
+        public Task<BoxProcessingResponse> ProcessAsync(
+            BoxProcessingRequest request,
+            CancellationToken cancellationToken)
         {
             Thread.Sleep(_delay);
-            return Task.FromResult(CreateSuccessResponse("OK", new List<LabelRecord>()));
-        }
-
-        public Task<bool> UpdateWeightAsync(string tenam, decimal weight, CancellationToken cancellationToken)
-        {
-            Thread.Sleep(_delay);
-            return Task.FromResult(true);
+            return Task.FromResult(CreateSuccessResponse("OK", []));
         }
     }
 }
