@@ -444,16 +444,9 @@
         <Style x:Key="VsTopMenuItemStyle"
        TargetType="MenuItem"
        BasedOn="{StaticResource VsMenuItemStyle}">
-            <Setter Property="Height" Value="32"/>
+            <Setter Property="Height" Value="34"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="14,0,14,2"/>
-
-            <!-- Чуть приподнимает визуально -->
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <TranslateTransform Y="-2"/>
-                </Setter.Value>
-            </Setter>
+            <Setter Property="Padding" Value="14,0"/>
         </Style>
     </Window.Resources>
 
@@ -480,13 +473,13 @@
 
                 <Menu Grid.Column="0"
       Style="{StaticResource VsMenuStyle}"
+      VerticalAlignment="Center"
       shell:WindowChrome.IsHitTestVisibleInChrome="True"
       Margin="2,0,0,0">
 
                     <MenuItem Header="Печать"
               Style="{StaticResource VsTopMenuItemStyle}"
-              Width="70"
-                              Height="30">
+              Width="70">
                         <MenuItem Header="Настройки печати"
                   Style="{StaticResource VsMenuDropItemStyle}"
                   Click="OnOpenPrintSettingsClick"/>
@@ -494,8 +487,7 @@
 
                     <MenuItem Header="Режим работы"
               Style="{StaticResource VsTopMenuItemStyle}"
-              Width="117"
-                              Height="30">
+              Width="117">
                         <MenuItem Header="Автоматический режим"
                   Style="{StaticResource VsMenuDropItemStyle}"
                   MinWidth="360"
@@ -847,22 +839,23 @@
                         </Button>
 
                         <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
-                               Placement="Bottom"
-                               HorizontalOffset="-580"
-                               VerticalOffset="8"
-                               StaysOpen="False"
-                               AllowsTransparency="True"
-                               PopupAnimation="Fade"
-                               Closed="NotificationCenterPopup_Closed"
-                               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-                               IsOpen="{Binding IsNotificationCenterOpen, Mode=TwoWay}">
-                            <Border Width="640"
-                                    MaxHeight="520"
-                                    Background="{DynamicResource AppBackgroundBrush}"
-                                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="14"
-                                    Padding="16">
+       Placement="Bottom"
+       HorizontalOffset="-620"
+       VerticalOffset="10"
+       StaysOpen="False"
+       AllowsTransparency="True"
+       PopupAnimation="Fade"
+       Closed="NotificationCenterPopup_Closed"
+       DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+       IsOpen="{Binding IsNotificationCenterOpen, Mode=TwoWay}">
+                            <Border Width="680"
+            Height="560"
+            MaxHeight="640"
+            Background="{DynamicResource AppBackgroundBrush}"
+            BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14"
+            Padding="16">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -961,7 +954,7 @@
                                                     <RowDefinition Height="3*"/>
                                                     <RowDefinition Height="2*"/>
                                                 </Grid.RowDefinitions>
-                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="NotificationsListBox_SelectionChanged"/>
                                                 <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                         <StackPanel>
