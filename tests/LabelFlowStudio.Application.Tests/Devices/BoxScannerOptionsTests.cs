@@ -12,7 +12,7 @@ public sealed class BoxScannerOptionsTests
         var options = new BoxScannerOptions();
 
         Assert.True(options.IsEnabled);
-        Assert.Equal("COM8", options.PortName);
+        Assert.Equal("COM5", options.PortName);
         Assert.Equal(9600, options.BaudRate);
         Assert.Equal(8, options.DataBits);
         Assert.Equal(Parity.None, options.Parity);

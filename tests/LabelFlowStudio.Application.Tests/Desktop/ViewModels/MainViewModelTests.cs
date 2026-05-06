@@ -11,35 +11,35 @@ namespace LabelFlowStudio.Application.Tests.Desktop.ViewModels;
 public sealed class MainViewModelTests
 {
     [Fact]
-    public async Task LoadRecordsCommand_LoadsRecords_UpdatesStatus()
-    {
-        var scanner = new FakeScanner();
-        var service = new FakeProcessingService
+    public Task LoadRecordsCommand_LoadsRecords_UpdatesStatus() =>
+        StaTestRunner.RunAsync(async () =>
         {
-            Response = CreateSuccessResponse(
-                message: "OK",
-                records: new List<LabelRecord>
-                {
-                    new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m },
-                    new() { Tenam = "4340558", Artnr = "B", Artbez = "Y", Bstmg = 2m }
-                }
-            )
-        };
+            var scanner = new FakeScanner();
+            var service = new FakeProcessingService
+            {
+                Response = CreateSuccessResponse(
+                    message: "OK",
+                    records: new List<LabelRecord>
+                    {
+                        new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m },
+                        new() { Tenam = "4340558", Artnr = "B", Artbez = "Y", Bstmg = 2m }
+                    }
+                )
+            };
 
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-        {
-            Tenam = "4340558"
-        };
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+            {
+                Tenam = "4340558"
+            };
 
-        vm.LoadRecordsCommand.Execute(null);
+            vm.LoadRecordsCommand.Execute(null);
 
-        await service.WaitCalledAsync();
+            await service.WaitCalledAsync();
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
-
-        Assert.Equal(2, vm.Records.Count);
-        Assert.Equal("OK", vm.StatusMessage);
-    }
+            Assert.Equal(2, vm.Records.Count);
+            Assert.Equal("OK", vm.StatusMessage);
+        });
 
     [Fact]
     public void LoadRecordsCommand_DoesNotBlockCallingThread_WhileProcessingStarts()
@@ -63,75 +63,83 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task ScannerEvent_WhenBusy_QueuesLatestTenamAndProcessesAfterCurrentRequest()
-    {
-        var scanner = new FakeScanner();
-        var service = new DelayedProcessingService();
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+    public Task ScannerEvent_WhenBusy_QueuesLatestTenamAndProcessesAfterCurrentRequest() =>
+        StaTestRunner.RunAsync(async () =>
+        {
+            var scanner = new FakeScanner();
+            var service = new DelayedProcessingService();
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
 
-        scanner.Raise("4340551");
-        await service.WaitFirstCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
+            scanner.Raise("4340551");
+            await service.WaitFirstCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
 
-        scanner.Raise("4340552");
+            scanner.Raise("4340552");
 
-        service.ReleaseFirstCall();
+            service.ReleaseFirstCall();
 
-        await service.WaitSecondCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+            await service.WaitSecondCallAsync().WaitAsync(TimeSpan.FromSeconds(2));
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.Equal("4340552", service.LastRequest?.Tenam);
-    }
+            Assert.Equal("4340552", service.LastRequest?.Tenam);
+        });
 
     [Fact]
-    public async Task ScannerEvent_AutomaticallyTriggers_LoadRecords()
-    {
-        var scanner = new FakeScanner();
-        var service = new FakeProcessingService
+    public Task ScannerEvent_AutomaticallyTriggers_LoadRecords() =>
+        StaTestRunner.RunAsync(async () =>
         {
-            Response = CreateSuccessResponse(
-                message: "Отправлено на печать",
-                records: new List<LabelRecord>()
-            )
-        };
+            var scanner = new FakeScanner();
+            var service = new FakeProcessingService
+            {
+                Response = CreateSuccessResponse(
+                    message: "Отправлено на печать",
+                    records: new List<LabelRecord>()
+                )
+            };
 
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance);
 
-        scanner.Raise("4340559");
+            scanner.Raise("4340559");
 
-        await service.WaitCalledAsync();
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+            await service.WaitCalledAsync();
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.Equal("Отправлено на печать", vm.StatusMessage);
-    }
-
+            Assert.Equal("Отправлено на печать", vm.StatusMessage);
+        });
 
     [Fact]
-    public async Task NotificationCenter_TracksUnreadAndErrorTabFiltering()
-    {
-        var scanner = new FakeScanner();
-        var service = new ThrowingProcessingService();
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+    public Task NotificationCenter_TracksUnreadAndErrorTabFiltering() =>
+        StaTestRunner.RunAsync(async () =>
         {
-            Tenam = "4340558"
-        };
+            var scanner = new FakeScanner();
+            var service = new ThrowingProcessingService();
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+            {
+                Tenam = "4340558"
+            };
 
-        vm.LoadRecordsCommand.Execute(null);
+            vm.LoadRecordsCommand.Execute(null);
 
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.True(vm.UnreadNotificationsCount > 0);
-        Assert.NotEmpty(vm.Notifications);
+            Assert.True(vm.UnreadNotificationsCount > 0);
+            Assert.True(vm.HasUnreadErrorNotifications);
+            Assert.NotEmpty(vm.Notifications);
 
-        vm.ToggleNotificationCenter();
+            var unreadBeforeOpen = vm.UnreadNotificationsCount;
 
-        Assert.True(vm.IsNotificationCenterOpen);
-        Assert.Equal(0, vm.UnreadNotificationsCount);
+            vm.ToggleNotificationCenter();
 
-        vm.NotificationTabIndex = 1;
+            Assert.True(vm.IsNotificationCenterOpen);
+            Assert.Equal(unreadBeforeOpen, vm.UnreadNotificationsCount);
 
-        Assert.All(vm.FilteredNotificationsView.Cast<UiNotification>(), notification => Assert.True(notification.IsError));
-    }
+            vm.NotificationTabIndex = 1;
 
+            Assert.All(vm.FilteredNotificationsView.Cast<UiNotification>(), notification => Assert.True(notification.IsError));
+
+            vm.MarkNotificationAsRead(vm.SelectedNotification);
+
+            Assert.Equal(Math.Max(0, unreadBeforeOpen - 1), vm.UnreadNotificationsCount);
+        });
 
     [Fact]
     public void NotificationCenter_WarningTabReflectsNewWarnings()
@@ -144,7 +152,10 @@ public sealed class MainViewModelTests
 
             vm.NotificationTabIndex = 2;
 
-            var addNotification = typeof(MainViewModel).GetMethod("AddNotification", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var addNotification = typeof(MainViewModel).GetMethod(
+                "AddNotification",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
             Assert.NotNull(addNotification);
 
             addNotification!.Invoke(vm, new object[] { "Тестовое предупреждение", NotificationCategory.Warning });
@@ -158,52 +169,54 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
-    public async Task LoadRecordsCommand_AddsNotificationForSuccessfulProcessing()
-    {
-        var scanner = new FakeScanner();
-        var service = new FakeProcessingService
+    public Task LoadRecordsCommand_AddsNotificationForSuccessfulProcessing() =>
+        StaTestRunner.RunAsync(async () =>
         {
-            Response = CreateSuccessResponse(
-                message: "Данные загружены",
-                records: new List<LabelRecord>
-                {
-                    new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m }
-                }
-            )
-        };
+            var scanner = new FakeScanner();
+            var service = new FakeProcessingService
+            {
+                Response = CreateSuccessResponse(
+                    message: "Данные загружены",
+                    records: new List<LabelRecord>
+                    {
+                        new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m }
+                    }
+                )
+            };
 
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
-        {
-            Tenam = "4340558"
-        };
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+            {
+                Tenam = "4340558"
+            };
 
-        vm.LoadRecordsCommand.Execute(null);
+            vm.LoadRecordsCommand.Execute(null);
 
-        await service.WaitCalledAsync();
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+            await service.WaitCalledAsync();
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.NotEmpty(vm.Notifications);
-        Assert.Equal("Короб №4340558: Данные загружены", vm.Notifications[0].Message);
-        Assert.NotEmpty(vm.Notifications);
-    }
+            Assert.NotEmpty(vm.Notifications);
+            Assert.Equal("Короб №4340558: Данные загружены", vm.Notifications[0].Message);
+        });
 
     [Fact]
-    public async Task NotificationCenter_ShowsToastForErrorsToo()
-    {
-        var scanner = new FakeScanner();
-        var service = new ThrowingProcessingService();
-        var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+    public Task NotificationCenter_ShowsToastForErrorsToo() =>
+        StaTestRunner.RunAsync(async () =>
         {
-            Tenam = "4340558"
-        };
+            var scanner = new FakeScanner();
+            var service = new ThrowingProcessingService();
+            var vm = new MainViewModel(service, scanner, NullLogger<MainViewModel>.Instance)
+            {
+                Tenam = "4340558"
+            };
 
-        vm.LoadRecordsCommand.Execute(null);
+            vm.LoadRecordsCommand.Execute(null);
 
-        await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
+            await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-        Assert.NotEmpty(vm.Notifications);
-        Assert.True(vm.Notifications[0].IsError);
-    }
+            Assert.NotEmpty(vm.Notifications);
+            Assert.True(vm.Notifications[0].IsError);
+            Assert.Contains("Ошибка сервиса", vm.Notifications[0].Message);
+        });
 
     private static BoxProcessingResponse CreateSuccessResponse(string message, IReadOnlyList<LabelRecord> records)
     {
@@ -352,5 +365,4 @@ public sealed class MainViewModelTests
             return Task.FromResult(true);
         }
     }
-
 }
