@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Printing;
 
@@ -57,8 +57,6 @@ public sealed class EndLabelDocumentBuilderTests
         var builder = CreateBuilder();
         var response = CreateResponse(weight: null);
 
-        var document = StaTestRunner.Run(() => builder.Build(response, "4340558"));
-        
         var textBlocks = StaTestRunner.Run(() =>
         {
             var document = builder.Build(response, "4340558");
@@ -84,11 +82,12 @@ public sealed class EndLabelDocumentBuilderTests
         return new BoxProcessingResponse(
             Status: BoxProcessingStatus.Success,
             Message: "OK",
-            Records: Array.Empty<LabelFlowStudio.Core.Models.LabelRecord>(),
+            Records: [],
             Weight: weight,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true);
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: false,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
     }
 
     private static List<string> ExtractTextBlocks(System.Windows.Documents.FixedDocument document)

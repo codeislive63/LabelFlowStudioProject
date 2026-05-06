@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Printing;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -96,10 +96,8 @@ public sealed class WpfPrintServiceTests
         return new BoxProcessingResponse(
             Status: BoxProcessingStatus.Success,
             Message: "ok",
-            Records: Array.Empty<LabelFlowStudio.Core.Models.LabelRecord>(),
+            Records: [],
             Weight: 1m,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false);
+            PrintPlan: PrintPlan.None);
     }
 }

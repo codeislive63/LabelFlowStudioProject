@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Printing;
@@ -51,10 +51,10 @@ public sealed class DropSheetDocumentBuilderTests
             Message: "OK",
             Records: records,
             Weight: 10m,
-            ShouldPrintDropSheet: false,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: false
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: false));
 
         var doc = StaTestRunner.Run(() => DropSheetDocumentBuilder.Build(response, Tenam));
 

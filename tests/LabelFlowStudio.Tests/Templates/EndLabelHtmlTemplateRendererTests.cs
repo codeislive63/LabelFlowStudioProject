@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Templates;
-using LabelFlowStudio.Application.Tests.Infrastructure;
 
 namespace LabelFlowStudio.Application.Tests.Templates;
 
@@ -27,14 +27,14 @@ public sealed class EndLabelHtmlTemplateRendererTests
         };
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: 6.325m,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         var template = string.Join("\n", new[]
         {
@@ -76,14 +76,14 @@ public sealed class EndLabelHtmlTemplateRendererTests
         };
 
         var response = new BoxProcessingResponse(
-            BoxProcessingStatus.Success,
+            Status: BoxProcessingStatus.Success,
             Message: "ok",
             Records: records,
             Weight: 1.0m,
-            ShouldPrintDropSheet: true,
-            ShouldPrintEmptyDropSheet: false,
-            ShouldPrintEndLabels: true
-        );
+            PrintPlan: new PrintPlan(
+                PrintDropSheet: true,
+                PrintEmptyDropSheet: false,
+                PrintEndLabels: true));
 
         var template = "NAME={{Gpbez}}";
 
