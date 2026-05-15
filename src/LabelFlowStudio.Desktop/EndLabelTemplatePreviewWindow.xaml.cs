@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.Templates;
 using Microsoft.Web.WebView2.Core;
@@ -84,10 +84,12 @@ public partial class EndLabelTemplatePreviewWindow : Window
         Closed += OnClosed;
 
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Open, (_, _) => OnImportClick(this, new RoutedEventArgs())));
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Save, async (_, _) => await SaveTemplateAsync()));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.SaveAs, (_, _) => OnExportClick(this, new RoutedEventArgs())));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Print, async (_, _) => await PrintAsync()));
 
         InputBindings.Add(new KeyBinding(ApplicationCommands.Open, new KeyGesture(Key.O, ModifierKeys.Control)));
+        InputBindings.Add(new KeyBinding(ApplicationCommands.Save, new KeyGesture(Key.S, ModifierKeys.Control)));
         InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, new KeyGesture(Key.E, ModifierKeys.Control)));
         InputBindings.Add(new KeyBinding(ApplicationCommands.Print, new KeyGesture(Key.P, ModifierKeys.Control)));
     }
@@ -506,6 +508,8 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
     }
 
+    private void OnSaveClick(object sender, RoutedEventArgs eventArgs) => _ = SaveTemplateAsync();
+
     private void OnPrintClick(object sender, RoutedEventArgs eventArgs) => _ = PrintAsync();
 
     private void OnEditorFlagsChanged(object sender, RoutedEventArgs eventArgs)
@@ -771,46 +775,35 @@ public partial class EndLabelTemplatePreviewWindow : Window
     // Save + title
     // ===========================
 
-    private async Task SaveTemplateAsync()
+    private async Task<bool> SaveTemplateAsync()
     {
         if (!_isEditorReady)
         {
-            return;
+            return false;
         }
 
         if (_isSaving)
         {
-            return;
+            return false;
         }
 
         _isSaving = true;
 
         try
         {
-            var templatePath = EndLabelTemplateStore.GetTemplatePath();
-            var directory = Path.GetDirectoryName(templatePath);
-
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            await File.WriteAllTextAsync(
-                templatePath,
-                _templateText,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-                CancellationToken.None
-            );
+            await EndLabelTemplateStore.SaveAsync(_templateText, CancellationToken.None);
 
             _isDirty = false;
             UpdateWindowTitle();
 
             ShowToast("Сохранено");
+            return true;
         }
         catch (Exception exception)
         {
             ShowToast("Ошибка сохранения");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
         finally
         {
@@ -834,6 +827,11 @@ public partial class EndLabelTemplatePreviewWindow : Window
             if (!_isPreviewReady)
             {
                 ShowToast("Предпросмотр ещё загружается");
+                return;
+            }
+
+            if (_isDirty && !await SaveTemplateAsync())
+            {
                 return;
             }
 

@@ -1,4 +1,4 @@
-﻿<Window x:Class="LabelFlowStudio.Desktop.EndLabelTemplatePreviewWindow"
+<Window x:Class="LabelFlowStudio.Desktop.EndLabelTemplatePreviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
@@ -162,6 +162,10 @@
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   Click="OnImportClick"
                                   InputGestureText="Ctrl+O"/>
+                        <MenuItem Header="Сохранить для приложения"
+                                  Style="{StaticResource VsMenuDropItemStyle}"
+                                  Click="OnSaveClick"
+                                  InputGestureText="Ctrl+S"/>
                         <MenuItem Header="Экспорт"
                                   Style="{StaticResource VsMenuDropItemStyle}"
                                   Click="OnExportClick"
