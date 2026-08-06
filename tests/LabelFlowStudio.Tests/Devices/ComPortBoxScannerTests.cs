@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text;
+using System.IO.Ports;
 using LabelFlowStudio.Application.Tests.Infrastructure;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -96,6 +97,22 @@ public sealed class ComPortBoxScannerTests
     }
 
     [Fact]
+    public async Task StartAsync_DisposesCreatedPort_WhenOpenFails()
+    {
+        var options = new BoxScannerOptions { PortName = "COM1" };
+        var port = new TrackingSerialPort("__LABELFLOW_MISSING_PORT__");
+        var scanner = new ComPortBoxScanner(
+            new TestOptionsMonitor<BoxScannerOptions>(options),
+            NullLogger<ComPortBoxScanner>.Instance,
+            _ => port);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => scanner.StartAsync(CancellationToken.None));
+
+        Assert.True(port.IsDisposed);
+        Assert.False(scanner.IsRunning);
+    }
+
+    [Fact]
     public async Task StopAsync_WhenNotRunning_DoesNothing()
     {
         var scanner = CreateScanner(new BoxScannerOptions { PortName = "COM1" });
@@ -147,5 +164,16 @@ public sealed class ComPortBoxScannerTests
         var buffer = (StringBuilder)bufferField!.GetValue(scanner)!;
 
         return (buffer, method!, snapshotField!);
+    }
+
+    private sealed class TrackingSerialPort(string portName) : SerialPort(portName)
+    {
+        public bool IsDisposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            IsDisposed = true;
+            base.Dispose(disposing);
+        }
     }
 }

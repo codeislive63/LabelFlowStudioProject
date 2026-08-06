@@ -16,4 +16,8 @@
 	  <ProjectReference Include="..\LabelFlowStudio.Core\LabelFlowStudio.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <InternalsVisibleTo Include="LabelFlowStudio.Tests" />
+	</ItemGroup>
+
 </Project>

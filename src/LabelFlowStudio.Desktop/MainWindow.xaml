@@ -619,19 +619,27 @@
                                 BorderThickness="1"
                                 CornerRadius="12"
                                 Opacity="0.90">
-                            <Border.Triggers>
-                                <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard>
-                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                            <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeShade"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             From="0.86"
-                                                             To="0.98"
-                                                             Duration="0:0:1.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                            </Border.Triggers>
+                            <Border.Style>
+                                <Style TargetType="{x:Type Border}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard x:Name="TopPanelAutomaticModeShadeAnimation">
+                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0.86"
+                                                                         To="0.98"
+                                                                         Duration="0:0:1.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <RemoveStoryboard BeginStoryboardName="TopPanelAutomaticModeShadeAnimation"/>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                         </Border>
 
                         <Border Background="#FCFFFFFF"
@@ -657,24 +665,31 @@
                                           StrokeStartLineCap="Round"
                                           StrokeEndLineCap="Round"
                                           RenderTransformOrigin="0.5,0.5">
+                                        <Path.Style>
+                                            <Style TargetType="{x:Type Path}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="TopPanelAutomaticModeSpinnerAnimation">
+                                                                <Storyboard RepeatBehavior="Forever">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                     From="0"
+                                                                                     To="360"
+                                                                                     Duration="0:0:1.1"/>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <RemoveStoryboard BeginStoryboardName="TopPanelAutomaticModeSpinnerAnimation"/>
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Path.Style>
                                         <Path.RenderTransform>
                                             <RotateTransform Angle="0"/>
                                         </Path.RenderTransform>
                                     </Path>
-
-                                    <Grid.Triggers>
-                                        <EventTrigger RoutedEvent="Loaded">
-                                            <BeginStoryboard>
-                                                <Storyboard RepeatBehavior="Forever">
-                                                    <DoubleAnimation Storyboard.TargetName="TopPanelAutomaticModeSpinnerArc"
-                                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                     From="0"
-                                                                     To="360"
-                                                                     Duration="0:0:1.1"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </EventTrigger>
-                                    </Grid.Triggers>
                                 </Grid>
 
                                 <TextBlock Text="Автоматический режим"
@@ -1299,24 +1314,31 @@
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round"
                                   RenderTransformOrigin="0.5,0.5">
+                                <Path.Style>
+                                    <Style TargetType="{x:Type Path}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="BusySpinnerAnimation">
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                             From="0"
+                                                                             To="360"
+                                                                             Duration="0:0:0.9"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <RemoveStoryboard BeginStoryboardName="BusySpinnerAnimation"/>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
                                 <Path.RenderTransform>
                                     <RotateTransform Angle="0"/>
                                 </Path.RenderTransform>
                             </Path>
-
-                            <Grid.Triggers>
-                                <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard>
-                                        <Storyboard RepeatBehavior="Forever">
-                                            <DoubleAnimation Storyboard.TargetName="SpinnerArc"
-                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                             From="0"
-                                                             To="360"
-                                                             Duration="0:0:0.9"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                            </Grid.Triggers>
                         </Grid>
 
                         <TextBlock Text="{Binding StatusMessage}"
