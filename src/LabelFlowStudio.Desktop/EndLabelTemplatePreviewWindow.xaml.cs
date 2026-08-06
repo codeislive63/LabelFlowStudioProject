@@ -21,6 +21,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private readonly string _tenam;
 
     private readonly SemaphoreSlim _previewGate = new(1, 1);
+    private readonly CancellationTokenSource _windowLifetimeCts = new();
 
     private Task? _initializeWebViewsTask;
     private CancellationTokenSource? _renderDebounceCts;
@@ -30,6 +31,8 @@ public partial class EndLabelTemplatePreviewWindow : Window
     private bool _isDirty;
     private bool _isSaving;
     private bool _pendingPreviewFlagsApply;
+    private bool _isClosed;
+    private bool _webViewsDisposed;
 
     private string _templateText = string.Empty;
 
@@ -118,6 +121,10 @@ public partial class EndLabelTemplatePreviewWindow : Window
             ShowToast("WebView2 не инициализировался");
             MessageBox.Show(this, exception.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        catch (OperationCanceledException) when (_isClosed)
+        {
+            // The window was closed while WebView2 was initializing.
+        }
         catch (Exception exception)
         {
             ShowToast("Ошибка загрузки");
@@ -127,12 +134,94 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private void OnClosed(object? sender, EventArgs eventArgs)
     {
+        _isClosed = true;
+        Loaded -= OnLoaded;
+        Closed -= OnClosed;
+
+        _windowLifetimeCts.Cancel();
+
         _renderDebounceCts?.Cancel();
         _renderDebounceCts?.Dispose();
         _renderDebounceCts = null;
 
         _toastTimer?.Stop();
         _toastTimer = null;
+
+        ScheduleWebViewDisposal();
+    }
+
+    private void ScheduleWebViewDisposal()
+    {
+        var initializationTask = _initializeWebViewsTask;
+
+        if (initializationTask is null || initializationTask.IsCompleted)
+        {
+            DisposeWebViews();
+            return;
+        }
+
+        _ = DisposeWebViewsAfterInitializationAsync(initializationTask);
+    }
+
+    private async Task DisposeWebViewsAfterInitializationAsync(Task initializationTask)
+    {
+        try
+        {
+            await initializationTask;
+        }
+        catch
+        {
+            // Initialization failure is handled by the caller; cleanup must still run.
+        }
+
+        DisposeWebViews();
+    }
+
+    private void DisposeWebViews()
+    {
+        if (_webViewsDisposed)
+        {
+            return;
+        }
+
+        _webViewsDisposed = true;
+
+        try
+        {
+            PreviewWebView.NavigationCompleted -= OnPreviewNavigationCompleted;
+        }
+        catch
+        {
+            // WebView2 may already be unavailable after a browser process failure.
+        }
+
+        try
+        {
+            if (EditorWebView.CoreWebView2 is { } editorCoreWebView)
+            {
+                editorCoreWebView.WebMessageReceived -= OnEditorWebMessageReceived;
+                editorCoreWebView.NavigationCompleted -= OnEditorNavigationCompleted;
+            }
+        }
+        catch
+        {
+            // WebView2 may already be unavailable after a browser process failure.
+        }
+
+        TryDisposeWebView(PreviewWebView);
+        TryDisposeWebView(EditorWebView);
+    }
+
+    private static void TryDisposeWebView(WebView2 webView)
+    {
+        try
+        {
+            webView.Dispose();
+        }
+        catch
+        {
+            // Cleanup is best-effort while the window is closing.
+        }
     }
 
     // ===========================
@@ -287,28 +376,27 @@ public partial class EndLabelTemplatePreviewWindow : Window
         }
         catch (TimeoutException)
         {
-            _initializeWebViewsTask = null;
             throw new TimeoutException("WebView2 не успел инициализироваться за 60 секунд");
         }
     }
 
     private async Task InitializeWebViewsAsync()
     {
-        var userDataFolder = GetWebViewUserDataFolder();
-        Directory.CreateDirectory(userDataFolder);
+        var cancellationToken = _windowLifetimeCts.Token;
+        cancellationToken.ThrowIfCancellationRequested();
 
-        PreviewWebView.CreationProperties ??= new CoreWebView2CreationProperties
-        {
-            UserDataFolder = userDataFolder
-        };
+        var environment = await WebView2EnvironmentProvider.GetAsync().WaitAsync(cancellationToken);
 
-        EditorWebView.CreationProperties ??= new CoreWebView2CreationProperties
-        {
-            UserDataFolder = userDataFolder
-        };
+        cancellationToken.ThrowIfCancellationRequested();
 
-        await PreviewWebView.EnsureCoreWebView2Async();
-        await EditorWebView.EnsureCoreWebView2Async();
+        // WebView2 initialization is not cancellable. Await each native operation before
+        // DisposeWebViews can run so closing the window cannot race with initialization.
+        await PreviewWebView.EnsureCoreWebView2Async(environment);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await EditorWebView.EnsureCoreWebView2Async(environment);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // ВАЖНО: чтобы не было "прозрачных дыр" при снапе/полуэкране
         PreviewWebView.DefaultBackgroundColor = Color.White;
@@ -336,12 +424,6 @@ public partial class EndLabelTemplatePreviewWindow : Window
             contentRoot,
             CoreWebView2HostResourceAccessKind.Allow
         );
-    }
-
-    private static string GetWebViewUserDataFolder()
-    {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(localAppData, "LabelFlowStudio", "WebView2", $"pid-{Environment.ProcessId}");
     }
 
     private void NavigateEditor()

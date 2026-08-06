@@ -9,8 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace LabelFlowStudio.Desktop;
 
@@ -19,12 +22,25 @@ namespace LabelFlowStudio.Desktop;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    private static readonly TimeSpan MemoryDiagnosticsInterval = TimeSpan.FromMinutes(5);
+
     private IHost? _host;
+    private Timer? _memoryDiagnosticsTimer;
+
+    static App()
+    {
+        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
         ConfigureGlobalExceptionLogging();
         ConfigureSerilog();
+        StartMemoryDiagnostics();
+
+        Log.Information(
+            "Software rendering enabled for WPF and WebView2. WPF render mode: {RenderMode}",
+            RenderOptions.ProcessRenderMode);
 
         try
         {
@@ -102,6 +118,14 @@ public partial class App : System.Windows.Application
     {
         try
         {
+            if (_memoryDiagnosticsTimer is not null)
+            {
+                await _memoryDiagnosticsTimer.DisposeAsync();
+                _memoryDiagnosticsTimer = null;
+            }
+
+            await SilentHtmlPrinter.ShutdownAsync();
+
             if (_host is null)
             {
                 return;
@@ -151,4 +175,44 @@ public partial class App : System.Windows.Application
             args.SetObserved();
         };
     }
+
+    private void StartMemoryDiagnostics()
+    {
+        LogMemoryUsage();
+
+        _memoryDiagnosticsTimer = new Timer(
+            static _ => LogMemoryUsage(),
+            state: null,
+            dueTime: MemoryDiagnosticsInterval,
+            period: MemoryDiagnosticsInterval);
+    }
+
+    private static void LogMemoryUsage()
+    {
+        try
+        {
+            using var process = Process.GetCurrentProcess();
+            process.Refresh();
+
+            var gcInfo = GC.GetGCMemoryInfo();
+
+            Log.Information(
+                "Memory diagnostics: working set {WorkingSetMb:F1} MB; private memory {PrivateMemoryMb:F1} MB; " +
+                "managed heap {ManagedHeapMb:F1} MB; GC committed {GcCommittedMb:F1} MB; " +
+                "fragmented {FragmentedMb:F1} MB; handles {HandleCount}; Gen2 collections {Gen2Collections}",
+                ToMegabytes(process.WorkingSet64),
+                ToMegabytes(process.PrivateMemorySize64),
+                ToMegabytes(gcInfo.HeapSizeBytes),
+                ToMegabytes(gcInfo.TotalCommittedBytes),
+                ToMegabytes(gcInfo.FragmentedBytes),
+                process.HandleCount,
+                GC.CollectionCount(2));
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Log.Debug(exception, "Failed to collect memory diagnostics");
+        }
+    }
+
+    private static double ToMegabytes(long bytes) => bytes / (1024d * 1024d);
 }

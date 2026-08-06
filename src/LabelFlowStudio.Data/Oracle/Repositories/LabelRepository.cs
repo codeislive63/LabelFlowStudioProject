@@ -3,7 +3,6 @@ using LabelFlowStudio.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Oracle.ManagedDataAccess.Client;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace LabelFlowStudio.Data.Oracle.Repositories;
@@ -17,7 +16,8 @@ public sealed class LabelRepository : ILabelRepository
     private readonly ILogger<LabelRepository> _logger;
 
     private static readonly TimeSpan QueryBurstWindow = TimeSpan.FromSeconds(30);
-    private static readonly ConcurrentDictionary<string, QueryBurstTracker> QueryBurstTrackers = new(StringComparer.Ordinal);
+    private const int MaxTrackedTenams = 4_096;
+    private static readonly QueryBurstWindowTracker QueryBurstTrackers = new(QueryBurstWindow, MaxTrackedTenams);
 
 
     /// <summary>
@@ -110,30 +110,9 @@ public sealed class LabelRepository : ILabelRepository
 
     private static int RegisterQueryHit(string tenam, DateTime startedAtUtc, out DateTime windowStartedAtUtc)
     {
-        var tracker = QueryBurstTrackers.AddOrUpdate(
-            tenam,
-            _ => new QueryBurstTracker(startedAtUtc, 1),
-            (_, current) => current.TryRegister(startedAtUtc, QueryBurstWindow));
+        var tracker = QueryBurstTrackers.Register(tenam, startedAtUtc);
 
         windowStartedAtUtc = tracker.WindowStartedAtUtc;
         return tracker.Count;
     }
-
-    private sealed record QueryBurstTracker(DateTime WindowStartedAtUtc, int Count)
-    {
-        public QueryBurstTracker TryRegister(DateTime startedAtUtc, TimeSpan window)
-        {
-            if ((startedAtUtc - WindowStartedAtUtc) > window)
-            {
-                return this with
-                {
-                    WindowStartedAtUtc = startedAtUtc,
-                    Count = 1
-                };
-            }
-
-            return this with { Count = Count + 1 };
-        }
-    }
-
 }

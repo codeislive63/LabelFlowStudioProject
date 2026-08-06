@@ -15,6 +15,7 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
     private readonly IOptionsMonitor<BoxScannerOptions> _optionsMonitor;
     private readonly ILogger<ComPortBoxScanner> _logger;
+    private readonly Func<BoxScannerOptions, SerialPort> _serialPortFactory;
 
     private readonly object _sync = new();
     private readonly object _lifecycleSync = new();
@@ -29,9 +30,18 @@ public sealed class ComPortBoxScanner : IBoxScanner
     /// Создает экземпляр сканера COM порта
     /// </summary>
     public ComPortBoxScanner(IOptionsMonitor<BoxScannerOptions> optionsMonitor, ILogger<ComPortBoxScanner> logger)
+        : this(optionsMonitor, logger, BuildSerialPort)
+    {
+    }
+
+    internal ComPortBoxScanner(
+        IOptionsMonitor<BoxScannerOptions> optionsMonitor,
+        ILogger<ComPortBoxScanner> logger,
+        Func<BoxScannerOptions, SerialPort> serialPortFactory)
     {
         _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serialPortFactory = serialPortFactory ?? throw new ArgumentNullException(nameof(serialPortFactory));
     }
 
     /// <summary>
@@ -59,6 +69,8 @@ public sealed class ComPortBoxScanner : IBoxScanner
             throw new InvalidOperationException("Box scanner PortName is not configured");
         }
 
+        SerialPort? startedPort = null;
+
         try
         {
             lock (_lifecycleSync)
@@ -72,11 +84,22 @@ public sealed class ComPortBoxScanner : IBoxScanner
 
                 _optionsSnapshot = options;
 
-                var port = BuildSerialPort(options);
-                port.DataReceived += OnDataReceived;
-                port.Open();
+                var port = _serialPortFactory(options)
+                           ?? throw new InvalidOperationException("Serial port factory returned null");
+
+                try
+                {
+                    port.DataReceived += OnDataReceived;
+                    port.Open();
+                }
+                catch
+                {
+                    CleanupDetachedPort(port);
+                    throw;
+                }
 
                 _serialPort = port;
+                startedPort = port;
                 IsRunning = true;
 
                 _logger.LogInformation("Box scanner started on {PortName}", options.PortName);
@@ -87,7 +110,16 @@ public sealed class ComPortBoxScanner : IBoxScanner
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to start box scanner on {PortName}", options.PortName);
-            CleanupPort();
+
+            lock (_lifecycleSync)
+            {
+                if (_serialPort is null || ReferenceEquals(_serialPort, startedPort))
+                {
+                    IsRunning = false;
+                    CleanupPort();
+                }
+            }
+
             throw;
         }
     }
@@ -305,6 +337,37 @@ public sealed class ComPortBoxScanner : IBoxScanner
         lock (_sync)
         {
             _buffer.Clear();
+        }
+    }
+
+    // Освобождает порт, владение которым еще не было передано полю _serialPort
+    private void CleanupDetachedPort(SerialPort serialPort)
+    {
+        try
+        {
+            serialPort.DataReceived -= OnDataReceived;
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (serialPort.IsOpen)
+            {
+                serialPort.Close();
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            serialPort.Dispose();
+        }
+        catch
+        {
         }
     }
 

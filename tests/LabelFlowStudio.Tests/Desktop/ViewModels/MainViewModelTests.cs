@@ -99,7 +99,8 @@ public sealed class MainViewModelTests
             await service.WaitCalledAsync();
             await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
-            Assert.Equal("Отправлено на печать", vm.StatusMessage);
+            Assert.Equal("4340559", service.LastRequest?.Tenam);
+            Assert.Equal("4340559", vm.LastProcessedTenam);
         });
 
     [Fact]

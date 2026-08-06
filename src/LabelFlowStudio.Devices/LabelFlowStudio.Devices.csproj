@@ -15,5 +15,9 @@
 		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
 		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="LabelFlowStudio.Tests" />
+	</ItemGroup>
 	
 </Project>
