@@ -16,7 +16,7 @@
                 <ResourceDictionary Source="Themes/WorkStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <DataTemplate DataType="{x:Type viewModels:MainViewModel}">
+            <DataTemplate DataType="{x:Type viewModels:WorkSectionViewModel}">
                 <workViews:WorkSectionView />
             </DataTemplate>
 

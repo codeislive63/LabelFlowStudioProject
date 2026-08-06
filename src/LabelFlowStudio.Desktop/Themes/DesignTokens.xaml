@@ -14,4 +14,47 @@
 
     <Thickness x:Key="ShellPagePadding">20</Thickness>
     <CornerRadius x:Key="ShellCardCornerRadius">12</CornerRadius>
+
+    <!-- Work monitoring tokens: spacing follows the 8/12/16/24/32 DIP grid. -->
+    <Thickness x:Key="AutoLineSpace8">8</Thickness>
+    <Thickness x:Key="AutoLineSpace12">12</Thickness>
+    <Thickness x:Key="AutoLineSpace16">16</Thickness>
+    <Thickness x:Key="AutoLineSpace24">24</Thickness>
+    <Thickness x:Key="AutoLineSpace32">32</Thickness>
+    <Thickness x:Key="AutoLinePagePadding">24</Thickness>
+
+    <CornerRadius x:Key="AutoLineRadius10">10</CornerRadius>
+    <CornerRadius x:Key="AutoLineRadius12">12</CornerRadius>
+
+    <Color x:Key="AutoLineBlueColor">#2463D4</Color>
+    <Color x:Key="AutoLineBlueSoftColor">#EDF4FF</Color>
+    <Color x:Key="AutoLineBlueBorderColor">#BFD2F7</Color>
+    <Color x:Key="AutoLineSuccessColor">#218548</Color>
+    <Color x:Key="AutoLineSuccessSoftColor">#EDF8F1</Color>
+    <Color x:Key="AutoLineSuccessBorderColor">#BFE4CB</Color>
+    <Color x:Key="AutoLineWarningColor">#9A6200</Color>
+    <Color x:Key="AutoLineWarningSoftColor">#FFF7E8</Color>
+    <Color x:Key="AutoLineWarningBorderColor">#ECD5A8</Color>
+    <Color x:Key="AutoLineErrorColor">#C8323C</Color>
+    <Color x:Key="AutoLineErrorSoftColor">#FFF0F1</Color>
+    <Color x:Key="AutoLineErrorBorderColor">#F0C3C7</Color>
+    <Color x:Key="AutoLineNeutralColor">#667085</Color>
+    <Color x:Key="AutoLineNeutralSoftColor">#F4F6F9</Color>
+    <Color x:Key="AutoLineNeutralBorderColor">#DDE2EA</Color>
+
+    <SolidColorBrush x:Key="AutoLineBlueBrush" Color="{StaticResource AutoLineBlueColor}" />
+    <SolidColorBrush x:Key="AutoLineBlueSoftBrush" Color="{StaticResource AutoLineBlueSoftColor}" />
+    <SolidColorBrush x:Key="AutoLineBlueBorderBrush" Color="{StaticResource AutoLineBlueBorderColor}" />
+    <SolidColorBrush x:Key="AutoLineSuccessBrush" Color="{StaticResource AutoLineSuccessColor}" />
+    <SolidColorBrush x:Key="AutoLineSuccessSoftBrush" Color="{StaticResource AutoLineSuccessSoftColor}" />
+    <SolidColorBrush x:Key="AutoLineSuccessBorderBrush" Color="{StaticResource AutoLineSuccessBorderColor}" />
+    <SolidColorBrush x:Key="AutoLineWarningBrush" Color="{StaticResource AutoLineWarningColor}" />
+    <SolidColorBrush x:Key="AutoLineWarningSoftBrush" Color="{StaticResource AutoLineWarningSoftColor}" />
+    <SolidColorBrush x:Key="AutoLineWarningBorderBrush" Color="{StaticResource AutoLineWarningBorderColor}" />
+    <SolidColorBrush x:Key="AutoLineErrorBrush" Color="{StaticResource AutoLineErrorColor}" />
+    <SolidColorBrush x:Key="AutoLineErrorSoftBrush" Color="{StaticResource AutoLineErrorSoftColor}" />
+    <SolidColorBrush x:Key="AutoLineErrorBorderBrush" Color="{StaticResource AutoLineErrorBorderColor}" />
+    <SolidColorBrush x:Key="AutoLineNeutralBrush" Color="{StaticResource AutoLineNeutralColor}" />
+    <SolidColorBrush x:Key="AutoLineNeutralSoftBrush" Color="{StaticResource AutoLineNeutralSoftColor}" />
+    <SolidColorBrush x:Key="AutoLineNeutralBorderBrush" Color="{StaticResource AutoLineNeutralBorderColor}" />
 </ResourceDictionary>

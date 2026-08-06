@@ -17,15 +17,13 @@ public sealed class ShellViewModelTests
     {
         StaTestRunner.Run(() =>
         {
-            using var work = CreateWorkViewModel();
-            var journal = new JournalViewModel();
-            var settings = new SettingsViewModel();
-
-            var shell = new ShellViewModel(work, journal, settings);
+            using var fixture = new ShellFixture();
+            var shell = fixture.Shell;
 
             Assert.Equal(AppSection.Work, shell.CurrentSection);
             Assert.True(shell.IsWorkSectionOpen);
-            Assert.Same(work, shell.CurrentSectionViewModel);
+            Assert.Same(fixture.WorkSection, shell.CurrentSectionViewModel);
+            Assert.Same(fixture.Work, shell.Work);
         });
     }
 
@@ -34,25 +32,24 @@ public sealed class ShellViewModelTests
     {
         StaTestRunner.Run(() =>
         {
-            using var work = CreateWorkViewModel();
+            using var fixture = new ShellFixture();
+            var work = fixture.Work;
             work.Tenam = "4430558";
             work.Records.Add(new LabelRecord { Tenam = "4430558", Artnr = "A-1" });
             var initialMode = work.CurrentWorkMode;
 
-            var journal = new JournalViewModel();
-            var settings = new SettingsViewModel();
-            var shell = new ShellViewModel(work, journal, settings);
+            var shell = fixture.Shell;
 
             shell.NavigateToJournalCommand.Execute(null);
             Assert.Equal(AppSection.Journal, shell.CurrentSection);
-            Assert.Same(journal, shell.CurrentSectionViewModel);
+            Assert.Same(fixture.Journal, shell.CurrentSectionViewModel);
 
             shell.NavigateToSettingsCommand.Execute(null);
             Assert.Equal(AppSection.Settings, shell.CurrentSection);
-            Assert.Same(settings, shell.CurrentSectionViewModel);
+            Assert.Same(fixture.Settings, shell.CurrentSectionViewModel);
 
             shell.NavigateToWorkCommand.Execute(null);
-            Assert.Same(work, shell.CurrentSectionViewModel);
+            Assert.Same(fixture.WorkSection, shell.CurrentSectionViewModel);
             Assert.Equal("4430558", work.Tenam);
             Assert.Single(work.Records);
             Assert.Equal(initialMode, work.CurrentWorkMode);
@@ -64,8 +61,8 @@ public sealed class ShellViewModelTests
     {
         StaTestRunner.Run(() =>
         {
-            using var work = CreateWorkViewModel();
-            var shell = new ShellViewModel(work, new JournalViewModel(), new SettingsViewModel());
+            using var fixture = new ShellFixture();
+            var shell = fixture.Shell;
             var changedProperties = new List<string?>();
             shell.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
 
@@ -90,6 +87,46 @@ public sealed class ShellViewModelTests
             new NoOpWeightService(),
             new NoOpScanner(),
             NullLogger<MainViewModel>.Instance);
+    }
+
+    private sealed class ShellFixture : IDisposable
+    {
+        public ShellFixture()
+        {
+            Work = CreateWorkViewModel();
+            Automatic = new AutomaticLineViewModel(
+                Work,
+                () => new AutomaticLineEquipmentSnapshot(
+                    IsScannerRunning: true,
+                    IsPrinterInstalled: false,
+                    UseScales: false));
+            Manual = new ManualProcessingViewModel(Work);
+            WorkSection = new WorkSectionViewModel(Work, Automatic, Manual);
+            Journal = new JournalViewModel();
+            Settings = new SettingsViewModel();
+            Shell = new ShellViewModel(Work, WorkSection, Journal, Settings);
+        }
+
+        public MainViewModel Work { get; }
+
+        public AutomaticLineViewModel Automatic { get; }
+
+        public ManualProcessingViewModel Manual { get; }
+
+        public WorkSectionViewModel WorkSection { get; }
+
+        public JournalViewModel Journal { get; }
+
+        public SettingsViewModel Settings { get; }
+
+        public ShellViewModel Shell { get; }
+
+        public void Dispose()
+        {
+            WorkSection.Dispose();
+            Automatic.Dispose();
+            Work.Dispose();
+        }
     }
 
     private sealed class NoOpProcessingService : IBoxProcessingService

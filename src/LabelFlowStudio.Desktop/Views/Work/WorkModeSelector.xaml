@@ -1,0 +1,70 @@
+<UserControl x:Class="LabelFlowStudio.Desktop.Views.Work.WorkModeSelector"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:viewModels="clr-namespace:LabelFlowStudio.Desktop.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}"
+             d:DesignHeight="46"
+             d:DesignWidth="500"
+             mc:Ignorable="d">
+    <Border MaxWidth="520"
+            Padding="8"
+            HorizontalAlignment="Left"
+            Background="{DynamicResource SurfaceAltBrush}"
+            BorderBrush="{DynamicResource SurfaceBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="10">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="246" />
+                <ColumnDefinition Width="246" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    AutomationProperties.Name="Переключить на автоматическую линию"
+                    Command="{Binding SwitchToAutomaticModeCommand}">
+                <Button.Style>
+                    <Style TargetType="Button"
+                           BasedOn="{StaticResource AutoLineModeSegmentButtonStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Margin="0,0,8,0" Symbol="Pipeline24" />
+                    <TextBlock VerticalAlignment="Center" Text="Автоматическая линия" />
+                </StackPanel>
+            </Button>
+
+            <Button Grid.Column="1"
+                    AutomationProperties.Name="Переключить на ручную обработку"
+                    Command="{Binding SwitchToManualModeCommand}">
+                <Button.Style>
+                    <Style TargetType="Button"
+                           BasedOn="{StaticResource AutoLineModeSegmentButtonStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAutomaticMode}" Value="False">
+                                <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Margin="0,0,8,0" Symbol="HandLeft24" />
+                    <TextBlock VerticalAlignment="Center" Text="Ручная обработка" />
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

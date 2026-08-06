@@ -13,6 +13,9 @@ public static class DesktopServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<MainViewModel>();
+        services.AddSingleton<AutomaticLineViewModel>();
+        services.AddSingleton<ManualProcessingViewModel>();
+        services.AddSingleton<WorkSectionViewModel>();
         services.AddSingleton<JournalViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ShellViewModel>();
