@@ -58,7 +58,7 @@ public partial class MainWindow : FluentWindow
     private async Task FocusWorkInputAsync()
     {
         if (_viewModel.CurrentSection != AppSection.Work
-            || FindVisualChild<WorkSectionView>(this) is not { } workView)
+            || FindVisualChild<ManualProcessingView>(this) is not { } workView)
         {
             return;
         }

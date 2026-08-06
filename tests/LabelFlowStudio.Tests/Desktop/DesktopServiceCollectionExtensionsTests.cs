@@ -8,6 +8,9 @@ public sealed class DesktopServiceCollectionExtensionsTests
 {
     [Theory]
     [InlineData(typeof(MainViewModel))]
+    [InlineData(typeof(AutomaticLineViewModel))]
+    [InlineData(typeof(ManualProcessingViewModel))]
+    [InlineData(typeof(WorkSectionViewModel))]
     [InlineData(typeof(JournalViewModel))]
     [InlineData(typeof(SettingsViewModel))]
     [InlineData(typeof(ShellViewModel))]

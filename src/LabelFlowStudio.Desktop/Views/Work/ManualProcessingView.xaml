@@ -1,0 +1,265 @@
+<UserControl x:Class="LabelFlowStudio.Desktop.Views.Work.ManualProcessingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:viewModels="clr-namespace:LabelFlowStudio.Desktop.ViewModels"
+             xmlns:work="clr-namespace:LabelFlowStudio.Desktop.Views.Work"
+             d:DataContext="{d:DesignInstance Type=viewModels:ManualProcessingViewModel}"
+             d:DesignHeight="760"
+             d:DesignWidth="1200"
+             mc:Ignorable="d"
+             Loaded="ManualProcessingView_Loaded"
+             IsVisibleChanged="ManualProcessingView_IsVisibleChanged">
+    <Grid DataContext="{Binding Work}"
+          Margin="{DynamicResource ShellPagePadding}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <work:WorkModeSelector HorizontalAlignment="Left"
+                                   VerticalAlignment="Center" />
+
+            <Border Grid.Column="1"
+                    Padding="12,7"
+                    Background="{DynamicResource SurfaceAltBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="9">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Записей"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Margin="8,0,0,0"
+                               FontWeight="SemiBold"
+                               Text="{Binding Records.Count}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Margin="0,0,0,12"
+                Padding="14"
+                Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Margin="0,0,10,0"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Text="TENAM" />
+
+                <TextBox x:Name="TenamTextBox"
+                         Grid.Column="1"
+                         Style="{StaticResource AppTextBoxStyle}"
+                         Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
+                         GotKeyboardFocus="TenamTextBox_GotKeyboardFocus"
+                         PreviewKeyDown="TenamTextBox_PreviewKeyDown"
+                         PreviewTextInput="TenamTextBox_PreviewTextInput"
+                         DataObject.Pasting="TenamTextBox_Pasting" />
+
+                <Button Grid.Column="2"
+                        Command="{Binding OpenEndLabelPreviewCommand}"
+                        Style="{StaticResource WorkActionButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,7,0" Symbol="BarcodeScanner24" />
+                        <TextBlock Text="Торцевая этикетка" />
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="3"
+                        Command="{Binding OpenStuffingSheetPreviewCommand}"
+                        Style="{StaticResource WorkActionButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,7,0" Symbol="Print24" />
+                        <TextBlock Text="Лист сброса" />
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="4"
+                        Command="{Binding RequestManualWeightCommand}"
+                        Style="{StaticResource WorkActionButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Margin="0,0,7,0" Text="⚖" />
+                        <TextBlock Text="Ввести вес" />
+                    </StackPanel>
+                </Button>
+
+                <CheckBox Grid.Row="1"
+                          Grid.Column="1"
+                          Grid.ColumnSpan="5"
+                          Margin="0,10,0,0"
+                          HorizontalAlignment="Left"
+                          Content="Печатать торцевую этикетку сразу после ручного сканирования"
+                          IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2"
+                Margin="0,0,0,12"
+                Padding="12"
+                Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                    <TextBlock Margin="0,0,10,0"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="Статус" />
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Margin="16,0,0,0"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Text="{Binding LastProcessedTenam}" />
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="3"
+                Padding="0"
+                Style="{StaticResource CardStyle}">
+            <Grid>
+                <DataGrid x:Name="RecordsGrid"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserSortColumns="True"
+                          ColumnHeaderHeight="40"
+                          EnableColumnVirtualization="True"
+                          EnableRowVirtualization="True"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalScrollBarVisibility="Auto"
+                          IsReadOnly="True"
+                          ItemsSource="{Binding Records}"
+                          LoadingRow="RecordsGrid_LoadingRow"
+                          RowHeight="34"
+                          Sorting="RecordsGrid_Sorting"
+                          VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Style>
+                        <Style BasedOn="{StaticResource AppDataGridStyle}"
+                               TargetType="DataGrid">
+                            <Setter Property="RowHeaderWidth" Value="44" />
+                            <Setter Property="HeadersVisibility" Value="All" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                    <Setter Property="RowHeaderWidth" Value="0" />
+                                    <Setter Property="HeadersVisibility" Value="Column" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Style>
+                    <DataGrid.Resources>
+                        <Style x:Key="CellTextStyle" TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                            <Setter Property="TextWrapping" Value="NoWrap" />
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                            <Setter Property="Margin" Value="10,0" />
+                            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="110" Binding="{Binding Tenam}" ElementStyle="{StaticResource CellTextStyle}" Header="TENAM" />
+                        <DataGridTextColumn Width="140" Binding="{Binding Lfaempfkdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код магазина" />
+                        <DataGridTextColumn Width="100" Binding="{Binding Tesortnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Короб в заказе" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Artnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Артикул" />
+                        <DataGridTextColumn Width="260" Binding="{Binding Artbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Наименование" />
+                        <DataGridTextColumn Width="120" Binding="{Binding Bstmg}" ElementStyle="{StaticResource CellTextStyle}" Header="Кол-во в коробе" />
+                        <DataGridTextColumn Width="300" Binding="{Binding Bstchgnam5}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа" />
+                        <DataGridTextColumn Width="190" Binding="{Binding Aufid}" ElementStyle="{StaticResource CellTextStyle}" Header="AUFID" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Lfakdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа (LFAKDNR)" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Lfaempfort1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город" />
+                        <DataGridTextColumn Width="220" Binding="{Binding Lfaempfstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица" />
+                        <DataGridTextColumn Width="260" Binding="{Binding Gpbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Грузополучатель" />
+                        <DataGridTextColumn Width="90" Binding="{Binding Gpplz}" ElementStyle="{StaticResource CellTextStyle}" Header="Индекс" />
+                        <DataGridTextColumn Width="80" Binding="{Binding Lndnam}" ElementStyle="{StaticResource CellTextStyle}" Header="Страна" />
+                        <DataGridTextColumn Width="140" Binding="{Binding Gport1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город (GP)" />
+                        <DataGridTextColumn Width="220" Binding="{Binding Gpstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица (GP)" />
+                        <DataGridTextColumn Width="280" Binding="{Binding Adres}" ElementStyle="{StaticResource CellTextStyle}" Header="Адрес строкой" />
+                        <DataGridTextColumn Width="140" Binding="{Binding SumBst}" ElementStyle="{StaticResource CellTextStyle}" Header="Изделий в коробе" />
+                        <DataGridTextColumn Width="120" Binding="{Binding Brutto}" ElementStyle="{StaticResource CellTextStyle}" Header="Вес брутто, кг" />
+                        <DataGridTextColumn Width="90" Binding="{Binding Market}" ElementStyle="{StaticResource CellTextStyle}" Header="Маркет" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsHitTestVisible="False">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <ui:SymbolIcon FontSize="32"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Symbol="BarcodeScanner24" />
+                    <TextBlock Margin="0,10,0,0"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="Ожидание сканирования TENAM" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.RowSpan="4"
+              Panel.ZIndex="90"
+              IsHitTestVisible="False">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Border Background="{DynamicResource AppBackgroundBrush}" Opacity="0.72" />
+            <Border Padding="20"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource CardStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Width="90"
+                                 Height="6"
+                                 VerticalAlignment="Center"
+                                 IsIndeterminate="True" />
+                    <TextBlock Margin="14,0,0,0"
+                               FontWeight="SemiBold"
+                               Text="{Binding StatusMessage}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -15,13 +15,23 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ShellViewModel(
         MainViewModel work,
+        WorkSectionViewModel workSection,
         JournalViewModel journal,
         SettingsViewModel settings)
     {
         Work = work ?? throw new ArgumentNullException(nameof(work));
+        WorkSection = workSection ?? throw new ArgumentNullException(nameof(workSection));
         Journal = journal ?? throw new ArgumentNullException(nameof(journal));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _currentSectionViewModel = Work;
+
+        if (!ReferenceEquals(Work, WorkSection.Work))
+        {
+            throw new ArgumentException(
+                "WorkSectionViewModel must reference the shell MainViewModel instance.",
+                nameof(workSection));
+        }
+
+        _currentSectionViewModel = WorkSection;
 
         NavigateToWorkCommand = new RelayCommand(() => NavigateTo(AppSection.Work));
         NavigateToJournalCommand = new RelayCommand(() => NavigateTo(AppSection.Journal));
@@ -29,6 +39,8 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     public MainViewModel Work { get; }
+
+    public WorkSectionViewModel WorkSection { get; }
 
     public JournalViewModel Journal { get; }
 
@@ -72,7 +84,7 @@ public sealed class ShellViewModel : ViewModelBase
     {
         CurrentSectionViewModel = section switch
         {
-            AppSection.Work => Work,
+            AppSection.Work => WorkSection,
             AppSection.Journal => Journal,
             AppSection.Settings => Settings,
             _ => throw new ArgumentOutOfRangeException(nameof(section), section, null)
