@@ -1,0 +1,24 @@
+<UserControl x:Class="LabelFlowStudio.Desktop.Views.JournalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <Grid Margin="{DynamicResource ShellPagePadding}">
+        <Border Style="{StaticResource SectionPlaceholderCardStyle}">
+            <StackPanel>
+                <ui:SymbolIcon Symbol="History24"
+                               FontSize="36"
+                               Foreground="{DynamicResource AccentBrush}"
+                               HorizontalAlignment="Left" />
+                <TextBlock Text="Журнал"
+                           Margin="0,16,0,6"
+                           FontSize="24"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Каркас раздела готов. События обработки, фильтры и экспорт будут перенесены сюда отдельным этапом после введения структурной модели ProcessingEvent."
+                           MaxWidth="720"
+                           HorizontalAlignment="Left"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

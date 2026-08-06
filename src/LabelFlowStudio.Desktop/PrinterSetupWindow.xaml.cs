@@ -37,10 +37,66 @@ public partial class PrinterSetupWindow : Window
 
     public PrintSettings ResultSettings => _settings;
 
-    public static async Task<bool> EnsureConfiguredAsync(Window owner, CancellationToken cancellationToken)
+    /// <summary>
+    /// Opens the setup window only when the persisted settings are incomplete.
+    /// </summary>
+    public static Task<bool> EnsureConfiguredAsync(Window owner, CancellationToken cancellationToken)
+    {
+        return OpenSettingsAsync(owner, forceOpen: false, cancellationToken);
+    }
+
+    /// <summary>
+    /// Always opens the setup window so the user can review or change printer settings.
+    /// </summary>
+    public static Task<bool> ShowSettingsAsync(Window owner, CancellationToken cancellationToken)
+    {
+        return OpenSettingsAsync(owner, forceOpen: true, cancellationToken);
+    }
+
+    internal static bool ShouldShowSettings(PrintSettings settings, bool forceOpen)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return forceOpen || !settings.IsComplete;
+    }
+
+    private static Task<bool> OpenSettingsAsync(
+        Window owner,
+        bool forceOpen,
+        CancellationToken cancellationToken)
     {
         var settings = PrintSettingsStore.LoadOrDefault();
 
+        if (!ShouldShowSettings(settings, forceOpen))
+        {
+            return Task.FromResult(true);
+        }
+
+        return ShowDialogAndSaveAsync(owner, CreateSettingsDraft(settings), cancellationToken);
+    }
+
+    internal static PrintSettings CreateSettingsDraft(PrintSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return new PrintSettings
+        {
+            PrintEndLabelEnabled = settings.PrintEndLabelEnabled,
+            PrintStuffingSheetEnabled = settings.PrintStuffingSheetEnabled,
+            EndLabelPrinterName = settings.EndLabelPrinterName,
+            StuffingSheetPrinterName = settings.StuffingSheetPrinterName,
+            EndLabelCopies = settings.EndLabelCopies,
+            StuffingSheetCopies = settings.StuffingSheetCopies,
+            UseScales = settings.UseScales,
+            ManualScanAutoPrintEndLabelEnabled = settings.ManualScanAutoPrintEndLabelEnabled,
+            WorkMode = settings.WorkMode
+        };
+    }
+
+    private static async Task<bool> ShowDialogAndSaveAsync(
+        Window owner,
+        PrintSettings settings,
+        CancellationToken cancellationToken)
+    {
         var window = new PrinterSetupWindow(settings)
         {
             Owner = owner

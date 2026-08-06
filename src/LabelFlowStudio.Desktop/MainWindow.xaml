@@ -1,1353 +1,235 @@
-﻿<Window x:Class="LabelFlowStudio.Desktop.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:viewmodels="clr-namespace:LabelFlowStudio.Desktop.ViewModels"
-        xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}"
-        mc:Ignorable="d"
-        Title="LabelFlowStudio"
-        Height="700"
-        Width="1200"
-        MinHeight="600"
-        MinWidth="900"
-        Background="{DynamicResource AppBackgroundBrush}"
-        FontFamily="{DynamicResource AppFontFamily}"
-        FontSize="14"
-        WindowStyle="SingleBorderWindow"
-        ResizeMode="CanResize"
-        SnapsToDevicePixels="True"
-        UseLayoutRounding="True"
-        Loaded="MainWindow_Loaded"
-        PreviewTextInput="Window_PreviewTextInput"
-        PreviewKeyDown="Window_PreviewKeyDown"
-        Activated="MainWindow_Activated">
-
-    <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="54"
-                            CornerRadius="0"
-                            ResizeBorderThickness="8"
-                            GlassFrameThickness="0"
-                            UseAeroCaptionButtons="False"/>
-    </shell:WindowChrome.WindowChrome>
-
-    <Window.Resources>
-
-        <!-- VS-like menu -->
-        <Style x:Key="VsMenuStyle" TargetType="Menu">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="Margin" Value="2,0,0,0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Menu">
-                        <Border Background="#66FFFFFF"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12"
-                                SnapsToDevicePixels="True">
-                            <ItemsPresenter Margin="{TemplateBinding Padding}"
-                                            KeyboardNavigation.DirectionalNavigation="Cycle"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="VsMenuItemStyle" TargetType="MenuItem">
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="MenuItem">
-                        <Grid SnapsToDevicePixels="True">
-                            <Border x:Name="TopLevelBorder"
-                                    Padding="{TemplateBinding Padding}"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="9">
-                                <ContentPresenter ContentSource="Header"
-                                                  RecognizesAccessKey="True"
-                                                  VerticalAlignment="Center"/>
-                            </Border>
-
-                            <Popup x:Name="PART_Popup"
-                                   Placement="Bottom"
-                                   PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-                                   IsOpen="{TemplateBinding IsSubmenuOpen}"
-                                   AllowsTransparency="True"
-                                   Focusable="False"
-                                   PopupAnimation="Fade">
-                                <Border Margin="0,6,0,0"
-                                        Padding="6"
-                                        Background="{DynamicResource SurfaceBrush}"
-                                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="12"
-                                        Effect="{DynamicResource SoftDropShadowEffect}">
-                                    <StackPanel IsItemsHost="True"
-                                                KeyboardNavigation.DirectionalNavigation="Cycle"/>
-                                </Border>
-                            </Popup>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="TopLevelBorder"
-                                        Property="Background"
-                                        Value="#1A3B82F6"/>
-                                <Setter TargetName="TopLevelBorder"
-                                        Property="BorderBrush"
-                                        Value="#663B82F6"/>
-                            </Trigger>
-                            <Trigger Property="IsSubmenuOpen" Value="True">
-                                <Setter TargetName="TopLevelBorder"
-                                        Property="Background"
-                                        Value="#223B82F6"/>
-                                <Setter TargetName="TopLevelBorder"
-                                        Property="BorderBrush"
-                                        Value="#883B82F6"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground"
-                                        Value="{DynamicResource TextDisabledBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="VsMenuDropItemStyle" TargetType="MenuItem">
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="MenuItem">
-                        <Border x:Name="DropBorder"
-                                Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
-                                SnapsToDevicePixels="True">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <ContentPresenter Grid.Column="0"
-                                                  ContentSource="Header"
-                                                  RecognizesAccessKey="True"
-                                                  VerticalAlignment="Center"/>
-
-                                <TextBlock x:Name="CheckGlyph"
-                                           Grid.Column="1"
-                                           Margin="16,0,2,0"
-                                           FontWeight="Bold"
-                                           Foreground="{TemplateBinding Foreground}"
-                                           Text="✓"
-                                           Visibility="Collapsed"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="DropBorder"
-                                        Property="Background"
-                                        Value="#1A3B82F6"/>
-                                <Setter TargetName="DropBorder"
-                                        Property="BorderBrush"
-                                        Value="#663B82F6"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="DropBorder"
-                                        Property="Background"
-                                        Value="#143B82F6"/>
-                                <Setter TargetName="DropBorder"
-                                        Property="BorderBrush"
-                                        Value="#883B82F6"/>
-                                <Setter TargetName="CheckGlyph"
-                                        Property="Visibility"
-                                        Value="Visible"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground"
-                                        Value="{DynamicResource TextDisabledBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Window buttons -->
-        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="44"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd"
-                                        Property="Background"
-                                        Value="{DynamicResource SurfaceHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd"
-                                        Property="Background"
-                                        Value="{DynamicResource SurfaceAltBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="EndLabelButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
-            <Setter Property="Content" Value="Торцевая этикетка"/>
-            <Setter Property="ToolTip" Value="Открыть предпросмотр торцевой этикетки"/>
-        </Style>
-
-        <Style x:Key="StuffingSheetButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
-            <Setter Property="Content" Value="Лист сброса"/>
-            <Setter Property="ToolTip" Value="Открыть предпросмотр листа сброса"/>
-        </Style>
-
-        <Style x:Key="ManualWeightButtonStyle"
-       TargetType="Button"
-       BasedOn="{StaticResource ToolbarSecondaryButtonStyle}">
-            <Setter Property="Content" Value="Ввести вес"/>
-            <Setter Property="ToolTip" Value="Повторно открыть окно ручного ввода веса"/>
-            <Setter Property="Visibility" Value="Collapsed"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding CanRequestManualWeight}" Value="True">
-                    <Setter Property="Visibility" Value="Visible"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="NotificationCloseButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="CloseButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="10">
-                            <Viewbox Width="12"
-                                     Height="12"
-                                     Stretch="Uniform">
-                                <Path Stroke="{TemplateBinding Foreground}"
-                                      StrokeThickness="1.8"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      Data="M1,1 L11,11 M11,1 L1,11"/>
-                            </Viewbox>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="CloseButtonBorder"
-                                        Property="Background"
-                                        Value="#1AB00020"/>
-                                <Setter Property="Foreground"
-                                        Value="#FFB00020"/>
-                                <Setter TargetName="CloseButtonBorder"
-                                        Property="BorderBrush"
-                                        Value="#66B00020"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="CloseButtonBorder"
-                                        Property="Background"
-                                        Value="#26B00020"/>
-                                <Setter Property="Foreground"
-                                        Value="#FFB00020"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Notification center -->
-        <Style x:Key="NotificationTabControlStyle" TargetType="TabControl">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabControl">
-                        <Grid SnapsToDevicePixels="True"
-                              KeyboardNavigation.TabNavigation="Local">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0"
-                                    Margin="0,0,0,12"
-                                    Padding="8"
-                                    Background="{DynamicResource SurfaceAltBrush}"
-                                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10">
-                                <primitives:UniformGrid IsItemsHost="True"
-                                                        Rows="1"
-                                                        Margin="0"/>
-                            </Border>
-
-                            <Border Grid.Row="1"
-                                    Padding="10"
-                                    Background="{DynamicResource SurfaceBrush}"
-                                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="10">
-                                <ContentPresenter ContentSource="SelectedContent"/>
-                            </Border>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NotificationTabItemStyle" TargetType="TabItem">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0"/>
-            <Setter Property="MinWidth" Value="92"/>
-            <Setter Property="MinHeight" Value="38"/>
-            <Setter Property="Padding" Value="18,8"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="TabBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              RecognizesAccessKey="True"
-                                              ContentSource="Header"/>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder"
-                                        Property="Background"
-                                        Value="{DynamicResource SurfaceBrush}"/>
-                                <Setter TargetName="TabBorder"
-                                        Property="BorderBrush"
-                                        Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground"
-                                        Value="{DynamicResource TextPrimaryBrush}"/>
-                                <Setter Property="Panel.ZIndex"
-                                        Value="10"/>
-                            </Trigger>
-
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                    <Condition Property="IsSelected" Value="False"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="TabBorder"
-                                        Property="Background"
-                                        Value="{DynamicResource SurfaceHoverBrush}"/>
-                            </MultiTrigger>
-
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.6"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="NotificationListItemStyle" TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="ItemBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="9"
-                                Padding="2"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemBorder"
-                                        Property="Background"
-                                        Value="{DynamicResource SurfaceHoverBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ItemBorder"
-                                        Property="Background"
-                                        Value="#22000000"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-
-        <Style x:Key="VsTopMenuItemStyle"
-       TargetType="MenuItem"
-       BasedOn="{StaticResource VsMenuItemStyle}">
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="14,0"/>
-        </Style>
-    </Window.Resources>
-
+<ui:FluentWindow x:Class="LabelFlowStudio.Desktop.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="LabelFlowStudio"
+                 Width="1280"
+                 Height="820"
+                 MinWidth="1040"
+                 MinHeight="680"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="None"
+                 WindowCornerPreference="Round"
+                 Background="{DynamicResource AppBackgroundBrush}"
+                 Loaded="MainWindow_Loaded"
+                 GotKeyboardFocus="Window_GotKeyboardFocus"
+                 PreviewTextInput="Window_PreviewTextInput"
+                 PreviewKeyDown="Window_PreviewKeyDown">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="54"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- TITLE BAR -->
-        <Border Grid.Row="0"
-                Background="{DynamicResource SurfaceAltBrush}"
-                BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                BorderThickness="0,0,0,1"
-                Padding="10,6"
-                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+        <ui:TitleBar Grid.Row="0"
+                     Title="LabelFlowStudio"
+                     CloseWindowByDoubleClickOnIcon="True">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="Cube24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
-            <Grid>
+        <Border Grid.Row="1"
+                Background="{DynamicResource ShellHeaderBrush}"
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="14,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Menu Grid.Column="0"
-      Style="{StaticResource VsMenuStyle}"
-      VerticalAlignment="Center"
-      shell:WindowChrome.IsHitTestVisibleInChrome="True"
-      Margin="2,0,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
+                                 GroupName="AppSections"
+                                 IsChecked="{Binding IsWorkSectionOpen, Mode=OneWay}"
+                                 Command="{Binding NavigateToWorkCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Pipeline24" Margin="0,0,7,0" />
+                            <TextBlock Text="Работа" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </RadioButton>
 
-                    <MenuItem Header="Печать"
-              Style="{StaticResource VsTopMenuItemStyle}"
-              Width="70">
-                        <MenuItem Header="Настройки печати"
-                  Style="{StaticResource VsMenuDropItemStyle}"
-                  Click="OnOpenPrintSettingsClick"/>
-                    </MenuItem>
+                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
+                                 GroupName="AppSections"
+                                 IsChecked="{Binding IsJournalSectionOpen, Mode=OneWay}"
+                                 Command="{Binding NavigateToJournalCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="History24" Margin="0,0,7,0" />
+                            <TextBlock Text="Журнал" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </RadioButton>
 
-                    <MenuItem Header="Режим работы"
-              Style="{StaticResource VsTopMenuItemStyle}"
-              Width="117">
-                        <MenuItem Header="Автоматический режим"
-                  Style="{StaticResource VsMenuDropItemStyle}"
-                  MinWidth="360"
-                  ToolTipService.ShowDuration="20000"
-                  ToolTip="Короб приезжает на сканер, обработка и печать выполняются автоматически по настройкам печати"
-                  IsCheckable="True"
-                  IsChecked="{Binding IsAutomaticMode, Mode=OneWay}"
-                  Checked="OnAutomaticModeMenuItemChecked"
-                  Unchecked="OnAutomaticModeMenuItemUnchecked"/>
-
-                        <MenuItem Header="Полуавтоматический режим (торцевая этикетка)"
-                  Style="{StaticResource VsMenuDropItemStyle}"
-                  MinWidth="360"
-                  ToolTipService.ShowDuration="20000"
-                  ToolTip="Оператор сканирует короб вручную. В этом режиме автоматически печатается только торцевая этикетка."
-                  IsCheckable="True"
-                  IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </MenuItem>
-
-                </Menu>
-
-                <Grid Grid.Column="1"
-                      Background="Transparent"
-                      MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown"
-                      shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <TextBlock Text="LabelFlowStudio"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               Opacity="0.85"/>
-                </Grid>
-
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnMinimizeClick" ToolTip="Свернуть">
-                        <TextBlock Text="—" FontSize="14" FontWeight="Bold"/>
-                    </Button>
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnMaximizeRestoreClick" ToolTip="Развернуть/восстановить">
-                        <TextBlock Text="▢" FontSize="13" FontWeight="Bold"/>
-                    </Button>
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnCloseClick" ToolTip="Закрыть">
-                        <TextBlock Text="✕" FontSize="13" FontWeight="Bold"/>
-                    </Button>
+                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
+                                 GroupName="AppSections"
+                                 IsChecked="{Binding IsSettingsSectionOpen, Mode=OneWay}"
+                                 Command="{Binding NavigateToSettingsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Settings24" Margin="0,0,7,0" />
+                            <TextBlock Text="Настройки" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </RadioButton>
                 </StackPanel>
 
-            </Grid>
-        </Border>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource ShellIconButtonStyle}"
+                            Margin="0,0,10,0"
+                            ToolTip="Настройки печати"
+                            Click="OnOpenPrintSettingsClick">
+                        <ui:SymbolIcon Symbol="Print24" />
+                    </Button>
 
-        <!-- CONTENT -->
-        <Grid Grid.Row="1" Margin="16">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- Верхняя панель -->
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}" Padding="14" Margin="0,0,0,12">
-                <Grid>
-                    <Grid VerticalAlignment="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="260"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="TENAM"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,10,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontWeight="SemiBold"/>
-
-                        <TextBox x:Name="TenamTextBox"
-                                 Grid.Column="1"
-                                 Style="{StaticResource AppTextBoxStyle}"
-                                 Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,12,0"
-                                 PreviewTextInput="TenamTextBox_PreviewTextInput"
-                                 PreviewKeyDown="TenamTextBox_PreviewKeyDown"
-                                 DataObject.Pasting="TenamTextBox_Pasting"
-                                 GotKeyboardFocus="TenamTextBox_GotKeyboardFocus">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding LoadRecordsCommand}" />
-                            </TextBox.InputBindings>
-                        </TextBox>
-
-                        <Button Grid.Column="2"
-                                Style="{StaticResource EndLabelButtonStyle}"
-                                Command="{Binding OpenEndLabelPreviewCommand}"
-                                Margin="0,0,10,0"/>
-
-                        <Button Grid.Column="3"
-                                Style="{StaticResource StuffingSheetButtonStyle}"
-                                Command="{Binding OpenStuffingSheetPreviewCommand}" />
-
-                        <Button Grid.Column="4"
-                                Style="{StaticResource ManualWeightButtonStyle}"
-                                Command="{Binding RequestManualWeightCommand}"
-                                Margin="10,0,0,0"/>
-                    </Grid>
-
-                    <!-- Автоматический режим -->
-                    <Grid x:Name="TopPanelAutomaticModeOverlay"
-                          Panel.ZIndex="20"
-                          Margin="-14"
-                          IsHitTestVisible="True">
-                        <Grid.Style>
-                            <Style TargetType="Grid">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Grid.Style>
-
-                        <Border x:Name="TopPanelAutomaticModeShade"
-                                Background="#86111A2E"
-                                BorderBrush="{DynamicResource AccentBrush}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Opacity="0.90">
-                            <Border.Style>
-                                <Style TargetType="{x:Type Border}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard x:Name="TopPanelAutomaticModeShadeAnimation">
-                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                         From="0.86"
-                                                                         To="0.98"
-                                                                         Duration="0:0:1.2"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <RemoveStoryboard BeginStoryboardName="TopPanelAutomaticModeShadeAnimation"/>
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-
-                        <Border Background="#FCFFFFFF"
-                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Padding="14,10"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Opacity="1">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Grid Width="22" Height="22" Margin="0,0,10,0">
-                                    <Ellipse Width="20"
-                                             Height="20"
-                                             Stroke="{DynamicResource SurfaceBorderBrush}"
-                                             StrokeThickness="3"
-                                             Opacity="0.85"/>
-
-                                    <Path x:Name="TopPanelAutomaticModeSpinnerArc"
-                                          Data="M 11,1 A 10,10 0 0 1 21,11"
-                                          Stroke="{DynamicResource AccentBrush}"
-                                          StrokeThickness="3"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          RenderTransformOrigin="0.5,0.5">
-                                        <Path.Style>
-                                            <Style TargetType="{x:Type Path}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                                        <DataTrigger.EnterActions>
-                                                            <BeginStoryboard x:Name="TopPanelAutomaticModeSpinnerAnimation">
-                                                                <Storyboard RepeatBehavior="Forever">
-                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                                     From="0"
-                                                                                     To="360"
-                                                                                     Duration="0:0:1.1"/>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </DataTrigger.EnterActions>
-                                                        <DataTrigger.ExitActions>
-                                                            <RemoveStoryboard BeginStoryboardName="TopPanelAutomaticModeSpinnerAnimation"/>
-                                                        </DataTrigger.ExitActions>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Path.Style>
-                                        <Path.RenderTransform>
-                                            <RotateTransform Angle="0"/>
-                                        </Path.RenderTransform>
-                                    </Path>
-                                </Grid>
-
-                                <TextBlock Text="Автоматический режим"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <!-- Статус + центрированный TENAM + счётчик -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="12" Margin="0,0,0,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Grid Grid.Column="0" VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Статус"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,10,0"
-                                   VerticalAlignment="Center"/>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding StatusMessage}"
-                                   TextWrapping="Wrap"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding LastProcessedTenam}"
-                               FontSize="26"
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Opacity="0.70"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="{x:Type TextBlock}">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding LastProcessedTenam}" Value="">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-
-                    <StackPanel Grid.Column="2"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Margin="12,0,0,0">
-                        <Button x:Name="NotificationCenterButton"
-                                Width="40"
-                                Height="36"
-                                Margin="0,0,10,0"
-                                Background="Transparent"
-                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                BorderThickness="1"
-                                ToolTip="Новые уведомления"
-                                Click="NotificationCenterButton_Click">
-                            <Button.Template>
-                                <ControlTemplate TargetType="Button">
-                                    <Border x:Name="NotificationButtonBorder"
-                                            Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            CornerRadius="10">
-                                        <Grid>
-                                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,12,0,0">
-                                                    <Ellipse Width="5" Height="5" Fill="#FFB00020" Margin="0,0,2,0">
-                                                        <Ellipse.Style>
-                                                            <Style TargetType="Ellipse">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding HasUnreadErrorNotifications}" Value="True">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Ellipse.Style>
-                                                    </Ellipse>
-                                                    <Ellipse Width="5" Height="5" Fill="#FFAF7A00" Margin="0,0,2,0">
-                                                        <Ellipse.Style>
-                                                            <Style TargetType="Ellipse">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding HasUnreadWarningNotifications}" Value="True">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Ellipse.Style>
-                                                    </Ellipse>
-                                                    <Ellipse Width="5" Height="5" Fill="#FF2E7D32">
-                                                        <Ellipse.Style>
-                                                            <Style TargetType="Ellipse">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding HasUnreadSuccessNotifications}" Value="True">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Ellipse.Style>
-                                                    </Ellipse>
-                                                </StackPanel>
-                                            </Grid>
-                                            <Border Width="18"
-                                                    Height="18"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Top"
-                                                    Margin="0,-6,-6,0"
-                                                    CornerRadius="9"
-                                                    BorderBrush="{DynamicResource SurfaceAltBrush}"
-                                                    BorderThickness="1">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                        <Setter Property="Background" Value="{Binding NotificationBadgeColor}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding UnreadNotificationsCount}" Value="0">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding UnreadNotificationsCount}"
-                                                           FontSize="10"
-                                                           FontWeight="Bold"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="{Binding NotificationBadgeTextColor}"/>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="NotificationButtonBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="NotificationButtonBorder" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Button.Template>
-                        </Button>
-
-                        <Popup PlacementTarget="{Binding ElementName=NotificationCenterButton}"
-       Placement="Bottom"
-       HorizontalOffset="-620"
-       VerticalOffset="10"
-       StaysOpen="False"
-       AllowsTransparency="True"
-       PopupAnimation="Fade"
-       Closed="NotificationCenterPopup_Closed"
-       DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-       IsOpen="{Binding IsNotificationCenterOpen, Mode=TwoWay}">
-                            <Border Width="680"
-            Height="560"
-            MaxHeight="640"
-            Background="{DynamicResource AppBackgroundBrush}"
-            BorderBrush="{DynamicResource SurfaceBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="14"
-            Padding="16">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <DockPanel Grid.Row="0" Margin="0,0,0,12" LastChildFill="False">
-                                        <TextBlock DockPanel.Dock="Left"
-                                                   Text="Уведомления"
-                                                   FontSize="18"
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center"/>
-                                        <Button DockPanel.Dock="Right"
-                                                Margin="12,0,0,0"
-                                                Style="{StaticResource NotificationCloseButtonStyle}"
-                                                Click="NotificationCenterCloseButton_Click"/>
-                                    </DockPanel>
-
-                                    <TabControl Grid.Row="1"
-                                                Style="{StaticResource NotificationTabControlStyle}"
-                                                SelectedIndex="{Binding NotificationTabIndex}">
-                                        <TabControl.Resources>
-                                            <DataTemplate x:Key="NotificationItemTemplate">
-                                                <Border BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="8"
-                                                        Padding="10"
-                                                        Background="{DynamicResource SurfaceAltBrush}">
-                                                    <StackPanel>
-                                                        <DockPanel LastChildFill="False">
-                                                            <TextBlock Text="{Binding Timestamp, StringFormat=HH:mm:ss}"
-                                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                       VerticalAlignment="Center"/>
-                                                            <Border DockPanel.Dock="Right" Margin="8,0,0,0" Padding="8,2" CornerRadius="9">
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
-                                                                        <Setter Property="Background" Value="#1630884E"/>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
-                                                                                <Setter Property="Background" Value="#1AAF7A00"/>
-                                                                            </DataTrigger>
-                                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                                <Setter Property="Background" Value="#1AB00020"/>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Border.Style>
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding CategoryIcon}" FontSize="11" Margin="0,0,4,0"/>
-                                                                    <TextBlock Text="{Binding CategoryText}" FontSize="11" FontWeight="SemiBold">
-                                                                        <TextBlock.Style>
-                                                                            <Style TargetType="TextBlock">
-                                                                                <Setter Property="Foreground" Value="#FF30884E"/>
-                                                                                <Style.Triggers>
-                                                                                    <DataTrigger Binding="{Binding IsWarning}" Value="True">
-                                                                                        <Setter Property="Foreground" Value="#FFAF7A00"/>
-                                                                                    </DataTrigger>
-                                                                                    <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                                        <Setter Property="Foreground" Value="#FFB00020"/>
-                                                                                    </DataTrigger>
-                                                                                </Style.Triggers>
-                                                                            </Style>
-                                                                        </TextBlock.Style>
-                                                                    </TextBlock>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DockPanel>
-                                                        <TextBlock Text="{Binding Message}" Margin="0,6,0,0" TextWrapping="Wrap">
-                                                            <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsWarning}" Value="True">
-                                                                            <Setter Property="Foreground" Value="#FFAF7A00"/>
-                                                                        </DataTrigger>
-                                                                        <DataTrigger Binding="{Binding IsError}" Value="True">
-                                                                            <Setter Property="Foreground" Value="#FFB00020"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </TextBlock.Style>
-                                                        </TextBlock>
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </TabControl.Resources>
-                                        <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="Все"/>
-                                                </StackPanel>
-                                            </TabItem.Header>
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="3*"/>
-                                                    <RowDefinition Height="2*"/>
-                                                </Grid.RowDefinitions>
-                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="NotificationsListBox_SelectionChanged"/>
-                                                <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
-                                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}" Margin="0,0,0,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryIcon}" FontSize="12" Margin="0,0,6,0"/>
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryText}" FontWeight="SemiBold"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Message}" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </Grid>
-                                        </TabItem>
-                                        <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="⛔" Margin="0,0,2,0"/>
-                                                    <TextBlock Text="Ошибки"/>
-                                                </StackPanel>
-                                            </TabItem.Header>
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="3*"/>
-                                                    <RowDefinition Height="2*"/>
-                                                </Grid.RowDefinitions>
-                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                                <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
-                                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}" Margin="0,0,0,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryIcon}" FontSize="12" Margin="0,0,6,0"/>
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryText}" FontWeight="SemiBold"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Message}" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </Grid>
-                                        </TabItem>
-                                        <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="⚠" Margin="0,0,2,0"/>
-                                                    <TextBlock Text="Warnings"/>
-                                                </StackPanel>
-                                            </TabItem.Header>
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="3*"/>
-                                                    <RowDefinition Height="2*"/>
-                                                </Grid.RowDefinitions>
-                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                                <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
-                                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}" Margin="0,0,0,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryIcon}" FontSize="12" Margin="0,0,6,0"/>
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryText}" FontWeight="SemiBold"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Message}" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </Grid>
-                                        </TabItem>
-                                        <TabItem Style="{StaticResource NotificationTabItemStyle}">
-                                            <TabItem.Header>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="✔" Margin="0,0,2,0"/>
-                                                    <TextBlock Text="Успех"/>
-                                                </StackPanel>
-                                            </TabItem.Header>
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="3*"/>
-                                                    <RowDefinition Height="2*"/>
-                                                </Grid.RowDefinitions>
-                                                <ListBox Grid.Row="0" Margin="0,0,0,10" HorizontalContentAlignment="Stretch" ItemsSource="{Binding FilteredNotificationsView}" SelectedItem="{Binding SelectedNotification, Mode=TwoWay}" ItemContainerStyle="{StaticResource NotificationListItemStyle}" ItemTemplate="{StaticResource NotificationItemTemplate}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                                <Border Grid.Row="1" Padding="10" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBrush}">
-                                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Timestamp, StringFormat=Дата: dd.MM.yyyy HH:mm:ss}" Margin="0,0,0,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryIcon}" FontSize="12" Margin="0,0,6,0"/>
-                                                                <TextBlock Text="{Binding SelectedNotification.CategoryText}" FontWeight="SemiBold"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding SelectedNotification.Message}" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                    </ScrollViewer>
-                                                </Border>
-                                            </Grid>
-                                        </TabItem>
-                                    </TabControl>
-
-                                    <TextBlock Grid.Row="2"
-                                               Text="Выберите уведомление в списке выше, чтобы посмотреть подробности."
-                                               Margin="0,10,0,0"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                </Grid>
-                            </Border>
-                        </Popup>
-
-                        <Border Background="{DynamicResource SurfaceAltBrush}"
-                                BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="10,6"
-                                VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Записей:"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding Records.Count}"
-                                           Margin="8,0,0,0"
-                                           FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Таблица -->
-            <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
-                <Grid>
-                    <DataGrid x:Name="RecordsGrid"
-                              ItemsSource="{Binding Records}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              CanUserAddRows="False"
-                              CanUserSortColumns="True"
-                              LoadingRow="RecordsGrid_LoadingRow"
-                              Sorting="RecordsGrid_Sorting"
-                              ColumnHeaderHeight="40"
-                              RowHeight="34"
-                              GridLinesVisibility="Horizontal"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              EnableRowVirtualization="True"
-                              EnableColumnVirtualization="True">
-
-                        <DataGrid.Style>
-                            <Style TargetType="DataGrid">
-                                <Setter Property="RowHeaderWidth" Value="44"/>
-                                <Setter Property="HeadersVisibility" Value="All"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Records.Count}" Value="0">
-                                        <Setter Property="RowHeaderWidth" Value="0"/>
-                                        <Setter Property="HeadersVisibility" Value="Column"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.Style>
-
-                        <DataGrid.Resources>
-                            <Style x:Key="CellTextStyle" TargetType="TextBlock">
-                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                <Setter Property="TextWrapping" Value="NoWrap"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                <Setter Property="Margin" Value="10,0,10,0"/>
-                                <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-                            </Style>
-
-                            <Style TargetType="DataGridCell">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="0"/>
-                            </Style>
-
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                <Setter Property="Padding" Value="10,0,10,0"/>
-                            </Style>
-                        </DataGrid.Resources>
-
-                        <DataGrid.RowHeaderStyle>
-                            <Style TargetType="{x:Type DataGridRowHeader}">
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="{x:Type DataGridRowHeader}">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}">
-                                                <ContentPresenter Content="{TemplateBinding Content}"
-                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                  HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"
-                                                                  RecognizesAccessKey="True"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding DataContext.Records.Count, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="0">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowHeaderStyle>
-
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="TENAM" Binding="{Binding Tenam}" Width="110"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Код магазина" Binding="{Binding Lfaempfkdnr}" Width="140"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Короб в заказе" Binding="{Binding Tesortnr}" Width="80"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Артикул" Binding="{Binding Artnr}" Width="160"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Наименование" Binding="{Binding Artbez}" Width="260"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Кол-во в коробе" Binding="{Binding Bstmg}" Width="110"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Код заказа" Binding="{Binding Bstchgnam5}" Width="320"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="AUFID" Binding="{Binding Aufid}" Width="190"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Код заказа (LFAKDNR)" Binding="{Binding Lfakdnr}" Width="150"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Город" Binding="{Binding Lfaempfort1}" Width="160"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Улица" Binding="{Binding Lfaempfstrasse}" Width="220"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Грузополучатель" Binding="{Binding Gpbez}" Width="260"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Индекс" Binding="{Binding Gpplz}" Width="90"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Страна" Binding="{Binding Lndnam}" Width="70"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Город (GP)" Binding="{Binding Gport1}" Width="140"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Улица (GP)" Binding="{Binding Gpstrasse}" Width="220"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Адрес строкой" Binding="{Binding Adres}" Width="280"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-
-                            <DataGridTextColumn Header="Изделий в коробе" Binding="{Binding SumBst}" Width="140"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Вес брутто, кг" Binding="{Binding Brutto}" Width="120"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                            <DataGridTextColumn Header="Маркет" Binding="{Binding Market}" Width="90"
-                                                ElementStyle="{StaticResource CellTextStyle}" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Empty state -->
-                    <Grid Panel.ZIndex="5" IsHitTestVisible="False">
-                        <Grid.Style>
-                            <Style TargetType="{x:Type Grid}">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </Style>
-                        </Grid.Style>
-
-                        <TextBlock Text="Ожидание сканирования TENAM"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Opacity="0.85"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <!-- Уголок "№" -->
-                    <Border Panel.ZIndex="10"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Top"
-                            Width="{Binding ElementName=RecordsGrid, Path=RowHeaderWidth}"
-                            Height="{Binding ElementName=RecordsGrid, Path=ColumnHeaderHeight}"
-                            Background="{DynamicResource SurfaceAltBrush}"
-                            BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                            BorderThickness="0,0,1,1"
-                            IsHitTestVisible="False">
-
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Records.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-
-                        <TextBlock Text="№"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"/>
-                    </Border>
-                </Grid>
-            </Border>
-
-            <!-- Busy overlay (loading) -->
-            <Grid Grid.RowSpan="3" Panel.ZIndex="90" IsHitTestVisible="False">
-                <Grid.Style>
-                    <Style TargetType="{x:Type Grid}">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
-
-                <Border Background="{DynamicResource AppBackgroundBrush}" Opacity="0.65"/>
-
-                <Border Style="{StaticResource CardStyle}"
-                        Padding="18"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Grid Width="28" Height="28" Margin="0,0,12,0">
-                            <Ellipse Width="26"
-                                     Height="26"
-                                     Stroke="{DynamicResource SurfaceBorderBrush}"
-                                     StrokeThickness="4"
-                                     Opacity="0.55"/>
-
-                            <Path x:Name="SpinnerArc"
-                                  Data="M 13,1 A 12,12 0 0 1 25,13"
-                                  Stroke="{DynamicResource AccentBrush}"
-                                  StrokeThickness="4"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  RenderTransformOrigin="0.5,0.5">
-                                <Path.Style>
-                                    <Style TargetType="{x:Type Path}">
+                    <Button x:Name="NotificationCenterButton"
+                            Style="{StaticResource ShellIconButtonStyle}"
+                            ToolTip="Уведомления"
+                            Click="NotificationCenterButton_Click">
+                        <Grid>
+                            <ui:SymbolIcon Symbol="Alert24" />
+                            <Border MinWidth="18"
+                                    Height="18"
+                                    Padding="4,0"
+                                    Margin="0,-9,-12,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    CornerRadius="9"
+                                    Background="{Binding Work.NotificationBadgeColor}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Visible" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                                <DataTrigger.EnterActions>
-                                                    <BeginStoryboard x:Name="BusySpinnerAnimation">
-                                                        <Storyboard RepeatBehavior="Forever">
-                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                             From="0"
-                                                                             To="360"
-                                                                             Duration="0:0:0.9"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </DataTrigger.EnterActions>
-                                                <DataTrigger.ExitActions>
-                                                    <RemoveStoryboard BeginStoryboardName="BusySpinnerAnimation"/>
-                                                </DataTrigger.ExitActions>
+                                            <DataTrigger Binding="{Binding Work.UnreadNotificationsCount}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </Path.Style>
-                                <Path.RenderTransform>
-                                    <RotateTransform Angle="0"/>
-                                </Path.RenderTransform>
-                            </Path>
+                                </Border.Style>
+                                <TextBlock Text="{Binding Work.UnreadNotificationsCount}"
+                                           Foreground="{Binding Work.NotificationBadgeTextColor}"
+                                           FontSize="10"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
                         </Grid>
-
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                    </Button>
+                </StackPanel>
             </Grid>
+        </Border>
 
-        </Grid>
+        <ContentControl Grid.Row="2"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Content="{Binding CurrentSectionViewModel}" />
+
+        <Popup x:Name="NotificationCenterPopup"
+               PlacementTarget="{Binding ElementName=NotificationCenterButton}"
+               Placement="Bottom"
+               HorizontalOffset="-350"
+               VerticalOffset="8"
+               AllowsTransparency="True"
+               StaysOpen="False"
+               IsOpen="{Binding Work.IsNotificationCenterOpen, Mode=TwoWay}"
+               Closed="NotificationCenterPopup_Closed">
+            <Border Width="390"
+                    MaxHeight="560"
+                    Padding="14"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="18" Opacity="0.18" ShadowDepth="4" />
+                </Border.Effect>
+                <Grid DataContext="{Binding Work}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <TextBlock Text="Уведомления" FontSize="18" FontWeight="SemiBold" />
+                        <Button HorizontalAlignment="Right"
+                                Width="30"
+                                Height="30"
+                                Content="×"
+                                Style="{StaticResource ShellIconButtonStyle}"
+                                Click="NotificationCenterCloseButton_Click" />
+                    </Grid>
+
+                    <ComboBox Grid.Row="1"
+                              Margin="0,12,0,10"
+                              SelectedIndex="{Binding NotificationTabIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="Все уведомления" />
+                        <ComboBoxItem Content="Ошибки" />
+                        <ComboBoxItem Content="Предупреждения" />
+                        <ComboBoxItem Content="Успешные операции" />
+                    </ComboBox>
+
+                    <ListBox Grid.Row="2"
+                             MinHeight="180"
+                             MaxHeight="330"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ItemsSource="{Binding FilteredNotificationsView}"
+                             SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource NotificationListItemStyle}"
+                             SelectionChanged="NotificationsListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding CategoryIcon}" FontSize="16" Margin="0,1,9,0" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding CategoryText}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Message}"
+                                                   Margin="0,3,0,0"
+                                                   MaxHeight="42"
+                                                   TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                                        <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   FontSize="11" />
+                                        <Ellipse Width="7" Height="7" Margin="0,8,0,0"
+                                                 HorizontalAlignment="Right"
+                                                 Fill="{DynamicResource AccentBrush}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUnread}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Row="3"
+                            Margin="0,10,0,0"
+                            Padding="10"
+                            Background="{DynamicResource SurfaceAltBrush}"
+                            CornerRadius="8">
+                        <TextBlock Text="{Binding SelectedNotification.Message, TargetNullValue=Выберите уведомление для просмотра подробностей.}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </Border>
+                </Grid>
+            </Border>
+        </Popup>
     </Grid>
-</Window>
+</ui:FluentWindow>

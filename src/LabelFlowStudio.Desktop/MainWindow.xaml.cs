@@ -1,411 +1,261 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Desktop.Input;
+using LabelFlowStudio.Desktop.Navigation;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
+using LabelFlowStudio.Desktop.Views.Work;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
 
 namespace LabelFlowStudio.Desktop;
 
 /// <summary>
-/// Главное окно приложения
+/// Постоянное окно приложения. Оно отвечает за навигационную оболочку и перевод
+/// событий keyboard-wedge устройства в WPF-независимый адаптер ввода.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : FluentWindow
 {
-    private const int ScanBufferTimeoutMilliseconds = 900;
+    private readonly ShellViewModel _viewModel;
+    private readonly KeyboardScannerInputAdapter _scannerInput = new();
+    private readonly DispatcherTimer _scannerBufferTimer;
+    private string _scannerTextMirroredToTenam = string.Empty;
 
-    private readonly DispatcherTimer _scanBufferTimer;
-    private string _scanBuffer = string.Empty;
-
-    private const int MaxScannerInterKeyDelayMilliseconds = 60;
-    private DateTime _lastScanKeyAtUtc = DateTime.MinValue;
-
-    /// <summary>
-    /// Создает главное окно и связывает его с моделью представления
-    /// </summary>
-    public MainWindow(MainViewModel mainViewModel)
+    public MainWindow(ShellViewModel viewModel)
     {
+        _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+
         InitializeComponent();
-        DataContext = mainViewModel;
+        DataContext = viewModel;
 
-        mainViewModel.PropertyChanged += (_, e) =>
+        _scannerBufferTimer = new DispatcherTimer
         {
-            if (e.PropertyName == nameof(MainViewModel.IsBusy) && !mainViewModel.IsBusy)
-            {
-                _ = FocusTenamSoonAsync();
-            }
+            Interval = _scannerInput.BufferTimeout
         };
-
-        AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, __) => _ = FocusTenamSoonAsync()), true);
-
-        _scanBufferTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(ScanBufferTimeoutMilliseconds)
-        };
-
-        _scanBufferTimer.Tick += ScanBufferTimer_Tick;
+        _scannerBufferTimer.Tick += ScannerBufferTimer_Tick;
+        _viewModel.PropertyChanged += OnShellPropertyChanged;
+        _viewModel.Work.PropertyChanged += OnWorkPropertyChanged;
+        Activated += MainWindow_Activated;
+        Closed += MainWindow_Closed;
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
-        await FocusTenamSoonAsync();
+        await FocusWorkInputAsync();
     }
 
     private void MainWindow_Activated(object? sender, EventArgs e)
     {
-        _ = FocusTenamSoonAsync();
+        _ = FocusWorkInputAsync();
+    }
+
+    private async Task FocusWorkInputAsync()
+    {
+        if (_viewModel.CurrentSection != AppSection.Work
+            || FindVisualChild<WorkSectionView>(this) is not { } workView)
+        {
+            return;
+        }
+
+        await workView.RequestPrimaryInputFocusAsync();
     }
 
     private async void OnOpenPrintSettingsClick(object sender, RoutedEventArgs e)
     {
-        await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
-    }
-
-    private void OnAutomaticModeMenuItemChecked(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.CurrentWorkMode = WorkMode.Automatic;
-        }
-    }
-
-    private void OnAutomaticModeMenuItemUnchecked(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.CurrentWorkMode = WorkMode.Manual;
-        }
-    }
-
-    // Переносит фокус в поле TENAM после завершения текущего UI-цикла
-    private async Task FocusTenamSoonAsync()
-    {
-        if (!IsActive)
-        {
-            return;
-        }
-
-        if (Keyboard.FocusedElement is TextBoxBase focused && !ReferenceEquals(focused, TenamTextBox))
-        {
-            return;
-        }
-
-        await Task.Yield();
-
-        if (!IsActive)
-        {
-            return;
-        }
-
-        TenamTextBox.Focus();
-        Keyboard.Focus(TenamTextBox);
-        TenamTextBox.SelectAll();
-    }
-
-    private void TenamTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-    {
-        if (sender is TextBox textBox)
-        {
-            textBox.SelectAll();
-        }
-    }
-
-    private void TenamTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        e.Handled = !IsDigitsOnly(e.Text);
-    }
-
-    private void TenamTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Space)
-        {
-            e.Handled = true;
-            return;
-        }
-
-        if ((e.Key == Key.Return || e.Key == Key.Enter) && DataContext is MainViewModel viewModel)
-        {
-            var tenamFromInput = TenamTextBox.Text;
-            if (!string.IsNullOrWhiteSpace(tenamFromInput))
-            {
-                viewModel.ReceiveTenamFromScanner(tenamFromInput);
-                e.Handled = true;
-            }
-        }
-    }
-
-    private void TenamTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
-    {
-        if (!e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText))
-        {
-            e.CancelCommand();
-            return;
-        }
-
-        var text = e.SourceDataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty;
-        if (!IsDigitsOnly(text))
-        {
-            e.CancelCommand();
-        }
-    }
-
-    private static bool IsDigitsOnly(string text)
-    {
-        return !string.IsNullOrEmpty(text) && text.All(char.IsDigit);
+        await PrinterSetupWindow.ShowSettingsAsync(this, CancellationToken.None);
+        await FocusWorkInputAsync();
     }
 
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        if (DataContext is not MainViewModel viewModel)
+        var shouldCapture = ShouldCaptureGlobalScannerInput();
+        var result = _scannerInput.ProcessTextInput(
+            e.Text,
+            GetScannerMode(),
+            DateTimeOffset.UtcNow,
+            shouldCapture);
+
+        ApplyScannerResult(result);
+        e.Handled = result.ShouldHandle;
+    }
+
+    private void Window_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (e.NewFocus is TextBoxBase && !string.IsNullOrEmpty(_scannerInput.Buffer))
         {
-            return;
+            ResetUnacceptedScannerSignal();
         }
-
-        if (viewModel.IsBusy)
-        {
-            return;
-        }
-
-        if (viewModel.IsAutomaticMode)
-        {
-            if (string.IsNullOrWhiteSpace(e.Text) || !IsDigitsOnly(e.Text))
-            {
-                e.Handled = true;
-                return;
-            }
-
-            var nowUtc = DateTime.UtcNow;
-
-            if (_lastScanKeyAtUtc != DateTime.MinValue
-                && (nowUtc - _lastScanKeyAtUtc) > TimeSpan.FromMilliseconds(MaxScannerInterKeyDelayMilliseconds))
-            {
-                ClearScanBuffer();
-                e.Handled = true;
-                return;
-            }
-
-            _lastScanKeyAtUtc = nowUtc;
-
-            AppendScanDigits(e.Text);
-            e.Handled = true;
-            return;
-        }
-
-        if (ShouldIgnoreGlobalScannerInput())
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(e.Text) || !IsDigitsOnly(e.Text))
-        {
-            return;
-        }
-
-        AppendScanDigits(e.Text);
-        e.Handled = true;
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (DataContext is not MainViewModel viewModel)
-        {
-            return;
-        }
+        var keyKind = e.Key is Key.Return or Key.Enter
+            ? KeyboardScannerKeyKind.Enter
+            : KeyboardScannerKeyKind.Other;
 
-        if (viewModel.IsBusy)
-        {
-            return;
-        }
+        var result = _scannerInput.ProcessKeyDown(
+            keyKind,
+            GetScannerMode(),
+            DateTimeOffset.UtcNow,
+            ShouldCaptureGlobalScannerInput());
 
-        // В авто-режиме блокируем любые клавиши, кроме Enter (завершить скан)
-        if (viewModel.IsAutomaticMode)
-        {
-            if (e.Key != Key.Return && e.Key != Key.Enter)
-            {
-                e.Handled = true;
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(_scanBuffer))
-            {
-                e.Handled = true;
-                return;
-            }
-
-            viewModel.ReceiveTenamFromScanner(_scanBuffer);
-
-            ClearScanBuffer();
-            _lastScanKeyAtUtc = DateTime.MinValue;
-
-            e.Handled = true;
-            return;
-        }
-
-        // Ручной режим — старая логика
-        if (ShouldIgnoreGlobalScannerInput())
-        {
-            return;
-        }
-
-        if (e.Key != Key.Return && e.Key != Key.Enter)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(_scanBuffer))
-        {
-            return;
-        }
-
-        viewModel.ReceiveTenamFromScanner(_scanBuffer);
-
-        ClearScanBuffer();
-        e.Handled = true;
+        ApplyScannerResult(result);
+        e.Handled = result.ShouldHandle;
     }
 
-    private static bool ShouldIgnoreGlobalScannerInput()
+    private KeyboardScannerInputMode GetScannerMode() => _viewModel.Work.CurrentWorkMode switch
     {
-        return Keyboard.FocusedElement is TextBoxBase;
+        WorkMode.Automatic => KeyboardScannerInputMode.Automatic,
+        _ => KeyboardScannerInputMode.Manual
+    };
+
+    private bool ShouldCaptureGlobalScannerInput()
+    {
+        if (_viewModel.CurrentSection != AppSection.Work
+            || _viewModel.Work.IsBusy
+            || _viewModel.Work.IsNotificationCenterOpen)
+        {
+            return false;
+        }
+
+        // Поля настроек и ручного ввода всегда получают обычную клавиатуру.
+        return Keyboard.FocusedElement is not TextBoxBase;
     }
 
-    private void AppendScanDigits(string digits)
+    private void ApplyScannerResult(KeyboardScannerInputResult result)
     {
-        _scanBufferTimer.Stop();
-        _scanBufferTimer.Start();
-
-        _scanBuffer += digits;
-
-        if (DataContext is MainViewModel viewModel)
+        if (result.Outcome == KeyboardScannerInputOutcome.BufferUpdated)
         {
-            viewModel.Tenam = _scanBuffer;
+            _scannerBufferTimer.Stop();
+            _scannerBufferTimer.Start();
+            _scannerTextMirroredToTenam = result.Buffer;
+            _viewModel.Work.Tenam = result.Buffer;
+        }
+        else if (result.Outcome == KeyboardScannerInputOutcome.BufferCleared)
+        {
+            _scannerBufferTimer.Stop();
+            ClearMirroredScannerText();
+        }
+        else if (result.Outcome == KeyboardScannerInputOutcome.ScanCompleted)
+        {
+            _scannerBufferTimer.Stop();
+            _scannerTextMirroredToTenam = string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.CompletedScan))
+        {
+            _viewModel.Work.ReceiveTenamFromScanner(result.CompletedScan);
         }
     }
 
-    private void ScanBufferTimer_Tick(object? sender, EventArgs e)
+    private void ScannerBufferTimer_Tick(object? sender, EventArgs e)
     {
-        _scanBufferTimer.Stop();
-        ClearScanBuffer();
-        _lastScanKeyAtUtc = DateTime.MinValue;
-    }
+        _scannerBufferTimer.Stop();
+        var result = _scannerInput.ExpireBuffer(DateTimeOffset.UtcNow);
+        ApplyScannerResult(result);
 
-    private void ClearScanBuffer()
-    {
-        _scanBuffer = string.Empty;
-    }
-
-    private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString();
-    }
-
-    // Обновляет номера строк после сортировки
-    private async void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
-    {
-        var grid = (DataGrid)sender;
-
-        await Task.Yield();
-
-        foreach (var item in grid.Items)
+        if (result.Outcome == KeyboardScannerInputOutcome.Ignored
+            && !string.IsNullOrEmpty(_scannerInput.Buffer))
         {
-            if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
-            {
-                row.Header = (row.GetIndex() + 1).ToString();
-            }
+            _scannerBufferTimer.Start();
         }
+    }
+
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.CurrentSection)
+            && _viewModel.CurrentSection != AppSection.Work)
+        {
+            ResetUnacceptedScannerSignal();
+        }
+    }
+
+    private void OnWorkPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.CurrentWorkMode))
+        {
+            ResetUnacceptedScannerSignal();
+        }
+    }
+
+    private void ResetUnacceptedScannerSignal()
+    {
+        _scannerBufferTimer.Stop();
+        _scannerInput.Reset();
+        ClearMirroredScannerText();
+    }
+
+    private void ClearMirroredScannerText()
+    {
+        var mirroredText = _scannerTextMirroredToTenam;
+        _scannerTextMirroredToTenam = string.Empty;
+
+        if (!string.IsNullOrEmpty(mirroredText)
+            && string.Equals(_viewModel.Work.Tenam, mirroredText, StringComparison.Ordinal))
+        {
+            _viewModel.Work.Tenam = string.Empty;
+        }
+    }
+
+    private void MainWindow_Closed(object? sender, EventArgs e)
+    {
+        _scannerBufferTimer.Stop();
+        _scannerBufferTimer.Tick -= ScannerBufferTimer_Tick;
+        _viewModel.PropertyChanged -= OnShellPropertyChanged;
+        _viewModel.Work.PropertyChanged -= OnWorkPropertyChanged;
+        Activated -= MainWindow_Activated;
+        Closed -= MainWindow_Closed;
     }
 
     private void NotificationCenterButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.ToggleNotificationCenter();
-        }
+        _viewModel.Work.ToggleNotificationCenter();
     }
 
     private void NotificationCenterCloseButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.IsNotificationCenterOpen = false;
-        }
+        _viewModel.Work.IsNotificationCenterOpen = false;
     }
 
     private void NotificationCenterPopup_Closed(object? sender, EventArgs e)
     {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.IsNotificationCenterOpen = false;
-        }
+        _viewModel.Work.IsNotificationCenterOpen = false;
     }
 
     private void NotificationsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (DataContext is not MainViewModel viewModel)
+        if (sender is ListBox { IsKeyboardFocusWithin: true }
+            && _viewModel.Work.IsNotificationCenterOpen
+            && e.AddedItems.Count > 0
+            && e.AddedItems[0] is UiNotification notification)
         {
-            return;
-        }
-
-        if (!viewModel.IsNotificationCenterOpen)
-        {
-            return;
-        }
-
-        if (e.AddedItems.Count > 0 && e.AddedItems[0] is UiNotification notification)
-        {
-            viewModel.MarkNotificationAsRead(notification);
+            _viewModel.Work.MarkNotificationAsRead(notification);
         }
     }
 
-    private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-
-    private void OnMaximizeRestoreClick(object sender, RoutedEventArgs e) => ToggleMaximizeRestore();
-
-    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
-
-    private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
     {
-        if (e.ChangedButton != MouseButton.Left)
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
-            return;
-        }
-
-        if (e.ClickCount == 2)
-        {
-            ToggleMaximizeRestore();
-            return;
-        }
-
-        try
-        {
-            if (WindowState == WindowState.Maximized)
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
             {
-                var mousePos = e.GetPosition(this);
-                var screenPos = PointToScreen(mousePos);
-
-                var restoreWidth = RestoreBounds.Width;
-                var restoreHeight = RestoreBounds.Height;
-
-                WindowState = WindowState.Normal;
-
-                Left = screenPos.X - (mousePos.X / ActualWidth) * restoreWidth;
-                Top = screenPos.Y - (mousePos.Y / ActualHeight) * restoreHeight;
+                return match;
             }
 
-            DragMove();
+            if (FindVisualChild<T>(child) is { } descendant)
+            {
+                return descendant;
+            }
         }
-        catch
-        {
-        }
-    }
 
-    private void ToggleMaximizeRestore()
-    {
-        WindowState = WindowState == WindowState.Maximized
-            ? WindowState.Normal
-            : WindowState.Maximized;
+        return null;
     }
 }
