@@ -23,6 +23,7 @@
 		<PackageReference Include="Serilog.Sinks.Debug" />
 
 		<PackageReference Include="Microsoft.Web.WebView2" />
+		<PackageReference Include="WPF-UI" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -42,6 +43,13 @@
 
 	<ItemGroup>
 	  <Content Include="Assets\app.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
 	</ItemGroup>
 
 </Project>

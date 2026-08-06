@@ -50,6 +50,9 @@
     <!-- WebView2 -->
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3719.77" />
 
+    <!-- Fluent WPF shell -->
+    <PackageVersion Include="WPF-UI" Version="4.3.0" />
+
     <!-- Barcode -->
     <PackageVersion Include="ZXing.Net" Version="0.16.11" />
 

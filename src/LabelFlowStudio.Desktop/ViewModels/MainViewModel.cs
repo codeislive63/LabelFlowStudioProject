@@ -99,6 +99,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         OpenEndLabelPreviewCommand = new AsyncCommand(OpenEndLabelPreviewAsync, CanOpenEndLabelPreview, HandleCommandException);
         OpenStuffingSheetPreviewCommand = new AsyncCommand(OpenStuffingSheetPreviewAsync, CanOpenStuffingSheetPreview, HandleCommandException);
         RequestManualWeightCommand = new AsyncCommand(RequestManualWeightAgainAsync, CanRequestManualWeightAgain, HandleCommandException);
+        SwitchToAutomaticModeCommand = new RelayCommand(() => CurrentWorkMode = WorkMode.Automatic);
+        SwitchToManualModeCommand = new RelayCommand(() => CurrentWorkMode = WorkMode.Manual);
 
         var settings = PrintSettingsStore.LoadOrDefault();
         _currentWorkMode = settings?.WorkMode ?? WorkMode.Manual;
@@ -274,6 +276,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     /// Команда открытия предпросмотра листа сброса
     /// </summary>
     public AsyncCommand OpenStuffingSheetPreviewCommand { get; }
+
+    /// <summary>
+    /// Запрашивает переключение оборудования в автоматический режим.
+    /// </summary>
+    public RelayCommand SwitchToAutomaticModeCommand { get; }
+
+    /// <summary>
+    /// Запрашивает переключение оборудования в ручной режим.
+    /// </summary>
+    public RelayCommand SwitchToManualModeCommand { get; }
 
     /// <summary>
     /// Текущее значение TENAM

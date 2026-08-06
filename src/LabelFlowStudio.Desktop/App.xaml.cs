@@ -1,7 +1,6 @@
 ﻿using LabelFlowStudio.Application;
 using LabelFlowStudio.Data;
 using LabelFlowStudio.Desktop.Logging;
-using LabelFlowStudio.Desktop.ViewModels;
 using LabelFlowStudio.Devices;
 using LabelFlowStudio.Printing;
 using Microsoft.Extensions.Configuration;
@@ -106,8 +105,7 @@ public partial class App : System.Windows.Application
                 services.AddLabelFlowDevices(context.Configuration);
                 services.AddLabelFlowApplication();
                 services.AddLabelFlowPrinting(context.Configuration);
-                services.AddSingleton<MainWindow>();
-                services.AddSingleton<MainViewModel>();
+                services.AddLabelFlowDesktop();
             })
             .UseSerilog()
             .Build();
