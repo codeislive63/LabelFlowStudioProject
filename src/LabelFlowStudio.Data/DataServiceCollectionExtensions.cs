@@ -28,6 +28,7 @@ public static class DataServiceCollectionExtensions
         });
 
         services.AddSingleton<ILabelRepository, LabelRepository>();
+        services.AddSingleton<IDataSourceHealthCheck, OracleDataSourceHealthCheck>();
 
         return services;
     }

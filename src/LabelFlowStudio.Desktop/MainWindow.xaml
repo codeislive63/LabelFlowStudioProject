@@ -263,7 +263,8 @@
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              ItemsSource="{Binding FilteredNotificationsView}"
                              SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
-                             SelectionChanged="NotificationsListBox_SelectionChanged">
+                             SelectionChanged="NotificationsListBox_SelectionChanged"
+                             PreviewMouseLeftButtonUp="NotificationsListBox_PreviewMouseLeftButtonUp">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem"
                                    BasedOn="{StaticResource NotificationListItemStyle}">
@@ -397,12 +398,9 @@
                     <Button Grid.Row="3"
                             Margin="0,12,0,0"
                             HorizontalAlignment="Stretch"
-                            Command="{Binding DataContext.NavigateToJournalCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                            Click="OpenFullJournal_Click"
+                            Click="MarkAllNotificationsAsRead_Click"
                             Style="{StaticResource AutoLineLinkButtonStyle}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock Text="Открыть полный журнал событий" />
-                        </StackPanel>
+                        <TextBlock Text="Отметить все прочитанными" />
                     </Button>
                 </Grid>
             </Border>

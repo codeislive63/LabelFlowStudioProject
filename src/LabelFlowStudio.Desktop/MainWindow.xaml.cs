@@ -531,4 +531,33 @@ public partial class MainWindow : FluentWindow
 
         return null;
     }
+
+    private void NotificationsListBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source)
+        {
+            return;
+        }
+
+        var current = source;
+
+        while (current is not null && current != NotificationsListBox)
+        {
+            if (current is FrameworkElement
+                {
+                    DataContext: UiNotification notification
+                })
+            {
+                _viewModel.Work.MarkNotificationAsRead(notification);
+                return;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+    }
+
+    private void MarkAllNotificationsAsRead_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Work.MarkAllNotificationsAsRead();
+    }
 }

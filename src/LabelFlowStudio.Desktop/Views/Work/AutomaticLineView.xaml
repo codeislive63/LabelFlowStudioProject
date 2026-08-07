@@ -208,14 +208,35 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <TextBlock Margin="0,6,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="14"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               MaxWidth="720"
-                               Text="{Binding LineSubtitle, FallbackValue=Ожидание следующего короба}"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
+                    <TextBlock HorizontalAlignment="Center"
+           FontSize="14"
+           Foreground="{DynamicResource TextSecondaryBrush}"
+           MaxWidth="720"
+           Text="{Binding LineSubtitle}"
+           TextAlignment="Center"
+           TextWrapping="Wrap">
+
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Margin"
+                    Value="0,6,0,0" />
+
+                                <Setter Property="Visibility"
+                    Value="Visible" />
+
+                                <Style.Triggers>
+                                    <Trigger Property="Text"
+                         Value="">
+                                        <Setter Property="Visibility"
+                            Value="Collapsed" />
+
+                                        <Setter Property="Margin"
+                            Value="0" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
             </Border>
 
