@@ -69,9 +69,7 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
         _loadingShowDelay = loadingShowDelay;
         _minimumLoadingVisible = minimumLoadingVisible;
         _presentationContext = SynchronizationContext.Current;
-        _tenamInput = Work.CurrentWorkMode == WorkMode.Manual
-            ? Work.Tenam
-            : string.Empty;
+        _tenamInput = string.Empty;
         PagedRecords = new ReadOnlyObservableCollection<LabelRecord>(_pagedRecords);
         PageNavigationItems = new ReadOnlyObservableCollection<PageNavigationItem>(_pageNavigationItems);
 
@@ -126,15 +124,7 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
                 .Where(char.IsDigit)
                 .ToArray());
 
-            if (!SetProperty(ref _tenamInput, digitsOnly))
-            {
-                return;
-            }
-
-            if (!string.Equals(Work.Tenam, digitsOnly, StringComparison.Ordinal))
-            {
-                Work.Tenam = digitsOnly;
-            }
+            SetProperty(ref _tenamInput, digitsOnly);
         }
     }
 
@@ -173,10 +163,10 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
     public bool IsEmptyStateVisible => !HasRecords && !IsLoadingOverlayVisible;
 
     public bool IsNotFoundState => !HasRecords
-        && Work.LastProcessingStatus == BoxProcessingStatus.NotFound;
+        && Work.LastManualProcessingStatus == BoxProcessingStatus.NotFound;
 
     public bool IsErrorState => !HasRecords
-        && Work.LastProcessingStatus == BoxProcessingStatus.Error;
+        && Work.LastManualProcessingStatus == BoxProcessingStatus.Error;
 
     public string EmptyStateTitle => IsNotFoundState
         ? "Короб не найден"
@@ -197,11 +187,11 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
         : "–";
 
     public bool IsAutoPrintDisabledStatus =>
-        Work.StatusMessage.Contains("Автопечать отключена", StringComparison.OrdinalIgnoreCase);
+        Work.ManualStatusMessage.Contains("Автопечать отключена", StringComparison.OrdinalIgnoreCase);
 
     public string DataStatusText => IsAutoPrintDisabledStatus
         ? "Автопечать отключена в настройках"
-        : Work.LastProcessingStatus switch
+        : Work.LastManualProcessingStatus switch
         {
             BoxProcessingStatus.Success => "Данные загружены",
             BoxProcessingStatus.NeedWeight => "Требуется вес",
@@ -211,11 +201,11 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
         };
 
     public bool IsDataStatusSuccess => !IsAutoPrintDisabledStatus
-        && Work.LastProcessingStatus == BoxProcessingStatus.Success;
+        && Work.LastManualProcessingStatus == BoxProcessingStatus.Success;
 
-    public bool IsDataStatusWarning => Work.LastProcessingStatus == BoxProcessingStatus.NeedWeight;
+    public bool IsDataStatusWarning => Work.LastManualProcessingStatus == BoxProcessingStatus.NeedWeight;
 
-    public bool IsDataStatusError => Work.LastProcessingStatus == BoxProcessingStatus.Error;
+    public bool IsDataStatusError => Work.LastManualProcessingStatus == BoxProcessingStatus.Error;
 
     public int PageSize
     {
@@ -402,31 +392,10 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
 
     private void OnWorkPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (string.IsNullOrEmpty(eventArgs.PropertyName)
-            || eventArgs.PropertyName == nameof(MainViewModel.Tenam))
-        {
-            RefreshPage(resetToFirstPage: true);
-
-            if (!string.IsNullOrWhiteSpace(Work.Tenam)
-                && Work.CurrentWorkMode == WorkMode.Manual)
-            {
-                SetProperty(ref _tenamInput, Work.Tenam, nameof(TenamInput));
-            }
-            else if (string.IsNullOrEmpty(Work.Tenam) && !Work.IsBusy)
-            {
-                SetProperty(ref _tenamInput, string.Empty, nameof(TenamInput));
-            }
-        }
-
         if ((string.IsNullOrEmpty(eventArgs.PropertyName)
-             || eventArgs.PropertyName == nameof(MainViewModel.CurrentWorkMode))
-            && Work.CurrentWorkMode != WorkMode.Manual)
-        {
-            SetProperty(ref _tenamInput, string.Empty, nameof(TenamInput));
-        }
-
-        if ((string.IsNullOrEmpty(eventArgs.PropertyName)
-             || eventArgs.PropertyName == nameof(MainViewModel.CurrentOracleQueryTenam))
+             || eventArgs.PropertyName == nameof(MainViewModel.CurrentOracleQueryTenam)
+             || eventArgs.PropertyName == nameof(MainViewModel.ActiveRequestMode))
+            && Work.ActiveRequestMode == WorkMode.Manual
             && !string.IsNullOrWhiteSpace(Work.CurrentOracleQueryTenam))
         {
             LoadingTenam = Work.CurrentOracleQueryTenam;
@@ -435,8 +404,8 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrEmpty(eventArgs.PropertyName)
             || eventArgs.PropertyName == nameof(MainViewModel.OracleConnectionState)
             || eventArgs.PropertyName == nameof(MainViewModel.IsBusy)
-            || eventArgs.PropertyName == nameof(MainViewModel.StatusMessage)
-            || eventArgs.PropertyName == nameof(MainViewModel.CurrentWorkMode))
+            || eventArgs.PropertyName == nameof(MainViewModel.ActiveRequestMode)
+            || eventArgs.PropertyName == nameof(MainViewModel.ManualStatusMessage))
         {
             UpdateLoadingPresentation();
             OnPropertyChanged(nameof(EmptyStateDescription));
@@ -455,13 +424,13 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
         }
 
         if (string.IsNullOrEmpty(eventArgs.PropertyName)
-            || eventArgs.PropertyName == nameof(MainViewModel.LastProcessingStatus))
+            || eventArgs.PropertyName == nameof(MainViewModel.LastManualProcessingStatus))
         {
             NotifyManualDataStateChanged();
         }
 
         if (string.IsNullOrEmpty(eventArgs.PropertyName)
-            || eventArgs.PropertyName == nameof(MainViewModel.StatusMessage))
+            || eventArgs.PropertyName == nameof(MainViewModel.ManualStatusMessage))
         {
             OnPropertyChanged(nameof(IsAutoPrintDisabledStatus));
             OnPropertyChanged(nameof(DataStatusText));
@@ -470,7 +439,7 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
     }
 
     private bool IsPrimaryManualDataLoadActive =>
-        Work.CurrentWorkMode == WorkMode.Manual
+        Work.ActiveRequestMode == WorkMode.Manual
         && Work.IsBusy
         && Work.OracleConnectionState == OracleConnectionState.Checking
         && string.Equals(Work.StatusMessage, "Загрузка", StringComparison.Ordinal);

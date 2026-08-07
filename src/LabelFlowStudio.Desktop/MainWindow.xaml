@@ -37,24 +37,87 @@
                 Background="{DynamicResource ShellHeaderBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="0,0,0,1">
-
             <Grid Margin="14,6">
-                <StackPanel HorizontalAlignment="Right"
-                    Orientation="Horizontal"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Левая часть верхней панели -->
+                <Grid Grid.Column="0"
+          HorizontalAlignment="Left"
+          VerticalAlignment="Center">
+
+                    <!-- На главном экране показываем рабочее действие -->
+                    <Button Command="{Binding NavigateToManualCommand}"
+        Content="Ручная обработка"
+        Margin="8,0,0,0">
+
+                        <Button.Style>
+                            <Style TargetType="Button"
+               BasedOn="{StaticResource ManualActionButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsWorkSectionOpen}"
+                             Value="False">
+                                        <Setter Property="Visibility"
+                            Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- На вложенных экранах вместо неё показываем возврат -->
+                    <StackPanel Orientation="Horizontal"
                     VerticalAlignment="Center">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility"
+                            Value="Visible" />
+
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsWorkSectionOpen}"
+                                     Value="True">
+                                        <Setter Property="Visibility"
+                                    Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <Button Width="36"
+                    Height="36"
+                    Margin="0,0,10,0"
+                    Command="{Binding NavigateToWorkCommand}"
+                    Style="{StaticResource ShellIconButtonStyle}"
+                    ToolTip="Вернуться на главный экран">
+                            <ui:SymbolIcon Symbol="ArrowLeft24" />
+                        </Button>
+
+                        <TextBlock VerticalAlignment="Center"
+                       FontSize="15"
+                       FontWeight="SemiBold"
+                       Text="{Binding CurrentSectionTitle}" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Правая служебная часть -->
+                <StackPanel Grid.Column="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Center">
 
                     <!-- Настройки -->
                     <Button Margin="0,0,10,0"
-                    ToolTip="Настройки"
-                    Command="{Binding NavigateToSettingsCommand}">
+                ToolTip="Настройки"
+                Command="{Binding NavigateToSettingsCommand}">
                         <Button.Style>
                             <Style TargetType="Button"
-                           BasedOn="{StaticResource ShellIconButtonStyle}">
+                       BasedOn="{StaticResource ShellIconButtonStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsSettingsSectionOpen}"
-                                         Value="True">
+                                     Value="True">
                                         <Setter Property="Background"
-                                        Value="{DynamicResource ShellNavigationSelectedBrush}" />
+                                    Value="{DynamicResource ShellNavigationSelectedBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -65,59 +128,57 @@
 
                     <!-- Уведомления -->
                     <Button x:Name="NotificationCenterButton"
-                    Style="{StaticResource ShellIconButtonStyle}"
-                    ToolTip="Уведомления"
-                    Click="NotificationCenterButton_Click">
+                Style="{StaticResource ShellIconButtonStyle}"
+                ToolTip="Уведомления"
+                Click="NotificationCenterButton_Click">
 
                         <Grid>
                             <ui:SymbolIcon Symbol="Alert24" />
 
                             <Border MinWidth="18"
-                            Height="18"
-                            Padding="4,0"
-                            Margin="0,-9,-12,0"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            CornerRadius="9">
+                        Height="18"
+                        Padding="4,0"
+                        Margin="0,-9,-12,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        CornerRadius="9">
 
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility"
-                                        Value="Visible" />
+                                    Value="Visible" />
 
                                         <Setter Property="Background"
-                                        Value="{DynamicResource WarningBrush}" />
+                                    Value="{DynamicResource WarningBrush}" />
 
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Work.UnreadProblemNotificationsCount}"
-                                                 Value="0">
+                                             Value="0">
                                                 <Setter Property="Visibility"
-                                                Value="Collapsed" />
+                                            Value="Collapsed" />
                                             </DataTrigger>
 
                                             <DataTrigger Binding="{Binding Work.HasUnreadErrorNotifications}"
-                                                 Value="True">
+                                             Value="True">
                                                 <Setter Property="Background"
-                                                Value="{DynamicResource ErrorBrush}" />
+                                            Value="{DynamicResource ErrorBrush}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
 
                                 <TextBlock Text="{Binding Work.UnreadProblemNotificationsCount}"
-                                   Foreground="{StaticResource SeverityOnColorBrush}"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center" />
+                               Foreground="{StaticResource SeverityOnColorBrush}"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
                             </Border>
                         </Grid>
                     </Button>
-
                 </StackPanel>
             </Grid>
         </Border>
-
         <ContentControl Grid.Row="2"
                         HorizontalContentAlignment="Stretch"
                         VerticalContentAlignment="Stretch"
@@ -341,23 +402,75 @@
                             Style="{StaticResource AutoLineLinkButtonStyle}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock Text="Открыть полный журнал событий" />
-                            <TextBlock Margin="8,0,0,0" Text="→" />
                         </StackPanel>
                     </Button>
                 </Grid>
             </Border>
         </Grid>
 
-        <ui:ContentDialogHost x:Name="RootContentDialogHost"
-                              Grid.RowSpan="3"
-                              Panel.ZIndex="100"
-                              IsDisableSiblingsEnabled="True" />
+        <!-- Компактное Fluent-уведомление об успешном сохранении -->
+        <Border x:Name="SettingsSavedToast"
+                Grid.RowSpan="3"
+                Panel.ZIndex="120"
+                MinWidth="230"
+                MaxWidth="320"
+                Height="48"
+                Margin="0,0,0,120"
+                Padding="16,0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
 
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="10"
+
+                Opacity="0"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SettingsSavedToastTranslate"
+                            Y="10" />
+            </Border.RenderTransform>
+
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18"
+                          ShadowDepth="4"
+                          Opacity="0.16"
+                          Color="#000000" />
+            </Border.Effect>
+
+            <StackPanel Orientation="Horizontal"
+                VerticalAlignment="Center">
+
+                <ui:SymbolIcon Width="20"
+                       Height="20"
+                       VerticalAlignment="Center"
+                       FontSize="20"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Symbol="CheckmarkCircle24" />
+
+                <TextBlock Margin="10,0,0,0"
+                   VerticalAlignment="Center"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   Text="Настройки сохранены" />
+            </StackPanel>
+        </Border>
+
+        <ui:ContentDialogHost x:Name="RootContentDialogHost"
+                      Grid.RowSpan="3"
+                      Panel.ZIndex="100"
+                      IsDisableSiblingsEnabled="True" />
+
+        <!-- Обычный Snackbar оставляем только для ошибок -->
         <ui:SnackbarPresenter x:Name="RootSnackbarPresenter"
-                              Grid.RowSpan="3"
-                              Panel.ZIndex="110"
-                              Margin="24"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Bottom" />
+                      Grid.RowSpan="3"
+                      Panel.ZIndex="110"
+                      Margin="0,0,24,24"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Bottom" />
     </Grid>
 </ui:FluentWindow>

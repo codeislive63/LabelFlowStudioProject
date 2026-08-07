@@ -108,4 +108,81 @@
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Top" />
     </Style>
+
+    <Style x:Key="ManualActionButtonStyle"
+       TargetType="Button">
+
+        <Setter Property="Height" Value="36" />
+        <Setter Property="MinWidth" Value="154" />
+        <Setter Property="Padding" Value="16,0" />
+
+        <Setter Property="Background" Value="#F4F6F9" />
+        <Setter Property="BorderBrush" Value="#D5DAE3" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#3D4654" />
+
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+
+                    <Border x:Name="ButtonBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="9"
+                        SnapsToDevicePixels="True">
+
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver"
+                             Value="True">
+
+                            <Setter TargetName="ButtonBorder"
+                                Property="Background"
+                                Value="#EDF4FC" />
+
+                            <Setter TargetName="ButtonBorder"
+                                Property="BorderBrush"
+                                Value="#A9C8EC" />
+
+                            <Setter Property="Foreground"
+                                Value="#2F6FAD" />
+                        </Trigger>
+
+                        <Trigger Property="IsPressed"
+                             Value="True">
+
+                            <Setter TargetName="ButtonBorder"
+                                Property="Background"
+                                Value="#E1ECF8" />
+
+                            <Setter TargetName="ButtonBorder"
+                                Property="BorderBrush"
+                                Value="#8FB6E2" />
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled"
+                             Value="False">
+
+                            <Setter TargetName="ButtonBorder"
+                                Property="Opacity"
+                                Value="0.5" />
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

@@ -61,12 +61,20 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         {
             if (Work.CurrentWorkMode != WorkMode.Automatic)
             {
-                return AutomaticLineState.Idle;
+                return AutomaticLineState.Disabled;
             }
 
+            var automaticRequestIsBusy =
+                Work.IsBusy && Work.ActiveRequestMode == WorkMode.Automatic;
+
+            var automaticStatusMessage =
+                Work.ActiveRequestMode == WorkMode.Manual
+                    ? null
+                    : _hasAutomaticActivity ? Work.StatusMessage : null;
+
             var projectedState = ResolveLineState(
-                Work.IsBusy,
-                _hasAutomaticActivity ? Work.StatusMessage : null,
+                automaticRequestIsBusy,
+                automaticStatusMessage,
                 _currentLineEvent,
                 IsSuccessStateVisible);
 
@@ -93,6 +101,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     public string LineHeadline => LineState switch
     {
+        AutomaticLineState.Disabled => "Автоматическая обработка выключена",
         AutomaticLineState.Initializing => "Инициализация линии",
         AutomaticLineState.Idle => "Линия работает",
         AutomaticLineState.Loading => "Получение данных",
@@ -107,6 +116,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     public string LineSubtitle => LineState switch
     {
+        AutomaticLineState.Disabled => "Включить её можно в настройках",
         AutomaticLineState.Initializing => "Проверка состояния сканера",
         AutomaticLineState.Idle => "Ожидание следующего короба",
         AutomaticLineState.Success => LastBoxActionText == NoDataText
@@ -124,6 +134,8 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
             ResolveLineIssueMessage(),
         _ => "Ожидание следующего короба"
     };
+
+    public bool IsDisabled => LineState == AutomaticLineState.Disabled;
 
     public bool IsIdle => LineState == AutomaticLineState.Idle;
 
@@ -437,8 +449,10 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         }
 
         if ((string.IsNullOrEmpty(eventArgs.PropertyName)
-             || eventArgs.PropertyName == nameof(MainViewModel.IsBusy))
+             || eventArgs.PropertyName == nameof(MainViewModel.IsBusy)
+             || eventArgs.PropertyName == nameof(MainViewModel.ActiveRequestMode))
             && Work.CurrentWorkMode == WorkMode.Automatic
+            && Work.ActiveRequestMode == WorkMode.Automatic
             && Work.IsBusy)
         {
             _hasAutomaticActivity = true;
@@ -448,6 +462,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
         if (string.IsNullOrEmpty(eventArgs.PropertyName)
             || eventArgs.PropertyName == nameof(MainViewModel.IsBusy)
+            || eventArgs.PropertyName == nameof(MainViewModel.ActiveRequestMode)
             || eventArgs.PropertyName == nameof(MainViewModel.StatusMessage)
             || eventArgs.PropertyName == nameof(MainViewModel.CurrentWorkMode))
         {
@@ -496,6 +511,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
     private void RefreshRecentEvents()
     {
         RecentEvents = Work.Notifications
+            .Where(notification => !IsManualOperationNotification(notification))
             .Take(RecentEventLimit)
             .Select(ProjectEvent)
             .ToArray();
@@ -514,6 +530,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LineState));
         OnPropertyChanged(nameof(LineHeadline));
         OnPropertyChanged(nameof(LineSubtitle));
+        OnPropertyChanged(nameof(IsDisabled));
         OnPropertyChanged(nameof(IsIdle));
         OnPropertyChanged(nameof(IsInitializing));
         OnPropertyChanged(nameof(IsLoading));
@@ -646,13 +663,19 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         || Contains(message, "rejectedduringtransition");
 
     private bool IsAutomaticOperationNotification(UiNotification notification) =>
-        Work.IsBusy
-        || Contains(notification.Message, "короб №")
+        !IsManualOperationNotification(notification)
+        && (Work.ActiveRequestMode == WorkMode.Automatic
+            || Contains(notification.Message, "короб №")
         || Contains(notification.Message, "лист сброса №")
         || Contains(notification.Message, "торцевая этикетка №")
         || (_hasAutomaticActivity
             && !string.IsNullOrWhiteSpace(Work.StatusMessage)
-            && Contains(notification.Message, Work.StatusMessage));
+            && Contains(notification.Message, Work.StatusMessage)));
+
+    private static bool IsManualOperationNotification(UiNotification notification) =>
+        notification.Message.StartsWith(
+            "Ручная обработка:",
+            StringComparison.OrdinalIgnoreCase);
 
     private static bool ContainsStandaloneNumber(string value, string number)
     {
@@ -723,7 +746,8 @@ public enum AutomaticLineState
     Success = 4,
     Warning = 5,
     Error = 6,
-    Initializing = 7
+    Initializing = 7,
+    Disabled = 8
 }
 
 internal readonly record struct AutomaticLineEquipmentSnapshot(

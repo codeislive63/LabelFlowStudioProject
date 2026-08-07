@@ -1,6 +1,7 @@
 <UserControl x:Class="LabelFlowStudio.Desktop.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:views="clr-namespace:LabelFlowStudio.Desktop.Views"
              Loaded="OnLoaded">
     <Grid Margin="{DynamicResource ShellPagePadding}">
@@ -18,6 +19,29 @@
                            FontSize="26"
                            FontWeight="SemiBold"
                            Text="Настройки" />
+
+                <Border Margin="{StaticResource SettingsMarginBottom16}"
+                        Style="{StaticResource SettingsCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Margin="0,0,24,0">
+                            <TextBlock Style="{StaticResource SettingsSectionTitleStyle}"
+                                       Text="Автоматическая обработка" />
+                            <TextBlock Margin="0,6,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="Принимает коробки с конвейера и выполняет настроенную печать"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ui:ToggleSwitch Grid.Column="1"
+                                         VerticalAlignment="Center"
+                                         IsChecked="{Binding Editor.IsAutomaticProcessingEnabled, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
 
                 <views:PrintSettingsEditorView DataContext="{Binding Editor}" />
             </StackPanel>
@@ -52,20 +76,12 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal">
-                    <Button MinWidth="{StaticResource SettingsCancelButtonWidth}"
-                            Height="{StaticResource SettingsControlHeight}"
-                            Margin="0,0,12,0"
-                            Command="{Binding CancelCommand}"
-                            Content="Отменить изменения"
-                            Style="{StaticResource SecondaryButtonStyle}" />
-                    <Button MinWidth="{StaticResource SettingsSaveButtonWidth}"
-                            Height="{StaticResource SettingsControlHeight}"
-                            Command="{Binding SaveCommand}"
-                            Content="Сохранить"
-                            Style="{StaticResource PrimaryButtonStyle}" />
-                </StackPanel>
+                <Button Grid.Column="1"
+                        MinWidth="{StaticResource SettingsSaveButtonWidth}"
+                        Height="{StaticResource SettingsControlHeight}"
+                        Command="{Binding SaveCommand}"
+                        Content="Сохранить"
+                        Style="{StaticResource PrimaryButtonStyle}" />
             </Grid>
         </Border>
     </Grid>
