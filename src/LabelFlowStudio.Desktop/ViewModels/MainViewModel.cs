@@ -1,6 +1,7 @@
 using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.BoxProcessing.Weight;
+using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.BoxProcessing;
 using LabelFlowStudio.Desktop.Commands;
@@ -30,6 +31,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly IBoxWeightService _boxWeightService;
     private readonly IBoxScanner _boxScanner;
     private readonly ILogger<MainViewModel> _logger;
+
+    private readonly IDataSourceHealthCheck? _dataSourceHealthCheck;
 
     private readonly SemaphoreSlim _scannerGate = new(1, 1);
     private readonly SemaphoreSlim _requestGate = new(1, 1);
@@ -88,12 +91,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         IBoxProcessingService boxProcessingService,
         IBoxWeightService boxWeightService,
         IBoxScanner boxScanner,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        IDataSourceHealthCheck? dataSourceHealthCheck = null)
     {
         _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
         _boxWeightService = boxWeightService ?? throw new ArgumentNullException(nameof(boxWeightService));
         _boxScanner = boxScanner ?? throw new ArgumentNullException(nameof(boxScanner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _dataSourceHealthCheck = dataSourceHealthCheck;
         _uiContext = SynchronizationContext.Current;
 
         Records = new ObservableCollection<LabelRecord>();
@@ -115,6 +120,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         StatusMessage = "Введите или отсканируйте TENAM и нажмите Enter";
 
+        _ = InitializeOracleConnectionStatusAsync();
         _ = InitializeScannerAsync();
     }
 
@@ -1039,6 +1045,72 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             CancellationToken.None);
     }
 
+    private async Task InitializeOracleConnectionStatusAsync()
+    {
+        if (_dataSourceHealthCheck is null || _disposed)
+        {
+            return;
+        }
+
+        using var timeoutSource =
+            new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var gateEntered = false;
+
+        try
+        {
+            await SetOracleConnectionStateAsync(
+                OracleConnectionState.Checking,
+                "Проверяется подключение к базе данных.");
+
+            // Используем тот же gate, что и реальные Oracle-запросы,
+            // чтобы startup-check не гонялся с обработкой первого короба.
+            await _requestGate.WaitAsync(timeoutSource.Token);
+            gateEntered = true;
+
+            var connected =
+                await _dataSourceHealthCheck.CanConnectAsync(
+                    timeoutSource.Token);
+
+            await SetOracleConnectionStateAsync(
+                connected
+                    ? OracleConnectionState.Connected
+                    : OracleConnectionState.Error,
+                connected
+                    ? "Подключение к базе данных установлено."
+                    : "База данных недоступна.");
+        }
+        catch (OperationCanceledException)
+        {
+            if (!_disposed)
+            {
+                await SetOracleConnectionStateAsync(
+                    OracleConnectionState.Error,
+                    "База данных недоступна.");
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Oracle startup health check failed");
+
+            if (!_disposed)
+            {
+                await SetOracleConnectionStateAsync(
+                    OracleConnectionState.Error,
+                    "База данных недоступна.");
+            }
+        }
+        finally
+        {
+            if (gateEntered)
+            {
+                _requestGate.Release();
+            }
+        }
+    }
+
     private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
         BoxProcessingRequest request,
         string origin,
@@ -1639,6 +1711,25 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         notification.MarkAsRead();
         DecreaseUnreadCounter(notification.Category);
+        RefreshFilteredNotifications();
+    }
+
+    /// <summary>
+    /// Помечает все текущие уведомления как прочитанные.
+    /// </summary>
+    public void MarkAllNotificationsAsRead()
+    {
+        foreach (var notification in Notifications)
+        {
+            notification.MarkAsRead();
+        }
+
+        UnreadNotificationsCount = 0;
+        UnreadErrorNotificationsCount = 0;
+        UnreadWarningNotificationsCount = 0;
+        UnreadSuccessNotificationsCount = 0;
+
+        NotifyUnreadNotificationStateChanged();
         RefreshFilteredNotifications();
     }
 

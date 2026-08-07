@@ -127,8 +127,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
             : $"Получение данных коробки {Work.CurrentOracleQueryTenam}…",
         AutomaticLineState.Processing => ResolveStatusMessage("Короб обрабатывается"),
         AutomaticLineState.Printing => ResolveStatusMessage("Документ отправляется на печать"),
-        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning =>
-            "Сканер не готов",
+        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning => string.Empty,
         AutomaticLineState.Error when IsOracleStatusError => OracleStatusToolTip,
         AutomaticLineState.Warning or AutomaticLineState.Error =>
             ResolveLineIssueMessage(),
@@ -250,7 +249,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
     {
         OracleConnectionState.Checking => "Проверка…",
         OracleConnectionState.Connected => "Подключено",
-        OracleConnectionState.Error => "Ошибка",
+        OracleConnectionState.Error => "Нет соединения",
         _ => "Не проверено"
     };
 
