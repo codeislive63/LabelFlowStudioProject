@@ -13,8 +13,7 @@
              Loaded="ManualProcessingView_Loaded"
              IsVisibleChanged="ManualProcessingView_IsVisibleChanged">
     <Grid x:Name="ManualContent"
-          Margin="{DynamicResource ShellPagePadding}"
-          MaxWidth="1320"
+          MaxWidth="1440"
           HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -22,11 +21,6 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-        <work:WorkModeSelector Grid.Row="0"
-                               Margin="{StaticResource WorkGapBottom12}"
-                               HorizontalAlignment="Left"
-                               DataContext="{Binding Work}" />
 
         <Border Grid.Row="1"
                 Margin="{StaticResource WorkGapBottom12}"
@@ -36,51 +30,70 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock FontSize="12"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           Text="TENAM" />
-
-                <Grid x:Name="TenamInputHost"
-                      Grid.Row="1"
-                      Width="880"
-                      MaxWidth="880"
-                      Margin="0,8,0,12"
-                      HorizontalAlignment="Center">
-                    <TextBox x:Name="TenamTextBox"
-                             AutomationProperties.Name="TENAM"
-                             Style="{StaticResource ManualTenamTextBoxStyle}"
-                             Text="{Binding TenamInput, UpdateSourceTrigger=PropertyChanged}"
-                             GotKeyboardFocus="TenamTextBox_GotKeyboardFocus"
-                             PreviewKeyDown="TenamTextBox_PreviewKeyDown"
-                             PreviewTextInput="TenamTextBox_PreviewTextInput"
-                             DataObject.Pasting="TenamTextBox_Pasting" />
-                    <TextBlock x:Name="ManualTenamPlaceholder"
-                               Margin="13,0"
-                               VerticalAlignment="Center"
-                               IsHitTestVisible="False"
+                <StackPanel Grid.Row="0"
+                            Width="880"
+                            MaxWidth="880"
+                            HorizontalAlignment="Center">
+                    <TextBlock FontSize="12"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Text="Введите или отсканируйте TENAM">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed" />
+                               Text="TENAM" />
+
+                    <Border x:Name="TenamInputHost"
+                            Height="44"
+                            Margin="0,8,0,0"
+                            Background="{DynamicResource SurfaceBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Text.Length, ElementName=TenamTextBox}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible" />
+                                    <DataTrigger Binding="{Binding IsKeyboardFocusWithin, ElementName=TenamTextBox}" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=TenamTextBox}" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBorderBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Grid>
+                        </Border.Style>
+                        <Grid ClipToBounds="True">
+                            <TextBox x:Name="TenamTextBox"
+                                     AutomationProperties.Name="TENAM"
+                                     Style="{StaticResource ManualTenamTextBoxStyle}"
+                                     Text="{Binding TenamInput, UpdateSourceTrigger=PropertyChanged}"
+                                     GotKeyboardFocus="TenamTextBox_GotKeyboardFocus"
+                                     PreviewKeyDown="TenamTextBox_PreviewKeyDown"
+                                     PreviewTextInput="TenamTextBox_PreviewTextInput"
+                                     DataObject.Pasting="TenamTextBox_Pasting" />
+                            <TextBlock x:Name="ManualTenamPlaceholder"
+                                       Margin="13,0"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="Введите или отсканируйте TENAM">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text.Length, ElementName=TenamTextBox}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+                </StackPanel>
 
-                <Grid Grid.Row="2"
+                <Grid Grid.Row="1"
                       Width="572"
                       MaxWidth="572"
-                      Margin="0,0,0,12"
+                      Margin="0,12,0,0"
                       HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -103,57 +116,23 @@
                             Style="{StaticResource ManualPrimaryActionButtonStyle}" />
                 </Grid>
 
-                <Border Grid.Row="3"
-                        Width="760"
-                        MaxWidth="760"
-                        Padding="12,10"
-                        HorizontalAlignment="Center"
-                        Background="{StaticResource AutoLineNeutralSoftBrush}"
-                        CornerRadius="{StaticResource AutoLineRadius10}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Text="Автопечать торцевой этикетки" />
-                            <TextBlock Margin="0,3,0,0"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       Text="Печатать сразу после успешной загрузки данных"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-
-                        <Button Grid.Column="1"
-                                Margin="16,0"
-                                AutomationProperties.Name="Ввести вес"
-                                Command="{Binding Work.RequestManualWeightCommand}"
-                                Content="Ввести вес">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ManualSecondaryActionButtonStyle}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Work.CanRequestManualWeight}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-
-                        <ui:ToggleSwitch Grid.Column="2"
-                                         VerticalAlignment="Center"
-                                         AutomationProperties.Name="Автопечать торцевой этикетки"
-                                         IsEnabled="{Binding CanChangeManualOptions}"
-                                         IsChecked="{Binding Work.IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         OffContent=""
-                                         OnContent="" />
-                    </Grid>
-                </Border>
+                <Button Grid.Row="2"
+                        Margin="0,10,0,0"
+                        HorizontalAlignment="Right"
+                        AutomationProperties.Name="Ввести вес"
+                        Command="{Binding Work.RequestManualWeightCommand}"
+                        Content="Ввести вес">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ManualSecondaryActionButtonStyle}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Work.CanRequestManualWeight}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </Grid>
         </Border>
 
@@ -281,7 +260,7 @@
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserSortColumns="True"
-                          ColumnHeaderHeight="40"
+                          ColumnHeaderHeight="36"
                           EnableColumnVirtualization="True"
                           EnableRowVirtualization="True"
                           GridLinesVisibility="Horizontal"
@@ -289,14 +268,14 @@
                           IsReadOnly="True"
                           ItemsSource="{Binding PagedRecords}"
                           LoadingRow="RecordsGrid_LoadingRow"
-                          RowHeight="34"
+                          RowHeight="32"
                           Sorting="RecordsGrid_Sorting"
                           VerticalScrollBarVisibility="Auto"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling">
                     <DataGrid.Style>
                         <Style BasedOn="{StaticResource AppDataGridStyle}" TargetType="DataGrid">
-                            <Setter Property="RowHeaderWidth" Value="44" />
+                            <Setter Property="RowHeaderWidth" Value="42" />
                             <Setter Property="HeadersVisibility" Value="All" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasRecords}" Value="False">
@@ -308,6 +287,33 @@
                         </Style>
                     </DataGrid.Style>
                     <DataGrid.Resources>
+                        <Style TargetType="DataGridRowHeader">
+                            <Setter Property="Width" Value="42" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,1" />
+                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                            <Setter Property="FontSize" Value="12" />
+                            <Setter Property="FontWeight" Value="Normal" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridRowHeader">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+
+
                         <Style x:Key="CellTextStyle" TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                             <Setter Property="TextWrapping" Value="NoWrap" />
@@ -411,7 +417,7 @@
 
                 <Border x:Name="ManualPager"
                         Grid.Row="1"
-                        Padding="12,10"
+                        Padding="12,8"
                         BorderBrush="{DynamicResource SurfaceBorderBrush}"
                         BorderThickness="0,1,0,0">
                     <Grid>

@@ -400,7 +400,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (previousMode == WorkMode.Automatic && value == WorkMode.Manual)
             {
                 _automaticDrainRequestsRemaining = 1;
-                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", NotificationCategory.Warning);
+                AddNotification("Следующий считанный короб будет обработан как автоматический", NotificationCategory.Warning);
             }
 
             OnPropertyChanged(nameof(IsAutomaticMode));

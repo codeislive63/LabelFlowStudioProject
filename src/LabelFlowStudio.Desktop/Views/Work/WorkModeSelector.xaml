@@ -38,10 +38,9 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
-                <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Margin="0,0,8,0" FontSize="16" Symbol="Pipeline24" />
-                    <TextBlock VerticalAlignment="Center" FontSize="12" Text="Автоматическая линия" />
-                </StackPanel>
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="12"
+                           Text="Автоматическая линия" />
             </Button>
 
             <Button Grid.Column="1"
@@ -60,10 +59,9 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
-                <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Margin="0,0,8,0" FontSize="16" Symbol="HandLeft24" />
-                    <TextBlock VerticalAlignment="Center" FontSize="12" Text="Ручная обработка" />
-                </StackPanel>
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="12"
+                           Text="Ручная обработка" />
             </Button>
         </Grid>
     </Border>

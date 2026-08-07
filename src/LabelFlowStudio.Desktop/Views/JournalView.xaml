@@ -13,7 +13,7 @@
                            Margin="0,16,0,6"
                            FontSize="24"
                            FontWeight="SemiBold" />
-                <TextBlock Text="Каркас раздела готов. События обработки, фильтры и экспорт будут перенесены сюда отдельным этапом после введения структурной модели ProcessingEvent."
+                <TextBlock Text="Каркас раздела готов. События обработки, фильтры и экспорт будут перенесены сюда отдельным этапом после введения структурной модели"
                            MaxWidth="720"
                            HorizontalAlignment="Left"
                            Foreground="{DynamicResource TextSecondaryBrush}"
