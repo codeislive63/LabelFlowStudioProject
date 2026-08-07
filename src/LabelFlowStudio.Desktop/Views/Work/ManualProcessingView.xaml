@@ -116,23 +116,30 @@
                             Style="{StaticResource ManualPrimaryActionButtonStyle}" />
                 </Grid>
 
-                <Button Grid.Row="2"
-                        Margin="0,10,0,0"
-                        HorizontalAlignment="Right"
-                        AutomationProperties.Name="Ввести вес"
-                        Command="{Binding Work.RequestManualWeightCommand}"
-                        Content="Ввести вес">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource ManualSecondaryActionButtonStyle}">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Work.CanRequestManualWeight}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                <Grid Grid.Row="2"
+                      Margin="0,10,0,0">
+                    <ui:ToggleSwitch HorizontalAlignment="Left"
+                                     VerticalAlignment="Center"
+                                     Content="Автопечать торцевой этикетки"
+                                     IsChecked="{Binding Work.IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay}"
+                                     IsEnabled="{Binding CanChangeManualOptions}" />
+
+                    <Button HorizontalAlignment="Right"
+                            AutomationProperties.Name="Ввести вес"
+                            Command="{Binding Work.RequestManualWeightCommand}"
+                            Content="Ввести вес">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ManualSecondaryActionButtonStyle}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Work.CanRequestManualWeight}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
             </Grid>
         </Border>
 

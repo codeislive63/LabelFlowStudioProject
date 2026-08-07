@@ -104,7 +104,6 @@ public partial class ManualProcessingView : UserControl
     internal async Task RequestPrimaryInputFocusAsync()
     {
         if (!IsVisible
-            || _subscribedViewModel is not { IsAutomaticMode: false }
             || Window.GetWindow(this) is not { IsActive: true })
         {
             return;
@@ -119,7 +118,6 @@ public partial class ManualProcessingView : UserControl
 
         if (!IsVisible
             || !TenamTextBox.IsVisible
-            || _subscribedViewModel is not { IsAutomaticMode: false }
             || Window.GetWindow(this) is not { IsActive: true }
             || Keyboard.FocusedElement is TextBoxBase focusedAfterAwait
                && !ReferenceEquals(focusedAfterAwait, TenamTextBox))
@@ -154,10 +152,14 @@ public partial class ManualProcessingView : UserControl
         }
 
         if ((e.Key == Key.Return || e.Key == Key.Enter)
-            && _subscribedViewModel is { } viewModel
+            && DataContext is ManualProcessingViewModel viewModel
             && !string.IsNullOrWhiteSpace(TenamTextBox.Text))
         {
-            viewModel.ReceiveTenamFromScanner(TenamTextBox.Text);
+            if (viewModel.Work.ReceiveManualTenam(TenamTextBox.Text))
+            {
+                viewModel.TenamInput = string.Empty;
+            }
+
             e.Handled = true;
         }
     }

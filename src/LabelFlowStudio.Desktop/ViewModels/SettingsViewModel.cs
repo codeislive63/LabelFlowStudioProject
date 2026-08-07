@@ -41,6 +41,7 @@ public sealed class SettingsViewModel : ViewModelBase
     private readonly IPrintSettingsRepository _repository;
     private readonly IPrintSettingsEditorFactory _editorFactory;
     private readonly Func<bool> _isProcessing;
+    private readonly Action<PrintSettings> _applyRuntimeSettings;
     private readonly AsyncCommand _saveCommand;
     private readonly RelayCommand _cancelCommand;
 
@@ -58,7 +59,8 @@ public sealed class SettingsViewModel : ViewModelBase
             new PrintSettingsEditorFactory(
                 new WindowsPrinterCatalog(),
                 new PrintSettingsValidator()),
-            static () => false)
+            static () => false,
+            static _ => { })
     {
     }
 
@@ -69,7 +71,8 @@ public sealed class SettingsViewModel : ViewModelBase
         : this(
             repository,
             editorFactory,
-            () => mainViewModel?.IsBusy == true)
+            () => mainViewModel?.IsBusy == true,
+            settings => mainViewModel?.ApplyRuntimeSettings(settings))
     {
         ArgumentNullException.ThrowIfNull(mainViewModel);
         mainViewModel.PropertyChanged += OnMainViewModelPropertyChanged;
@@ -78,11 +81,13 @@ public sealed class SettingsViewModel : ViewModelBase
     internal SettingsViewModel(
         IPrintSettingsRepository repository,
         IPrintSettingsEditorFactory editorFactory,
-        Func<bool>? isProcessing = null)
+        Func<bool>? isProcessing = null,
+        Action<PrintSettings>? applyRuntimeSettings = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _editorFactory = editorFactory ?? throw new ArgumentNullException(nameof(editorFactory));
         _isProcessing = isProcessing ?? (() => false);
+        _applyRuntimeSettings = applyRuntimeSettings ?? (_ => { });
 
         _editor = _editorFactory.Create(_repository.LoadOrDefault());
         _editor.PropertyChanged += OnEditorPropertyChanged;
@@ -252,6 +257,8 @@ public sealed class SettingsViewModel : ViewModelBase
                     return editor.MergeWithLatestActive(latestActive);
                 },
                 cancellationToken);
+
+            _applyRuntimeSettings(settingsToSave.Clone());
 
             const string successMessage = "Изменения успешно применены";
             FeedbackRequested?.Invoke(

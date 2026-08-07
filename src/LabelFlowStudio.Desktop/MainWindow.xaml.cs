@@ -11,6 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -30,6 +31,7 @@ public partial class MainWindow : FluentWindow
     private readonly DispatcherTimer _scannerBufferTimer;
     private string _scannerTextMirroredToTenam = string.Empty;
     private bool _isModalInteractionActive;
+    private CancellationTokenSource? _settingsSavedToastCancellation;
 
     public MainWindow(
         ShellViewModel viewModel,
@@ -66,23 +68,23 @@ public partial class MainWindow : FluentWindow
             await ShowInitialPrintSettingsDialogAsync(initialEditor, CancellationToken.None);
         }
 
-        await FocusWorkInputAsync();
+        await FocusManualInputAsync();
     }
 
     private void MainWindow_Activated(object? sender, EventArgs e)
     {
-        _ = FocusWorkInputAsync();
+        _ = FocusManualInputAsync();
     }
 
-    private async Task FocusWorkInputAsync()
+    private async Task FocusManualInputAsync()
     {
-        if (_viewModel.CurrentSection != AppSection.Work
-            || FindVisualChild<ManualProcessingView>(this) is not { } workView)
+        if (_viewModel.CurrentSection != AppSection.Manual
+            || FindVisualChild<ManualProcessingView>(this) is not { } manualView)
         {
             return;
         }
 
-        await workView.RequestPrimaryInputFocusAsync();
+        await manualView.RequestPrimaryInputFocusAsync();
     }
 
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -131,6 +133,7 @@ public partial class MainWindow : FluentWindow
     private bool ShouldCaptureGlobalScannerInput()
     {
         if (_viewModel.CurrentSection != AppSection.Work
+            || !_viewModel.Work.IsAutomaticMode
             || _viewModel.Work.IsBusy
             || _viewModel.Work.IsNotificationCenterOpen
             || _isModalInteractionActive)
@@ -183,10 +186,16 @@ public partial class MainWindow : FluentWindow
 
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ShellViewModel.CurrentSection)
-            && _viewModel.CurrentSection != AppSection.Work)
+        if (e.PropertyName != nameof(ShellViewModel.CurrentSection))
         {
-            ResetUnacceptedScannerSignal();
+            return;
+        }
+
+        ResetUnacceptedScannerSignal();
+
+        if (_viewModel.CurrentSection == AppSection.Manual)
+        {
+            _ = FocusManualInputAsync();
         }
     }
 
@@ -318,26 +327,156 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    private void OnSettingsFeedbackRequested(object? sender, SettingsFeedbackEventArgs eventArgs)
+    private void OnSettingsFeedbackRequested(
+        object? sender,
+        SettingsFeedbackEventArgs eventArgs)
     {
-        var isSuccess = eventArgs.Kind == SettingsFeedbackKind.Success;
+        if (eventArgs.Kind == SettingsFeedbackKind.Success)
+        {
+            _ = ShowSettingsSavedToastAsync();
+            return;
+        }
+
         _snackbarService.Show(
-            isSuccess ? "Настройки сохранены" : "Ошибка настроек",
+            "Ошибка настроек",
             eventArgs.Message,
-            isSuccess ? ControlAppearance.Success : ControlAppearance.Danger,
-            new SymbolIcon(isSuccess
-                ? SymbolRegular.CheckmarkCircle24
-                : SymbolRegular.ErrorCircle24),
+            ControlAppearance.Danger,
+            new SymbolIcon(SymbolRegular.ErrorCircle24),
             TimeSpan.FromSeconds(4));
+    }
+
+    private async Task ShowSettingsSavedToastAsync()
+    {
+        _settingsSavedToastCancellation?.Cancel();
+        _settingsSavedToastCancellation?.Dispose();
+
+        var cancellation = new CancellationTokenSource();
+        _settingsSavedToastCancellation = cancellation;
+        var cancellationToken = cancellation.Token;
+
+        // Сбрасываем предыдущие анимации на случай быстрого повторного сохранения.
+        SettingsSavedToast.BeginAnimation(UIElement.OpacityProperty, null);
+        SettingsSavedToastTranslate.BeginAnimation(
+            TranslateTransform.YProperty,
+            null);
+
+        SettingsSavedToast.Visibility = Visibility.Visible;
+        SettingsSavedToast.Opacity = 0;
+        SettingsSavedToastTranslate.Y = 10;
+
+        var enterEasing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseOut
+        };
+
+        var fadeIn = new DoubleAnimation
+        {
+            From = 0,
+            To = 1,
+            Duration = TimeSpan.FromMilliseconds(160),
+            EasingFunction = enterEasing
+        };
+
+        var moveIn = new DoubleAnimation
+        {
+            From = 10,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(180),
+            EasingFunction = enterEasing
+        };
+
+        SettingsSavedToast.BeginAnimation(
+            UIElement.OpacityProperty,
+            fadeIn);
+
+        SettingsSavedToastTranslate.BeginAnimation(
+            TranslateTransform.YProperty,
+            moveIn);
+
+        try
+        {
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(1800),
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var exitEasing = new CubicEase
+        {
+            EasingMode = EasingMode.EaseIn
+        };
+
+        var fadeOut = new DoubleAnimation
+        {
+            From = 1,
+            To = 0,
+            Duration = TimeSpan.FromMilliseconds(120),
+            EasingFunction = exitEasing
+        };
+
+        var moveOut = new DoubleAnimation
+        {
+            From = 0,
+            To = 4,
+            Duration = TimeSpan.FromMilliseconds(120),
+            EasingFunction = exitEasing
+        };
+
+        fadeOut.Completed += (_, _) =>
+            completion.TrySetResult(true);
+
+        SettingsSavedToast.BeginAnimation(
+            UIElement.OpacityProperty,
+            fadeOut);
+
+        SettingsSavedToastTranslate.BeginAnimation(
+            TranslateTransform.YProperty,
+            moveOut);
+
+        await completion.Task;
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        SettingsSavedToast.BeginAnimation(
+            UIElement.OpacityProperty,
+            null);
+
+        SettingsSavedToastTranslate.BeginAnimation(
+            TranslateTransform.YProperty,
+            null);
+
+        SettingsSavedToast.Visibility = Visibility.Collapsed;
+        SettingsSavedToast.Opacity = 0;
+        SettingsSavedToastTranslate.Y = 10;
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
+        _settingsSavedToastCancellation?.Cancel();
+        _settingsSavedToastCancellation?.Dispose();
+        _settingsSavedToastCancellation = null;
+
         _scannerBufferTimer.Stop();
         _scannerBufferTimer.Tick -= ScannerBufferTimer_Tick;
+
         _viewModel.PropertyChanged -= OnShellPropertyChanged;
         _viewModel.Work.PropertyChanged -= OnWorkPropertyChanged;
         _viewModel.Settings.FeedbackRequested -= OnSettingsFeedbackRequested;
+
         Activated -= MainWindow_Activated;
         Closed -= MainWindow_Closed;
     }

@@ -5,8 +5,9 @@ using System.Windows.Input;
 namespace LabelFlowStudio.Desktop.ViewModels;
 
 /// <summary>
-/// Состояние постоянной оболочки приложения. Раздел и режим оборудования намеренно
-/// хранятся раздельно: <see cref="CurrentSection"/> не меняет WorkMode рабочего экрана.
+/// Состояние постоянной оболочки приложения.
+/// Навигация и режим автоматической линии намеренно разделены:
+/// открытие ручной обработки или настроек не выключает автоматику.
 /// </summary>
 public sealed class ShellViewModel : ViewModelBase
 {
@@ -34,6 +35,7 @@ public sealed class ShellViewModel : ViewModelBase
         _currentSectionViewModel = WorkSection;
 
         NavigateToWorkCommand = new RelayCommand(() => NavigateTo(AppSection.Work));
+        NavigateToManualCommand = new RelayCommand(() => NavigateTo(AppSection.Manual));
         NavigateToJournalCommand = new RelayCommand(() => NavigateTo(AppSection.Journal));
         NavigateToSettingsCommand = new RelayCommand(OpenSettingsSection);
     }
@@ -57,8 +59,10 @@ public sealed class ShellViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(IsWorkSectionOpen));
+            OnPropertyChanged(nameof(IsManualSectionOpen));
             OnPropertyChanged(nameof(IsJournalSectionOpen));
             OnPropertyChanged(nameof(IsSettingsSectionOpen));
+            OnPropertyChanged(nameof(CurrentSectionTitle));
         }
     }
 
@@ -70,11 +74,23 @@ public sealed class ShellViewModel : ViewModelBase
 
     public bool IsWorkSectionOpen => CurrentSection == AppSection.Work;
 
+    public bool IsManualSectionOpen => CurrentSection == AppSection.Manual;
+
     public bool IsJournalSectionOpen => CurrentSection == AppSection.Journal;
 
     public bool IsSettingsSectionOpen => CurrentSection == AppSection.Settings;
 
+    public string CurrentSectionTitle => CurrentSection switch
+    {
+        AppSection.Manual => "Ручная обработка",
+        AppSection.Journal => "Журнал",
+        AppSection.Settings => "Настройки",
+        _ => string.Empty
+    };
+
     public ICommand NavigateToWorkCommand { get; }
+
+    public ICommand NavigateToManualCommand { get; }
 
     public ICommand NavigateToJournalCommand { get; }
 
@@ -95,6 +111,7 @@ public sealed class ShellViewModel : ViewModelBase
         CurrentSectionViewModel = section switch
         {
             AppSection.Work => WorkSection,
+            AppSection.Manual => WorkSection.Manual,
             AppSection.Journal => Journal,
             AppSection.Settings => Settings,
             _ => throw new ArgumentOutOfRangeException(nameof(section), section, null)

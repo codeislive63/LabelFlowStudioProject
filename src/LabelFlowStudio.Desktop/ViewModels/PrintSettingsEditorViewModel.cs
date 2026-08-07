@@ -1,3 +1,4 @@
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Printing;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
@@ -157,6 +158,22 @@ public sealed class PrintSettingsEditorViewModel : ViewModelBase
         }
     }
 
+    public bool IsAutomaticProcessingEnabled
+    {
+        get => _draft.WorkMode == WorkMode.Automatic;
+        set
+        {
+            var workMode = value ? WorkMode.Automatic : WorkMode.Manual;
+            if (_draft.WorkMode == workMode)
+            {
+                return;
+            }
+
+            _draft.WorkMode = workMode;
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsValid => _validation.IsValid;
 
     public string ValidationMessage => _validation.Message;
@@ -209,8 +226,8 @@ public sealed class PrintSettingsEditorViewModel : ViewModelBase
 
     /// <summary>
     /// Applies only fields owned by this editor to the latest active snapshot.
-    /// Runtime-owned WorkMode and manual autoprint therefore cannot be reverted
-    /// by a Settings page that has remained open for a while.
+    /// Manual-screen transient state is not stored here, but the automatic-line
+    /// enable flag is a real persisted setting and therefore is merged explicitly.
     /// </summary>
     public PrintSettings MergeWithLatestActive(PrintSettings latestActive)
     {
@@ -224,6 +241,7 @@ public sealed class PrintSettingsEditorViewModel : ViewModelBase
         result.EndLabelCopies = _draft.EndLabelCopies;
         result.StuffingSheetCopies = _draft.StuffingSheetCopies;
         result.UseScales = _draft.UseScales;
+        result.WorkMode = _draft.WorkMode;
         return result;
     }
 

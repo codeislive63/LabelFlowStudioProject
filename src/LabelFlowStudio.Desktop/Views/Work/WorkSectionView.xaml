@@ -9,32 +9,7 @@
              d:DesignHeight="760"
              d:DesignWidth="1200"
              mc:Ignorable="d">
-    <UserControl.Resources>
-        <DataTemplate DataType="{x:Type viewModels:AutomaticLineViewModel}">
-            <workViews:AutomaticLineView />
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type viewModels:ManualProcessingViewModel}">
-            <workViews:ManualProcessingView />
-        </DataTemplate>
-    </UserControl.Resources>
-
     <Grid Margin="{DynamicResource ShellPagePadding}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <workViews:WorkModeSelector
-            Grid.Row="0"
-            Margin="0,0,0,12"
-            HorizontalAlignment="Left"
-            DataContext="{Binding CurrentModeViewModel.Work}" />
-
-        <ContentControl
-            Grid.Row="1"
-            HorizontalContentAlignment="Stretch"
-            VerticalContentAlignment="Stretch"
-            Content="{Binding CurrentModeViewModel}" />
+        <workViews:AutomaticLineView DataContext="{Binding Automatic}" />
     </Grid>
 </UserControl>

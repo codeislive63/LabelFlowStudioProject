@@ -1,4 +1,4 @@
-﻿using LabelFlowStudio.Application.BoxProcessing;
+using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.BoxProcessing.Weight;
 using LabelFlowStudio.Core.Models;
@@ -45,7 +45,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private WorkMode _nextRequestMode = WorkMode.Manual;
     private bool _nextRequestTriggeredByScanner;
     private WorkMode _currentWorkMode = WorkMode.Manual;
-    private int _automaticDrainRequestsRemaining;
+    private WorkMode? _activeRequestMode;
+    private string _pendingManualTenam = string.Empty;
 
     private EndLabelTemplatePreviewWindow? _endLabelPreviewWindow;
     private StuffingSheetTemplatePreviewWindow? _stuffingSheetPreviewWindow;
@@ -53,6 +54,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private string _tenam = string.Empty;
     private string _statusMessage = string.Empty;
     private BoxProcessingStatus? _lastProcessingStatus;
+    private BoxProcessingStatus? _lastManualProcessingStatus;
+    private string _manualStatusMessage = string.Empty;
     private bool _isBusy;
     private OracleConnectionState _oracleConnectionState = OracleConnectionState.Unknown;
     private string _oracleConnectionStatusDetail = "Запрос к базе данных в текущем запуске ещё не выполнялся.";
@@ -320,6 +323,24 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         private set => SetProperty(ref _lastProcessingStatus, value);
     }
 
+    public BoxProcessingStatus? LastManualProcessingStatus
+    {
+        get => _lastManualProcessingStatus;
+        private set => SetProperty(ref _lastManualProcessingStatus, value);
+    }
+
+    public string ManualStatusMessage
+    {
+        get => _manualStatusMessage;
+        private set => SetProperty(ref _manualStatusMessage, value);
+    }
+
+    public WorkMode? ActiveRequestMode
+    {
+        get => _activeRequestMode;
+        private set => SetProperty(ref _activeRequestMode, value);
+    }
+
     /// <summary>
     /// Runtime-состояние Oracle, подтверждённое реальными запросами текущего запуска.
     /// Бизнес-результаты обработки не интерпретируются как ошибки соединения.
@@ -383,27 +404,39 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public bool IsAutomaticMode => CurrentWorkMode == WorkMode.Automatic;
 
     /// <summary>
-    /// Текущий режим обработки коробов
+    /// Сохранённое состояние автоматической линии.
+    /// Manual здесь означает "автоматическая обработка выключена", а не открытый экран.
     /// </summary>
     public WorkMode CurrentWorkMode
     {
         get => _currentWorkMode;
-        set
+        set => SetCurrentWorkMode(value, persist: true);
+    }
+
+    internal void ApplyRuntimeSettings(PrintSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        SetCurrentWorkMode(settings.WorkMode, persist: false);
+    }
+
+    private void SetCurrentWorkMode(WorkMode value, bool persist)
+    {
+        if (!SetProperty(ref _currentWorkMode, value, nameof(CurrentWorkMode)))
         {
-            var previousMode = _currentWorkMode;
+            return;
+        }
 
-            if (!SetProperty(ref _currentWorkMode, value))
-            {
-                return;
-            }
+        if (value != WorkMode.Automatic)
+        {
+            _pendingScannerTenam = string.Empty;
+            _lastScannedTenam = string.Empty;
+            _lastScannedAtUtc = DateTime.MinValue;
+        }
 
-            if (previousMode == WorkMode.Automatic && value == WorkMode.Manual)
-            {
-                _automaticDrainRequestsRemaining = 1;
-                AddNotification("Следующий считанный короб будет обработан как автоматический", NotificationCategory.Warning);
-            }
+        OnPropertyChanged(nameof(IsAutomaticMode));
 
-            OnPropertyChanged(nameof(IsAutomaticMode));
+        if (persist)
+        {
             _ = SaveWorkModeAsync(value);
         }
     }
@@ -426,10 +459,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Принимает TENAM от сканера и запускает обработку
+    /// Принимает TENAM от автоматического сканера.
+    /// Событие игнорируется, если автоматическая обработка выключена.
     /// </summary>
     public void ReceiveTenamFromScanner(string boxNumber)
     {
+        if (!IsAutomaticMode)
+        {
+            return;
+        }
+
         var digitsOnly = new string((boxNumber ?? string.Empty)
             .Where(char.IsDigit)
             .ToArray());
@@ -451,13 +490,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         _ = RunOnUiThreadAsync(() =>
         {
+            if (!IsAutomaticMode)
+            {
+                return;
+            }
+
             if (IsBusy)
             {
                 _pendingScannerTenam = digitsOnly;
                 return;
             }
 
-            _nextRequestMode = ResolveNextRequestMode();
+            _nextRequestMode = WorkMode.Automatic;
             _nextRequestTriggeredByScanner = true;
             Tenam = digitsOnly;
 
@@ -466,6 +510,41 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 LoadRecordsCommand.Execute(null);
             }
         });
+    }
+
+    /// <summary>
+    /// Принимает TENAM из отдельного экрана ручной обработки.
+    /// Автоматическая линия при этом не выключается. Если сейчас выполняется
+    /// автоматическая операция, ручной запрос становится следующим.
+    /// </summary>
+    public bool ReceiveManualTenam(string boxNumber)
+    {
+        var digitsOnly = new string((boxNumber ?? string.Empty)
+            .Where(char.IsDigit)
+            .ToArray());
+
+        if (string.IsNullOrWhiteSpace(digitsOnly))
+        {
+            return false;
+        }
+
+        if (IsBusy)
+        {
+            _pendingManualTenam = digitsOnly;
+            return true;
+        }
+
+        _nextRequestMode = WorkMode.Manual;
+        _nextRequestTriggeredByScanner = true;
+        Tenam = digitsOnly;
+
+        if (!LoadRecordsCommand.CanExecute(null))
+        {
+            return false;
+        }
+
+        LoadRecordsCommand.Execute(null);
+        return true;
     }
 
     private bool CanRequestManualWeightAgain()
@@ -489,7 +568,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         var cancellationToken = StartNewLoadCancellation();
 
         IsBusy = true;
+        ActiveRequestMode = WorkMode.Manual;
         StatusMessage = "Проверка веса";
+        ManualStatusMessage = StatusMessage;
 
         try
         {
@@ -502,7 +583,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             if (response.Status != BoxProcessingStatus.NeedWeight)
             {
-                ApplyResponseState(response, tenamSnapshot);
+                ApplyResponseState(response, tenamSnapshot, WorkMode.Manual);
 
                 if (response.Status == BoxProcessingStatus.Success)
                 {
@@ -519,7 +600,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var updatedResponse = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
-            ApplyResponseState(updatedResponse, tenamSnapshot);
+            ApplyResponseState(updatedResponse, tenamSnapshot, WorkMode.Manual);
 
             if (updatedResponse.Status == BoxProcessingStatus.Success)
             {
@@ -541,32 +622,20 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogWarning(exception, "Failed to request manual weight again for TENAM {Tenam}", tenamSnapshot);
             LastProcessingStatus = BoxProcessingStatus.Error;
+            LastManualProcessingStatus = BoxProcessingStatus.Error;
             StatusMessage = "Не удалось повторно запросить ввод веса";
+            ManualStatusMessage = StatusMessage;
             AddNotification(
                 $"Не удалось повторно получить данные для короба №{tenamSnapshot} из базы данных.",
                 NotificationCategory.Error);
         }
         finally
         {
+            ActiveRequestMode = null;
             IsBusy = false;
             RequestManualWeightCommand.RaiseCanExecuteChanged();
+            SchedulePendingProcessing();
         }
-    }
-
-    private WorkMode ResolveNextRequestMode()
-    {
-        if (CurrentWorkMode == WorkMode.Automatic)
-        {
-            return WorkMode.Automatic;
-        }
-
-        if (_automaticDrainRequestsRemaining <= 0)
-        {
-            return WorkMode.Manual;
-        }
-
-        _automaticDrainRequestsRemaining--;
-        return WorkMode.Automatic;
     }
 
     // Сохраняет выбранный режим работы в настройках
@@ -618,7 +687,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         return !string.IsNullOrWhiteSpace(Tenam);
     }
 
-    // Выполняет загрузку данных и обновляет состояние экрана
+    // Выполняет один сериализованный request. Его WorkMode принадлежит самому
+    // request, а не тому экрану, который сейчас открыт у оператора.
     private async Task LoadRecordsAsync()
     {
         var requestMode = _nextRequestMode;
@@ -630,14 +700,28 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         var cancellationToken = StartNewLoadCancellation();
 
         IsBusy = true;
+        ActiveRequestMode = requestMode;
         StatusMessage = "Загрузка";
         LastProcessingStatus = null;
-        Records.Clear();
         Tenam = string.Empty;
 
-        // Сбрасываем возможность повторного ввода веса для предыдущего короба
-        _tenamAwaitingWeight = string.Empty;
-        CanRequestManualWeight = false;
+        if (requestMode == WorkMode.Manual)
+        {
+            LastManualProcessingStatus = null;
+            ManualStatusMessage = "Загрузка";
+            Records.Clear();
+
+            _lastLoadedResponse = null;
+            _lastLoadedTenam = string.Empty;
+            _lastSuccessfulResponse = null;
+            _lastSuccessfulTenam = string.Empty;
+
+            _tenamAwaitingWeight = string.Empty;
+            CanRequestManualWeight = false;
+
+            OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+            OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+        }
 
         try
         {
@@ -645,21 +729,27 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             await WaitForUiToRenderAsync();
 
-            var response = await ProcessRequestWithoutUiBlockingAsync(request, "LoadRecords", cancellationToken);
+            var response = await ProcessRequestWithoutUiBlockingAsync(
+                request,
+                requestMode == WorkMode.Automatic ? "AutomaticLine" : "ManualProcessing",
+                cancellationToken);
+
             cancellationToken.ThrowIfCancellationRequested();
 
             var requiredManualWeight = response.Status == BoxProcessingStatus.NeedWeight;
             if (requiredManualWeight)
             {
-                var shouldRequestManualWeight = response.PrintPlan.IsEmpty;
+                var shouldRequestManualWeight =
+                    requestMode == WorkMode.Manual
+                    && response.PrintPlan.IsEmpty;
 
                 if (shouldRequestManualWeight)
                 {
                     _tenamAwaitingWeight = tenamSnapshot;
                     CanRequestManualWeight = true;
 
-                    IsBusy = false;
                     StatusMessage = "Нет веса в БД. Поставьте короб на весы или нажмите «Ввести вес».";
+                    ManualStatusMessage = StatusMessage;
 
                     response = await RequestManualWeightAsync(response, tenamSnapshot, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
@@ -671,45 +761,66 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                         IsBusy = true;
                     }
                 }
-                else
+                else if (requestMode == WorkMode.Automatic)
                 {
                     AddNotification(
-                        $"Короб №{tenamSnapshot}: вес не найден в БД в автоматическом режиме и отключены весы.",
+                        $"Короб №{tenamSnapshot}: вес не найден в БД в автоматическом режиме.",
                         NotificationCategory.Warning);
                 }
             }
 
-            ApplyResponseState(response, tenamSnapshot);
+            ApplyResponseState(response, tenamSnapshot, requestMode);
 
-            var shouldAutoPrintInSemiAutomaticMode = requestMode == WorkMode.Manual
-                                                     && requestTriggeredByScanner
-                                                     && IsManualScanAutoPrintEndLabelEnabled
-                                                     && response.Status == BoxProcessingStatus.Success
-                                                     && response.PrintPlan.PrintEndLabels;
+            var shouldAutoPrintInManualTool =
+                requestMode == WorkMode.Manual
+                && requestTriggeredByScanner
+                && IsManualScanAutoPrintEndLabelEnabled
+                && response.Status == BoxProcessingStatus.Success
+                && response.PrintPlan.PrintEndLabels;
 
-            if (requestMode == WorkMode.Automatic || (requiredManualWeight && response.Status == BoxProcessingStatus.Success))
+            if (requestMode == WorkMode.Automatic)
             {
-                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: true, printEndLabel: true);
+                await TryAutoPrintAsync(
+                    response,
+                    tenamSnapshot,
+                    cancellationToken,
+                    requestMode,
+                    printDropSheet: true,
+                    printEndLabel: true);
             }
-            else if (shouldAutoPrintInSemiAutomaticMode)
+            else if (shouldAutoPrintInManualTool)
             {
-                await TryAutoPrintAsync(response, tenamSnapshot, cancellationToken, printDropSheet: false, printEndLabel: true);
+                await TryAutoPrintAsync(
+                    response,
+                    tenamSnapshot,
+                    cancellationToken,
+                    requestMode,
+                    printDropSheet: false,
+                    printEndLabel: true);
             }
         }
         catch (OperationCanceledException)
         {
             StatusMessage = "Операция отменена";
+
+            if (requestMode == WorkMode.Manual)
+            {
+                ManualStatusMessage = StatusMessage;
+            }
         }
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Failed to load records");
 
-            ApplyFailedLoadState("Не удалось получить данные из базы данных.");
+            ApplyFailedLoadState(
+                "Не удалось получить данные из базы данных.",
+                requestMode);
         }
         finally
         {
+            ActiveRequestMode = null;
             IsBusy = false;
-            SchedulePendingScannerProcessing();
+            SchedulePendingProcessing();
         }
     }
 
@@ -861,32 +972,46 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         return null;
     }
 
-    // Планирует обработку отложенного скана после завершения текущей команды
-    private void SchedulePendingScannerProcessing()
+    // После завершения request сначала отдаём приоритет явному ручному действию,
+    // затем продолжаем автоматическую очередь. Оба канала хранят только последний
+    // ещё не запущенный TENAM, как и прежняя latest-pending модель.
+    private void SchedulePendingProcessing()
     {
-        if (string.IsNullOrWhiteSpace(_pendingScannerTenam))
+        if (string.IsNullOrWhiteSpace(_pendingManualTenam)
+            && string.IsNullOrWhiteSpace(_pendingScannerTenam))
         {
             return;
         }
 
-        // Важно: запускаем ПОСЛЕ возврата из LoadRecordsAsync,
-        // чтобы AsyncCommand успел снять флаг "executing"
         _ = Task.Run(async () =>
         {
             await Task.Yield();
-            await RunOnUiThreadAsync(TryProcessPendingScannerTenam);
+            await RunOnUiThreadAsync(TryProcessPendingRequest);
         });
     }
 
-    // Запускает отложенный скан после завершения текущей обработки
-    private void TryProcessPendingScannerTenam()
+    private void TryProcessPendingRequest()
     {
-        if (string.IsNullOrWhiteSpace(_pendingScannerTenam))
+        if (IsBusy)
         {
             return;
         }
 
-        if (IsBusy)
+        if (!string.IsNullOrWhiteSpace(_pendingManualTenam))
+        {
+            var pendingManualTenam = _pendingManualTenam;
+            _pendingManualTenam = string.Empty;
+            ReceiveManualTenam(pendingManualTenam);
+            return;
+        }
+
+        if (!IsAutomaticMode)
+        {
+            _pendingScannerTenam = string.Empty;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_pendingScannerTenam))
         {
             return;
         }
@@ -894,14 +1019,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         var pendingTenam = _pendingScannerTenam;
         _pendingScannerTenam = string.Empty;
 
-        // Для отложенного TENAM пропускаем дедупликацию сканера,
-        // иначе повторно принятый код может быть отброшен в окне подавления дублей
         _lastScannedTenam = string.Empty;
         _lastScannedAtUtc = DateTime.MinValue;
 
         ReceiveTenamFromScanner(pendingTenam);
     }
-
     // Выполняет обработку TENAM вне UI потока
     private static async Task WaitForUiToRenderAsync()
     {
@@ -1014,78 +1136,116 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         );
     }
 
-    // Применяет результат обработки к состоянию экрана
-    private void ApplyResponseState(BoxProcessingResponse response, string tenamSnapshot)
+    // Применяет результат обработки, не смешивая ручную рабочую область
+    // с мониторингом автоматической линии.
+    private void ApplyResponseState(
+        BoxProcessingResponse response,
+        string tenamSnapshot,
+        WorkMode requestMode)
     {
         LastProcessingStatus = response.Status;
-
-        foreach (var record in response.Records)
-        {
-            Records.Add(record);
-        }
-
         StatusMessage = response.Message;
-        AddNotification(BuildProcessingNotification(response, tenamSnapshot), ResolveProcessingNotificationCategory(response));
 
-        if (response.Records.Count > 0)
+        var notificationMessage = BuildProcessingNotification(response, tenamSnapshot);
+        if (requestMode == WorkMode.Manual)
         {
-            _lastLoadedResponse = response;
-            _lastLoadedTenam = tenamSnapshot;
+            notificationMessage = $"Ручная обработка: {notificationMessage}";
         }
-        else
+
+        AddNotification(
+            notificationMessage,
+            ResolveProcessingNotificationCategory(response));
+
+        if (requestMode == WorkMode.Manual)
         {
-            _lastLoadedResponse = null;
-            _lastLoadedTenam = string.Empty;
+            LastManualProcessingStatus = response.Status;
+            ManualStatusMessage = response.Message;
+
+            Records.Clear();
+            foreach (var record in response.Records)
+            {
+                Records.Add(record);
+            }
+
+            if (response.Records.Count > 0)
+            {
+                _lastLoadedResponse = response;
+                _lastLoadedTenam = tenamSnapshot;
+            }
+            else
+            {
+                _lastLoadedResponse = null;
+                _lastLoadedTenam = string.Empty;
+            }
+
+            if (response.Status == BoxProcessingStatus.Success)
+            {
+                _lastSuccessfulResponse = response;
+                _lastSuccessfulTenam = tenamSnapshot;
+            }
+            else
+            {
+                _lastSuccessfulResponse = null;
+                _lastSuccessfulTenam = string.Empty;
+            }
+
+            OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
+            OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
+            return;
         }
 
         if (response.Status == BoxProcessingStatus.Success)
         {
-            _lastSuccessfulResponse = response;
-            _lastSuccessfulTenam = tenamSnapshot;
             LastProcessedTenam = tenamSnapshot;
         }
-        else
-        {
-            _lastSuccessfulResponse = null;
-            _lastSuccessfulTenam = string.Empty;
-            LastProcessedTenam = string.Empty;
-        }
-
-        OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
-        OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
     }
 
-    // Применяет состояние ошибки после неудачной загрузки
-    private void ApplyFailedLoadState(string errorMessage)
+    private void ApplyFailedLoadState(string errorMessage, WorkMode requestMode)
     {
         LastProcessingStatus = BoxProcessingStatus.Error;
         StatusMessage = errorMessage;
+
+        var notificationMessage = requestMode == WorkMode.Manual
+            ? $"Ручная обработка: ошибка: {errorMessage}"
+            : $"Ошибка: {errorMessage}";
+
+        AddNotification(notificationMessage, NotificationCategory.Error);
+
+        if (requestMode != WorkMode.Manual)
+        {
+            return;
+        }
+
+        LastManualProcessingStatus = BoxProcessingStatus.Error;
+        ManualStatusMessage = errorMessage;
+        Records.Clear();
+
         _lastLoadedResponse = null;
         _lastLoadedTenam = string.Empty;
         _lastSuccessfulResponse = null;
         _lastSuccessfulTenam = string.Empty;
-        LastProcessedTenam = string.Empty;
 
         _tenamAwaitingWeight = string.Empty;
         CanRequestManualWeight = false;
-
-        AddNotification($"Ошибка: {errorMessage}", NotificationCategory.Error);
 
         OpenEndLabelPreviewCommand.RaiseCanExecuteChanged();
         OpenStuffingSheetPreviewCommand.RaiseCanExecuteChanged();
         RequestManualWeightCommand.RaiseCanExecuteChanged();
     }
-
     // Выполняет бесшумную автопечать после успешной обработки
     private async Task TryAutoPrintAsync(
         BoxProcessingResponse response,
         string tenam,
         CancellationToken cancellationToken,
+        WorkMode requestMode,
         bool printDropSheet,
         bool printEndLabel)
     {
         // В fast-режиме никаких попапов, только статус
         var settings = PrintSettingsStore.LoadOrDefault();
+        var notificationPrefix = requestMode == WorkMode.Manual
+            ? "Ручная обработка: "
+            : string.Empty;
 
         if (settings is null || !settings.IsComplete)
         {
@@ -1118,11 +1278,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 var reason = ResolvePrintFailureReason(settings.StuffingSheetPrinterName);
                 StatusMessage = "Не удалось напечатать лист сброса";
-                AddNotification($"Лист сброса №{tenam} не отправлен на печать. {reason}", NotificationCategory.Error);
+                AddNotification($"{notificationPrefix}Лист сброса №{tenam} не отправлен на печать. {reason}", NotificationCategory.Error);
                 return;
             }
 
-            AddNotification($"Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
+            AddNotification($"{notificationPrefix}Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
         }
 
         if (printEndLabel
@@ -1144,11 +1304,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 var reason = ResolvePrintFailureReason(settings.EndLabelPrinterName);
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
-                AddNotification($"Торцевая этикетка №{tenam} не отправлена на печать. {reason}", NotificationCategory.Error);
+                AddNotification($"{notificationPrefix}Торцевая этикетка №{tenam} не отправлена на печать. {reason}", NotificationCategory.Error);
                 return;
             }
 
-            AddNotification($"Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", NotificationCategory.Success);
+            AddNotification($"{notificationPrefix}Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", NotificationCategory.Success);
         }
 
         StatusMessage = "Отправлено на печать";
@@ -1157,11 +1317,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // Проверяет доступность предпросмотра торцевой этикетки
     private bool CanOpenEndLabelPreview()
     {
-        if (IsBusy)
-        {
-            return false;
-        }
-
         if (_lastSuccessfulResponse is null)
         {
             return false;
@@ -1205,11 +1360,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // Проверяет доступность предпросмотра листа сброса
     private bool CanOpenStuffingSheetPreview()
     {
-        if (IsBusy)
-        {
-            return false;
-        }
-
         if (_lastLoadedResponse is null)
         {
             return false;

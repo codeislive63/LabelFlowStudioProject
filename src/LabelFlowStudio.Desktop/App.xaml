@@ -21,6 +21,10 @@
                 <workViews:WorkSectionView />
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type viewModels:ManualProcessingViewModel}">
+                <workViews:ManualProcessingView />
+            </DataTemplate>
+
             <DataTemplate DataType="{x:Type viewModels:JournalViewModel}">
                 <views:JournalView />
             </DataTemplate>
