@@ -14,11 +14,17 @@
              Unloaded="AutomaticLineView_Unloaded">
     <ScrollViewer HorizontalContentAlignment="Stretch"
                   HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+                  VerticalScrollBarVisibility="Auto"
+                  Padding="0,0,14,0">
+
+        <ScrollViewer.Resources>
+            <Style TargetType="{x:Type ScrollBar}"
+                   BasedOn="{StaticResource AutoLineVerticalScrollBarStyle}" />
+        </ScrollViewer.Resources>
+        
         <Grid x:Name="AutomaticLineContent"
-              MaxWidth="1320"
-              Margin="{DynamicResource AutoLinePagePadding}"
-              HorizontalAlignment="Center">
+              MaxWidth="1440"
+              HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -27,10 +33,6 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-
-            <work:WorkModeSelector Grid.Row="0"
-                                   Margin="{StaticResource WorkGapBottom16}"
-                                   DataContext="{Binding Work}" />
 
             <!-- The center card reflects only the real projected line state. -->
             <Border Grid.Row="1"

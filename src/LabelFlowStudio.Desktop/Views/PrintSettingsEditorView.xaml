@@ -184,13 +184,9 @@
         <Border Style="{StaticResource SettingsCardStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock VerticalAlignment="Center"
-                           Style="{StaticResource SettingsSectionTitleStyle}"
-                           Text="Весы" />
                 <ui:ToggleSwitch Grid.Column="1"
                                  Content="Использовать весы"
                                  IsChecked="{Binding UseScales, Mode=TwoWay}"

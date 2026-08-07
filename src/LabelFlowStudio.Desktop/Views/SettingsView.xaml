@@ -18,10 +18,7 @@
                            FontSize="26"
                            FontWeight="SemiBold"
                            Text="Настройки" />
-                <TextBlock Margin="{StaticResource SettingsMarginBottom16}"
-                           FontSize="22"
-                           FontWeight="SemiBold"
-                           Text="Печать" />
+
                 <views:PrintSettingsEditorView DataContext="{Binding Editor}" />
             </StackPanel>
         </ScrollViewer>

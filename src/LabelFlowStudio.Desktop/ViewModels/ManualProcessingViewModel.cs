@@ -163,8 +163,8 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
     }
 
     public string LoadingDescription => string.IsNullOrWhiteSpace(LoadingTenam)
-        ? "Получение данных коробки…"
-        : $"Получение данных коробки {LoadingTenam}…";
+        ? "Получение данных…"
+        : $"Получение данных короба {LoadingTenam}…";
 
     public bool HasRecords => Work.Records.Count > 0;
 

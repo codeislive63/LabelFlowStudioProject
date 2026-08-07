@@ -163,31 +163,39 @@
     <Style x:Key="ManualWorkCardStyle"
            TargetType="Border"
            BasedOn="{StaticResource AutoLineCardStyle}">
-        <Setter Property="Padding" Value="16" />
+        <Setter Property="Padding" Value="14" />
     </Style>
 
-    <Style x:Key="ManualTenamTextBoxStyle"
-           TargetType="TextBox"
-           BasedOn="{StaticResource AppTextBoxStyle}">
+    <!-- TENAM intentionally uses the native TextBox template.
+         The previous custom AppTextBoxStyle template could render the selection/caret
+         while the glyphs themselves were not painted correctly. The surrounding Border
+         in ManualProcessingView provides the Fluent rounded outline. -->
+    <Style x:Key="ManualTenamTextBoxStyle" TargetType="TextBox">
         <Setter Property="Height" Value="44" />
-        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="Padding" Value="12,0" />
         <Setter Property="FontSize" Value="16" />
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-        <Setter Property="CaretBrush" Value="{StaticResource AutoLineBlueBrush}" />
-        <Setter Property="SelectionBrush" Value="{StaticResource AutoLineBlueBrush}" />
-        <Setter Property="SelectionTextBrush" Value="{StaticResource SeverityOnColorBrush}" />
-        <Setter Property="SelectionOpacity" Value="1" />
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBorderBrush}" />
-            </Trigger>
-        </Style.Triggers>
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Foreground" Value="#1C1F2A" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="CaretBrush" Value="#2463D4" />
+        <Setter Property="SelectionBrush"
+                Value="#2463D4" />
+        <Setter Property="SelectionTextBrush"
+                Value="#1C1F2A" />
+        <Setter Property="SelectionOpacity"
+                Value="0.22" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
     </Style>
 
     <Style x:Key="ManualPrimaryActionButtonStyle"
            TargetType="Button"
            BasedOn="{StaticResource PrimaryButtonStyle}">
         <Setter Property="Height" Value="44" />
+        <Setter Property="MinWidth" Value="220" />
+        <Setter Property="MaxWidth" Value="280" />
         <Setter Property="Padding" Value="16,8" />
     </Style>
 
@@ -201,22 +209,22 @@
     <Style x:Key="ManualSummaryCardStyle"
            TargetType="Border"
            BasedOn="{StaticResource AutoLineCardStyle}">
-        <Setter Property="MinHeight" Value="78" />
-        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="MinHeight" Value="68" />
+        <Setter Property="Padding" Value="12,10" />
     </Style>
 
     <Style x:Key="ManualSummaryIconHostStyle" TargetType="Border">
-        <Setter Property="Width" Value="38" />
-        <Setter Property="Height" Value="38" />
-        <Setter Property="Margin" Value="0,0,12,0" />
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Margin" Value="0,0,10,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
         <Setter Property="CornerRadius" Value="9" />
     </Style>
 
     <Style x:Key="ManualEmptyStateCardStyle" TargetType="Border">
-        <Setter Property="MaxWidth" Value="440" />
-        <Setter Property="Padding" Value="24,20" />
+        <Setter Property="MaxWidth" Value="380" />
+        <Setter Property="Padding" Value="20,16" />
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource AutoLineNeutralBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
@@ -312,5 +320,59 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="AutoLineVerticalScrollBarStyle"
+       TargetType="{x:Type ScrollBar}">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Margin" Value="2,8,2,8" />
+        <Setter Property="Background" Value="Transparent" />
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track"
+                           IsDirectionReversed="True">
+
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton
+                                Command="{x:Static ScrollBar.PageUpCommand}"
+                                Opacity="0"
+                                Focusable="False" />
+                            </Track.DecreaseRepeatButton>
+
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border
+                                            Width="5"
+                                            HorizontalAlignment="Center"
+                                            Background="{DynamicResource TextSecondaryBrush}"
+                                            CornerRadius="3"
+                                            Opacity="0.35" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton
+                                Command="{x:Static ScrollBar.PageDownCommand}"
+                                Opacity="0"
+                                Focusable="False" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.9" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 </ResourceDictionary>
