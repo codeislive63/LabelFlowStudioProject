@@ -1,4 +1,4 @@
-﻿﻿
+﻿
 <!doctype html>
 <html lang="ru">
 <head>
@@ -709,22 +709,16 @@
             tokensHandleEl.addEventListener('click', () => setTokensHidden(false, true))
             closeTokensBtnEl.addEventListener('click', () => setTokensHidden(true, true))
 
-            // 1) local
+            // 1) bundled app resources only. Do not use CDN here: the editor must
+            // keep working in offline/proxy-restricted environments.
             const localOk = await tryStartMonaco(
                 'https://app/Editor/monaco/vs',
                 'monaco/vs/loader.js',
                 'monaco/vs/editor/editor.main.css'
             )
 
-            // 2) CDN
-            const cdnOk = localOk ? true : await tryStartMonaco(
-                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs',
-                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.css'
-            )
-
-            // 3) fallback
-            if (!cdnOk) {
+            // 2) local textarea fallback
+            if (!localOk) {
                 ensureFallback()
             }
 
