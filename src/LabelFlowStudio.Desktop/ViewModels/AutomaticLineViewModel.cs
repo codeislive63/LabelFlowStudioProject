@@ -64,41 +64,70 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
                 return AutomaticLineState.Idle;
             }
 
-            return ResolveLineState(
+            var projectedState = ResolveLineState(
                 Work.IsBusy,
                 _hasAutomaticActivity ? Work.StatusMessage : null,
                 _currentLineEvent,
                 IsSuccessStateVisible);
+
+            if (IsOracleStatusError && !Work.IsBusy)
+            {
+                return AutomaticLineState.Error;
+            }
+
+            if (!HasEquipmentSnapshot && projectedState == AutomaticLineState.Idle)
+            {
+                return AutomaticLineState.Initializing;
+            }
+
+            // The scanner is the only device whose runtime state is currently known.
+            // Do not present a healthy idle line after that real check reports it stopped.
+            return HasEquipmentSnapshot
+                && !IsScannerRunning
+                && !Work.IsBusy
+                && projectedState is AutomaticLineState.Idle or AutomaticLineState.Success
+                    ? AutomaticLineState.Error
+                    : projectedState;
         }
     }
 
     public string LineHeadline => LineState switch
     {
+        AutomaticLineState.Initializing => "Инициализация линии",
         AutomaticLineState.Idle => "Линия работает",
-        AutomaticLineState.Loading => "Загрузка данных",
+        AutomaticLineState.Loading => "Получение данных",
         AutomaticLineState.Processing => "Обработка короба",
-        AutomaticLineState.Printing => "Печать",
+        AutomaticLineState.Printing => ResolveStatusMessage("Печать"),
         AutomaticLineState.Success => "Короб обработан",
         AutomaticLineState.Warning => "Требуется внимание",
+        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning => "Линия остановлена",
         AutomaticLineState.Error => "Ошибка линии",
         _ => "Линия работает"
     };
 
     public string LineSubtitle => LineState switch
     {
+        AutomaticLineState.Initializing => "Проверка состояния сканера",
         AutomaticLineState.Idle => "Ожидание следующего короба",
         AutomaticLineState.Success => LastBoxActionText == NoDataText
             ? "Ожидание следующего короба"
             : LastBoxActionText,
-        AutomaticLineState.Loading => ResolveStatusMessage("Загрузка данных короба"),
+        AutomaticLineState.Loading => string.IsNullOrWhiteSpace(Work.CurrentOracleQueryTenam)
+            ? "Получение данных коробки…"
+            : $"Получение данных коробки {Work.CurrentOracleQueryTenam}…",
         AutomaticLineState.Processing => ResolveStatusMessage("Короб обрабатывается"),
         AutomaticLineState.Printing => ResolveStatusMessage("Документ отправляется на печать"),
+        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning =>
+            "Сканер остановлен",
+        AutomaticLineState.Error when IsOracleStatusError => OracleStatusToolTip,
         AutomaticLineState.Warning or AutomaticLineState.Error =>
             ResolveLineIssueMessage(),
         _ => "Ожидание следующего короба"
     };
 
     public bool IsIdle => LineState == AutomaticLineState.Idle;
+
+    public bool IsInitializing => LineState == AutomaticLineState.Initializing;
 
     public bool IsLoading => LineState == AutomaticLineState.Loading;
 
@@ -111,6 +140,8 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
     public bool IsWarning => LineState == AutomaticLineState.Warning;
 
     public bool IsError => LineState == AutomaticLineState.Error;
+
+    public bool HasLastBox => !string.IsNullOrWhiteSpace(Work.LastProcessedTenam);
 
     public string LastBoxTenamText => string.IsNullOrWhiteSpace(Work.LastProcessedTenam)
         ? NoDataValue
@@ -201,7 +232,30 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         ? "Проверка…"
         : IsScalesEnabled ? "Включены в настройках" : "Отключены";
 
-    public string WmsStatusText => "Неизвестно";
+    public OracleConnectionState OracleState => Work.OracleConnectionState;
+
+    public string OracleStatusText => OracleState switch
+    {
+        OracleConnectionState.Checking => "Проверка…",
+        OracleConnectionState.Connected => "Подключено",
+        OracleConnectionState.Error => "Ошибка",
+        _ => "Не проверено"
+    };
+
+    public string OracleStatusToolTip => Work.OracleConnectionStatusDetail;
+
+    public bool IsOracleStatusUnknown => OracleState == OracleConnectionState.Unknown;
+
+    public bool IsOracleStatusChecking => OracleState == OracleConnectionState.Checking;
+
+    public bool IsOracleStatusConnected => OracleState == OracleConnectionState.Connected;
+
+    public bool IsOracleStatusError => OracleState == OracleConnectionState.Error;
+
+    // Совместимость с текущим binding до визуальной интеграции Oracle-состояний.
+    public string WmsStatusText => OracleStatusText;
+
+    public string WmsStatusToolTip => OracleStatusToolTip;
 
     public string NoDataValue => "–";
 
@@ -271,6 +325,8 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(PrinterStatusText));
             OnPropertyChanged(nameof(ScalesStatusText));
         }
+
+        NotifyLineStateChanged();
     }
 
     public void Dispose()
@@ -355,8 +411,6 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
                 && isPrinterInstalled(printerName));
     }
 
-    private bool HasLastBox => !string.IsNullOrWhiteSpace(Work.LastProcessedTenam);
-
     private bool IsSuccessStateVisible => _successStateExpiresAt is { } expiresAt
         && _clock() < expiresAt;
 
@@ -397,6 +451,15 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
             || eventArgs.PropertyName == nameof(MainViewModel.StatusMessage)
             || eventArgs.PropertyName == nameof(MainViewModel.CurrentWorkMode))
         {
+            NotifyLineStateChanged();
+        }
+
+        if (string.IsNullOrEmpty(eventArgs.PropertyName)
+            || eventArgs.PropertyName == nameof(MainViewModel.OracleConnectionState)
+            || eventArgs.PropertyName == nameof(MainViewModel.OracleConnectionStatusDetail)
+            || eventArgs.PropertyName == nameof(MainViewModel.CurrentOracleQueryTenam))
+        {
+            NotifyOracleStatusChanged();
             NotifyLineStateChanged();
         }
 
@@ -452,6 +515,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LineHeadline));
         OnPropertyChanged(nameof(LineSubtitle));
         OnPropertyChanged(nameof(IsIdle));
+        OnPropertyChanged(nameof(IsInitializing));
         OnPropertyChanged(nameof(IsLoading));
         OnPropertyChanged(nameof(IsProcessing));
         OnPropertyChanged(nameof(IsPrinting));
@@ -466,10 +530,24 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(LastBoxTimeText));
         OnPropertyChanged(nameof(LastBoxResultText));
         OnPropertyChanged(nameof(LastBoxActionText));
+        OnPropertyChanged(nameof(HasLastBox));
         OnPropertyChanged(nameof(IsLastBoxSuccess));
         OnPropertyChanged(nameof(IsLastBoxWarning));
         OnPropertyChanged(nameof(IsLastBoxError));
         OnPropertyChanged(nameof(LineSubtitle));
+    }
+
+    private void NotifyOracleStatusChanged()
+    {
+        OnPropertyChanged(nameof(OracleState));
+        OnPropertyChanged(nameof(OracleStatusText));
+        OnPropertyChanged(nameof(OracleStatusToolTip));
+        OnPropertyChanged(nameof(IsOracleStatusUnknown));
+        OnPropertyChanged(nameof(IsOracleStatusChecking));
+        OnPropertyChanged(nameof(IsOracleStatusConnected));
+        OnPropertyChanged(nameof(IsOracleStatusError));
+        OnPropertyChanged(nameof(WmsStatusText));
+        OnPropertyChanged(nameof(WmsStatusToolTip));
     }
 
     private string ResolveStatusMessage(string fallback) =>
@@ -499,14 +577,20 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     private static string ResolveCompactAction(string message)
     {
+        // TODO: replace this isolated best-effort projection with ProcessingEvent.Action
+        // once structured processing events are the source of the monitoring screen.
         if (Contains(message, "лист сброса"))
         {
-            return "Лист сброса";
+            return Contains(message, "отправлен на печать")
+                ? "Лист сброса отправлен на печать"
+                : "Лист сброса";
         }
 
         if (Contains(message, "торцев") || Contains(message, "этикетк"))
         {
-            return "Торцевая этикетка";
+            return Contains(message, "отправлен на печать")
+                ? "Торцевая этикетка отправлена на печать"
+                : "Торцевая этикетка";
         }
 
         if (Contains(message, "вес"))
@@ -536,7 +620,8 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
         if (notification.IsWarning
             || Contains(notification.Message, "данные не найдены")
-            || Contains(notification.Message, "не найден в БД"))
+            || Contains(notification.Message, "не найден в БД")
+            || IsTransitionRiskMessage(notification.Message))
         {
             return AutomaticLineEventSeverity.Warning;
         }
@@ -551,6 +636,14 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
         return AutomaticLineEventSeverity.Information;
     }
+
+    private static bool IsTransitionRiskMessage(string message) =>
+        Contains(message, "переключение в ручной режим")
+        || Contains(message, "не потерять короб")
+        || Contains(message, "повторно отскан")
+        || Contains(message, "повторное скан")
+        || Contains(message, "requiresrescan")
+        || Contains(message, "rejectedduringtransition");
 
     private bool IsAutomaticOperationNotification(UiNotification notification) =>
         Work.IsBusy
@@ -629,7 +722,8 @@ public enum AutomaticLineState
     Printing = 3,
     Success = 4,
     Warning = 5,
-    Error = 6
+    Error = 6,
+    Initializing = 7
 }
 
 internal readonly record struct AutomaticLineEquipmentSnapshot(

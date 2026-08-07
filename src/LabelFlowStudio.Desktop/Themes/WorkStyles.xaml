@@ -39,8 +39,7 @@
                             <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource ShellNavigationSelectedBrush}" />
+                            <Setter TargetName="Border" Property="Opacity" Value="0.96" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -69,8 +68,8 @@
     </Style>
 
     <Style x:Key="AutoLineModeSegmentButtonStyle" TargetType="Button">
-        <Setter Property="Height" Value="38" />
-        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Padding" Value="12,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
@@ -86,7 +85,7 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="10"
+                            CornerRadius="8"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
@@ -123,14 +122,35 @@
     <Style x:Key="AutoLineKpiCardStyle"
            TargetType="Border"
            BasedOn="{StaticResource AutoLineCardStyle}">
-        <Setter Property="MinHeight" Value="102" />
-        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="MinHeight" Value="88" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style x:Key="AutoLineKpiIconHostStyle" TargetType="Border">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Margin" Value="0,0,12,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{StaticResource AutoLineNeutralSoftBrush}" />
+        <Setter Property="CornerRadius" Value="9" />
     </Style>
 
     <Style x:Key="AutoLineEquipmentItemStyle" TargetType="Border">
-        <Setter Property="Padding" Value="12" />
+        <Setter Property="MinHeight" Value="68" />
+        <Setter Property="Padding" Value="12,10" />
         <Setter Property="Background" Value="{StaticResource AutoLineNeutralSoftBrush}" />
         <Setter Property="CornerRadius" Value="{StaticResource AutoLineRadius10}" />
+    </Style>
+
+    <Style x:Key="AutoLineEquipmentIconHostStyle" TargetType="Border">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Margin" Value="0,0,12,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AutoLineNeutralBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="9" />
     </Style>
 
     <Style x:Key="AutoLineEventItemStyle" TargetType="Border">
@@ -138,6 +158,125 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+
+    <Style x:Key="ManualWorkCardStyle"
+           TargetType="Border"
+           BasedOn="{StaticResource AutoLineCardStyle}">
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style x:Key="ManualTenamTextBoxStyle"
+           TargetType="TextBox"
+           BasedOn="{StaticResource AppTextBoxStyle}">
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="12,9" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="CaretBrush" Value="{StaticResource AutoLineBlueBrush}" />
+        <Setter Property="SelectionBrush" Value="{StaticResource AutoLineBlueBrush}" />
+        <Setter Property="SelectionTextBrush" Value="{StaticResource SeverityOnColorBrush}" />
+        <Setter Property="SelectionOpacity" Value="1" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBorderBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ManualPrimaryActionButtonStyle"
+           TargetType="Button"
+           BasedOn="{StaticResource PrimaryButtonStyle}">
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="16,8" />
+    </Style>
+
+    <Style x:Key="ManualSecondaryActionButtonStyle"
+           TargetType="Button"
+           BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+
+    <Style x:Key="ManualSummaryCardStyle"
+           TargetType="Border"
+           BasedOn="{StaticResource AutoLineCardStyle}">
+        <Setter Property="MinHeight" Value="78" />
+        <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <Style x:Key="ManualSummaryIconHostStyle" TargetType="Border">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Margin" Value="0,0,12,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
+        <Setter Property="CornerRadius" Value="9" />
+    </Style>
+
+    <Style x:Key="ManualEmptyStateCardStyle" TargetType="Border">
+        <Setter Property="MaxWidth" Value="440" />
+        <Setter Property="Padding" Value="24,20" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource AutoLineNeutralBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource AutoLineRadius10}" />
+    </Style>
+
+    <Style x:Key="ManualPagerButtonStyle"
+           TargetType="Button"
+           BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="ManualPagerPageButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Margin" Value="2,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="PagerBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          TextElement.Foreground="{TemplateBinding Foreground}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PagerBorder" Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="PagerBorder" Property="Opacity" Value="0.75" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="PagerBorder" Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                            <Setter TargetName="PagerBorder" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Cursor" Value="Arrow" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="AutoLineLinkButtonStyle" TargetType="Button">

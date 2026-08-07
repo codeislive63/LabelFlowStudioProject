@@ -6,11 +6,11 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:viewModels="clr-namespace:LabelFlowStudio.Desktop.ViewModels"
              d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}"
-             d:DesignHeight="46"
-             d:DesignWidth="500"
+             d:DesignHeight="42"
+             d:DesignWidth="440"
              mc:Ignorable="d">
-    <Border MaxWidth="520"
-            Padding="8"
+    <Border MaxWidth="440"
+            Padding="4"
             HorizontalAlignment="Left"
             Background="{DynamicResource SurfaceAltBrush}"
             BorderBrush="{DynamicResource SurfaceBorderBrush}"
@@ -18,8 +18,8 @@
             CornerRadius="10">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="246" />
-                <ColumnDefinition Width="246" />
+                <ColumnDefinition Width="214" />
+                <ColumnDefinition Width="214" />
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0"
@@ -30,8 +30,8 @@
                            BasedOn="{StaticResource AutoLineModeSegmentButtonStyle}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsAutomaticMode}" Value="True">
-                                <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
-                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBorderBrush}" />
                                 <Setter Property="Foreground" Value="{StaticResource AutoLineBlueBrush}" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </DataTrigger>
@@ -39,8 +39,8 @@
                     </Style>
                 </Button.Style>
                 <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Margin="0,0,8,0" Symbol="Pipeline24" />
-                    <TextBlock VerticalAlignment="Center" Text="Автоматическая линия" />
+                    <ui:SymbolIcon Margin="0,0,8,0" FontSize="16" Symbol="Pipeline24" />
+                    <TextBlock VerticalAlignment="Center" FontSize="12" Text="Автоматическая линия" />
                 </StackPanel>
             </Button>
 
@@ -52,8 +52,8 @@
                            BasedOn="{StaticResource AutoLineModeSegmentButtonStyle}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsAutomaticMode}" Value="False">
-                                <Setter Property="Background" Value="{StaticResource AutoLineBlueSoftBrush}" />
-                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBorderBrush}" />
                                 <Setter Property="Foreground" Value="{StaticResource AutoLineBlueBrush}" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </DataTrigger>
@@ -61,8 +61,8 @@
                     </Style>
                 </Button.Style>
                 <StackPanel Orientation="Horizontal">
-                    <ui:SymbolIcon Margin="0,0,8,0" Symbol="HandLeft24" />
-                    <TextBlock VerticalAlignment="Center" Text="Ручная обработка" />
+                    <ui:SymbolIcon Margin="0,0,8,0" FontSize="16" Symbol="HandLeft24" />
+                    <TextBlock VerticalAlignment="Center" FontSize="12" Text="Ручная обработка" />
                 </StackPanel>
             </Button>
         </Grid>

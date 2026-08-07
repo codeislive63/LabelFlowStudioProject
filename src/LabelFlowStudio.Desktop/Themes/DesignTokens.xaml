@@ -11,6 +11,7 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+    <SolidColorBrush x:Key="SeverityOnColorBrush" Color="White" />
 
     <Thickness x:Key="ShellPagePadding">20</Thickness>
     <CornerRadius x:Key="ShellCardCornerRadius">12</CornerRadius>
@@ -22,6 +23,9 @@
     <Thickness x:Key="AutoLineSpace24">24</Thickness>
     <Thickness x:Key="AutoLineSpace32">32</Thickness>
     <Thickness x:Key="AutoLinePagePadding">24</Thickness>
+    <Thickness x:Key="WorkGapBottom12">0,0,0,12</Thickness>
+    <Thickness x:Key="WorkGapBottom16">0,0,0,16</Thickness>
+    <Thickness x:Key="WorkGapRight12">0,0,12,0</Thickness>
 
     <CornerRadius x:Key="AutoLineRadius10">10</CornerRadius>
     <CornerRadius x:Key="AutoLineRadius12">12</CornerRadius>

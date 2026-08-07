@@ -14,6 +14,7 @@
                 <ResourceDictionary Source="Themes/DesignTokens.xaml" />
                 <ResourceDictionary Source="Themes/ShellStyles.xaml" />
                 <ResourceDictionary Source="Themes/WorkStyles.xaml" />
+                <ResourceDictionary Source="Themes/SettingsStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModels:WorkSectionViewModel}">

@@ -1,59 +1,206 @@
-using System.Reflection;
+using System.Text.Json;
+using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Printing;
 
 namespace LabelFlowStudio.Application.Tests.Printing;
 
-[Collection("PrintSettingsStore")]
 public sealed class PrintSettingsStoreTests
 {
     [Fact]
     public void TryLoad_WhenSettingsFileMissing_ReturnsNull()
     {
-        using var _ = new SettingsFileScope("missing-file");
+        using var scope = new TemporarySettingsRepository();
 
-        var loaded = PrintSettingsStore.TryLoad();
+        var loaded = scope.Repository.TryLoad();
 
         Assert.Null(loaded);
     }
 
     [Fact]
-    public async Task SaveAsync_ThenTryLoad_ReturnsSavedValues()
+    public async Task SaveAsync_ThenTryLoad_RoundTripsEveryPersistedField()
     {
-        using var _ = new SettingsFileScope("save-then-load");
+        using var scope = new TemporarySettingsRepository();
+        var settings = CreateDistinctSettings();
 
-        var settings = new PrintSettings
-        {
-            EndLabelPrinterName = "Zebra",
-            StuffingSheetPrinterName = "LaserJet",
-            EndLabelCopies = 3,
-            StuffingSheetCopies = 2,
-            PrintStuffingSheetEnabled = true,
-            PrintEndLabelEnabled = true,
-            UseScales = false,
-            ManualScanAutoPrintEndLabelEnabled = true
-        };
+        await scope.Repository.SaveAsync(settings, CancellationToken.None);
 
-        await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
-
-        ResetCache();
-        var loaded = PrintSettingsStore.TryLoad();
+        var reloadedRepository = new PrintSettingsRepository(scope.SettingsFilePath);
+        var loaded = reloadedRepository.TryLoad();
 
         Assert.NotNull(loaded);
-        Assert.Equal("Zebra", loaded.EndLabelPrinterName);
-        Assert.Equal("LaserJet", loaded.StuffingSheetPrinterName);
-        Assert.Equal(3, loaded.EndLabelCopies);
-        Assert.Equal(2, loaded.StuffingSheetCopies);
-        Assert.False(loaded.UseScales);
-        Assert.True(loaded.ManualScanAutoPrintEndLabelEnabled);
+        AssertSettingsEqual(settings, loaded);
+    }
+
+    [Fact]
+    public async Task SaveAsync_UsesIndependentSnapshotsForInputAndCachedResults()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var settings = CreateDistinctSettings();
+
+        await scope.Repository.SaveAsync(settings, CancellationToken.None);
+        settings.EndLabelPrinterName = "Mutated caller";
+
+        var firstRead = scope.Repository.LoadOrDefault();
+        firstRead.StuffingSheetPrinterName = "Mutated result";
+        var secondRead = scope.Repository.LoadOrDefault();
+
+        Assert.Equal("End-label printer", firstRead.EndLabelPrinterName);
+        Assert.Equal("Stuffing-sheet printer", secondRead.StuffingSheetPrinterName);
+        Assert.NotSame(firstRead, secondRead);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UsesLatestCachedSnapshotAndReturnsIndependentResult()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var initial = CreateDistinctSettings();
+        await scope.Repository.SaveAsync(initial, CancellationToken.None);
+
+        var updated = await scope.Repository.UpdateAsync(
+            current =>
+            {
+                current.EndLabelCopies = 7;
+                current.WorkMode = WorkMode.Manual;
+                return current;
+            },
+            CancellationToken.None);
+        updated.EndLabelCopies = 55;
+
+        var loaded = scope.Repository.LoadOrDefault();
+        Assert.Equal(7, loaded.EndLabelCopies);
+        Assert.Equal(WorkMode.Manual, loaded.WorkMode);
+        Assert.Equal(initial.ManualScanAutoPrintEndLabelEnabled, loaded.ManualScanAutoPrintEndLabelEnabled);
+    }
+
+    [Fact]
+    public async Task Update_SynchronouslyReplacesFileAndCachedSnapshot()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var initial = CreateDistinctSettings();
+        await scope.Repository.SaveAsync(initial, CancellationToken.None);
+
+        var updated = scope.Repository.Update(
+            current =>
+            {
+                current.EndLabelCopies = 8;
+                return current;
+            },
+            CancellationToken.None);
+        updated.EndLabelCopies = 55;
+
+        var loaded = new PrintSettingsRepository(scope.SettingsFilePath).LoadOrDefault();
+        Assert.Equal(8, loaded.EndLabelCopies);
+        Assert.Equal(8, scope.Repository.LoadOrDefault().EndLabelCopies);
+        Assert.Empty(Directory.EnumerateFiles(
+            scope.DirectoryPath,
+            $".{Path.GetFileName(scope.SettingsFilePath)}.*.tmp"));
+    }
+
+    [Fact]
+    public async Task SaveAsync_PreservesExistingJsonFieldNamesAndOmitsCalculatedState()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var settings = CreateDistinctSettings();
+
+        await scope.Repository.SaveAsync(settings, CancellationToken.None);
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(scope.SettingsFilePath));
+        var properties = document.RootElement
+            .EnumerateObject()
+            .Select(property => property.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "printEndLabelEnabled",
+                "printStuffingSheetEnabled",
+                "endLabelPrinterName",
+                "stuffingSheetPrinterName",
+                "endLabelCopies",
+                "stuffingSheetCopies",
+                "useScales",
+                "manualScanAutoPrintEndLabelEnabled",
+                "workMode"
+            },
+            properties);
+        Assert.False(document.RootElement.TryGetProperty("isComplete", out _));
+        Assert.Equal("End-label printer", document.RootElement.GetProperty("endLabelPrinterName").GetString());
+        Assert.Equal(3, document.RootElement.GetProperty("endLabelCopies").GetInt32());
+    }
+
+    [Fact]
+    public async Task SaveAsync_LeavesNoAtomicWriteTemporaryFiles()
+    {
+        using var scope = new TemporarySettingsRepository();
+
+        await scope.Repository.SaveAsync(CreateDistinctSettings(), CancellationToken.None);
+
+        var leftovers = Directory.EnumerateFiles(
+                scope.DirectoryPath,
+                $".{Path.GetFileName(scope.SettingsFilePath)}.*.tmp")
+            .ToArray();
+        Assert.Empty(leftovers);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenAtomicReplaceFails_KeepsCacheAndCleansTemporaryFile()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var initial = CreateDistinctSettings();
+        await scope.Repository.SaveAsync(initial, CancellationToken.None);
+
+        File.Delete(scope.SettingsFilePath);
+        Directory.CreateDirectory(scope.SettingsFilePath);
+
+        var exception = await Record.ExceptionAsync(
+            () => scope.Repository.UpdateAsync(
+                current =>
+                {
+                    current.EndLabelCopies = 88;
+                    return current;
+                },
+                CancellationToken.None));
+
+        Assert.True(exception is IOException or UnauthorizedAccessException, exception?.ToString());
+        Assert.Equal(initial.EndLabelCopies, scope.Repository.LoadOrDefault().EndLabelCopies);
+        Assert.Empty(Directory.EnumerateFiles(
+            scope.DirectoryPath,
+            $".{Path.GetFileName(scope.SettingsFilePath)}.*.tmp"));
+    }
+
+    [Fact]
+    public async Task Update_WhenAtomicReplaceFails_KeepsCacheAndCleansTemporaryFile()
+    {
+        using var scope = new TemporarySettingsRepository();
+        var initial = CreateDistinctSettings();
+        await scope.Repository.SaveAsync(initial, CancellationToken.None);
+
+        File.Delete(scope.SettingsFilePath);
+        Directory.CreateDirectory(scope.SettingsFilePath);
+
+        var exception = Record.Exception(
+            () => scope.Repository.Update(
+                current =>
+                {
+                    current.EndLabelCopies = 88;
+                    return current;
+                },
+                CancellationToken.None));
+
+        Assert.True(exception is IOException or UnauthorizedAccessException, exception?.ToString());
+        Assert.Equal(initial.EndLabelCopies, scope.Repository.LoadOrDefault().EndLabelCopies);
+        Assert.Empty(Directory.EnumerateFiles(
+            scope.DirectoryPath,
+            $".{Path.GetFileName(scope.SettingsFilePath)}.*.tmp"));
     }
 
     [Fact]
     public void TryLoad_WhenJsonIsInvalid_ReturnsNull()
     {
-        using var _ = new SettingsFileScope("invalid-json", "not json");
+        using var scope = new TemporarySettingsRepository("not json");
 
-        ResetCache();
-        var loaded = PrintSettingsStore.TryLoad();
+        var loaded = scope.Repository.TryLoad();
 
         Assert.Null(loaded);
     }
@@ -61,92 +208,88 @@ public sealed class PrintSettingsStoreTests
     [Fact]
     public async Task SaveAsync_WhenSettingsIsNull_ThrowsArgumentNullException()
     {
-        using var _ = new SettingsFileScope("null-argument");
+        using var scope = new TemporarySettingsRepository();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => PrintSettingsStore.SaveAsync(settings: null!, CancellationToken.None)
-        );
+            () => scope.Repository.SaveAsync(settings: null!, CancellationToken.None));
     }
 
     [Fact]
-    public void LoadOrDefault_WhenSettingsAreAbsent_ReturnsDefaults()
+    public void LoadOrDefault_WhenSettingsAreAbsent_ReturnsIndependentDefaults()
     {
-        using var _ = new SettingsFileScope("load-defaults");
+        using var scope = new TemporarySettingsRepository();
 
-        var settings = PrintSettingsStore.LoadOrDefault();
+        var first = scope.Repository.LoadOrDefault();
+        first.EndLabelCopies = 77;
+        var second = scope.Repository.LoadOrDefault();
 
-        Assert.True(settings.PrintEndLabelEnabled);
-        Assert.True(settings.PrintStuffingSheetEnabled);
-        Assert.Equal(2, settings.EndLabelCopies);
-        Assert.Equal(1, settings.StuffingSheetCopies);
-        Assert.True(settings.UseScales);
-        Assert.False(settings.ManualScanAutoPrintEndLabelEnabled);
+        Assert.True(second.PrintEndLabelEnabled);
+        Assert.True(second.PrintStuffingSheetEnabled);
+        Assert.Equal(2, second.EndLabelCopies);
+        Assert.Equal(1, second.StuffingSheetCopies);
+        Assert.True(second.UseScales);
+        Assert.False(second.ManualScanAutoPrintEndLabelEnabled);
+        Assert.NotSame(first, second);
     }
 
-    private static void ResetCache()
+    private static PrintSettings CreateDistinctSettings() => new()
     {
-        var t = typeof(PrintSettingsStore);
+        EndLabelPrinterName = "End-label printer",
+        StuffingSheetPrinterName = "Stuffing-sheet printer",
+        EndLabelCopies = 3,
+        StuffingSheetCopies = 4,
+        PrintStuffingSheetEnabled = false,
+        PrintEndLabelEnabled = true,
+        UseScales = false,
+        ManualScanAutoPrintEndLabelEnabled = true,
+        WorkMode = WorkMode.Automatic
+    };
 
-        var gateField = t.GetField("Gate", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("Gate field not found");
-
-        var cacheField = t.GetField("_cached", BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException("_cached field not found");
-
-        var gate = gateField.GetValue(null)
-            ?? throw new InvalidOperationException("Gate is null");
-
-        lock (gate)
-        {
-            cacheField.SetValue(null, null);
-        }
+    private static void AssertSettingsEqual(PrintSettings expected, PrintSettings actual)
+    {
+        Assert.Equal(expected.PrintEndLabelEnabled, actual.PrintEndLabelEnabled);
+        Assert.Equal(expected.PrintStuffingSheetEnabled, actual.PrintStuffingSheetEnabled);
+        Assert.Equal(expected.EndLabelPrinterName, actual.EndLabelPrinterName);
+        Assert.Equal(expected.StuffingSheetPrinterName, actual.StuffingSheetPrinterName);
+        Assert.Equal(expected.EndLabelCopies, actual.EndLabelCopies);
+        Assert.Equal(expected.StuffingSheetCopies, actual.StuffingSheetCopies);
+        Assert.Equal(expected.UseScales, actual.UseScales);
+        Assert.Equal(
+            expected.ManualScanAutoPrintEndLabelEnabled,
+            actual.ManualScanAutoPrintEndLabelEnabled);
+        Assert.Equal(expected.WorkMode, actual.WorkMode);
     }
 
-    private sealed class SettingsFileScope : IDisposable
+    private sealed class TemporarySettingsRepository : IDisposable
     {
-        private readonly string _path;
-        private readonly string? _backup;
-
-        public SettingsFileScope(string _marker, string? initialContent = null)
+        public TemporarySettingsRepository(string? initialContent = null)
         {
-            _path = PrintSettingsStore.SettingsFilePath;
-            var directory = Path.GetDirectoryName(_path)!;
-            Directory.CreateDirectory(directory);
+            DirectoryPath = Path.Combine(
+                Path.GetTempPath(),
+                "LabelFlowStudio.Tests",
+                Guid.NewGuid().ToString("N"));
+            SettingsFilePath = Path.Combine(DirectoryPath, "print-settings.json");
+            Repository = new PrintSettingsRepository(SettingsFilePath);
 
-            _backup = File.Exists(_path) ? File.ReadAllText(_path) : null;
-            if (initialContent is null)
+            if (initialContent is not null)
             {
-                if (File.Exists(_path))
-                {
-                    File.Delete(_path);
-                }
+                Directory.CreateDirectory(DirectoryPath);
+                File.WriteAllText(SettingsFilePath, initialContent);
             }
-            else
-            {
-                File.WriteAllText(_path, initialContent);
-            }
-
-            ResetCache();
         }
+
+        public string DirectoryPath { get; }
+
+        public string SettingsFilePath { get; }
+
+        public PrintSettingsRepository Repository { get; }
 
         public void Dispose()
         {
-            if (_backup is null)
+            if (Directory.Exists(DirectoryPath))
             {
-                if (File.Exists(_path))
-                {
-                    File.Delete(_path);
-                }
+                Directory.Delete(DirectoryPath, recursive: true);
             }
-            else
-            {
-                File.WriteAllText(_path, _backup);
-            }
-
-            ResetCache();
         }
     }
 }
-
-[CollectionDefinition("PrintSettingsStore", DisableParallelization = true)]
-public sealed class PrintSettingsStoreCollection { }

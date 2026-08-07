@@ -8,7 +8,7 @@
                  MinWidth="1040"
                  MinHeight="680"
                  WindowStartupLocation="CenterScreen"
-                 ExtendsContentIntoTitleBar="True"
+                 ExtendsContentIntoTitleBar="False"
                  WindowBackdropType="None"
                  WindowCornerPreference="Round"
                  Background="{DynamicResource AppBackgroundBrush}"
@@ -19,19 +19,10 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0"
-                     Title="LabelFlowStudio"
-                     CloseWindowByDoubleClickOnIcon="True">
-            <ui:TitleBar.Icon>
-                <ui:SymbolIcon Symbol="Cube24" />
-            </ui:TitleBar.Icon>
-        </ui:TitleBar>
-
-        <Border Grid.Row="1"
+        <Border Grid.Row="0"
                 Background="{DynamicResource ShellHeaderBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="0,0,0,1">
@@ -74,13 +65,6 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource ShellIconButtonStyle}"
-                            Margin="0,0,10,0"
-                            ToolTip="Настройки печати"
-                            Click="OnOpenPrintSettingsClick">
-                        <ui:SymbolIcon Symbol="Print24" />
-                    </Button>
-
                     <Button x:Name="NotificationCenterButton"
                             Style="{StaticResource ShellIconButtonStyle}"
                             ToolTip="Уведомления"
@@ -93,20 +77,23 @@
                                     Margin="0,-9,-12,0"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
-                                    CornerRadius="9"
-                                    Background="{Binding Work.NotificationBadgeColor}">
+                                    CornerRadius="9">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Visible" />
+                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Work.UnreadNotificationsCount}" Value="0">
+                                            <DataTrigger Binding="{Binding Work.UnreadProblemNotificationsCount}" Value="0">
                                                 <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Work.HasUnreadErrorNotifications}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding Work.UnreadNotificationsCount}"
-                                           Foreground="{Binding Work.NotificationBadgeTextColor}"
+                                <TextBlock Text="{Binding Work.UnreadProblemNotificationsCount}"
+                                           Foreground="{StaticResource SeverityOnColorBrush}"
                                            FontSize="10"
                                            FontWeight="Bold"
                                            HorizontalAlignment="Center"
@@ -118,30 +105,46 @@
             </Grid>
         </Border>
 
-        <ContentControl Grid.Row="2"
+        <ContentControl Grid.Row="1"
                         HorizontalContentAlignment="Stretch"
                         VerticalContentAlignment="Stretch"
                         Content="{Binding CurrentSectionViewModel}" />
 
-        <Popup x:Name="NotificationCenterPopup"
-               PlacementTarget="{Binding ElementName=NotificationCenterButton}"
-               Placement="Bottom"
-               HorizontalOffset="-350"
-               VerticalOffset="8"
-               AllowsTransparency="True"
-               StaysOpen="False"
-               IsOpen="{Binding Work.IsNotificationCenterOpen, Mode=TwoWay}"
-               Closed="NotificationCenterPopup_Closed">
-            <Border Width="390"
-                    MaxHeight="560"
-                    Padding="14"
+        <Grid Grid.Row="1"
+              Panel.ZIndex="80">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Work.IsNotificationCenterOpen}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Button Background="Transparent"
+                    BorderThickness="0"
+                    Focusable="False"
+                    Click="NotificationDrawerBackdrop_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" />
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Border x:Name="NotificationDrawer"
+                    Width="412"
+                    MaxHeight="610"
+                    Margin="0,12,12,12"
+                    Padding="16"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource SurfaceBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="18" Opacity="0.18" ShadowDepth="4" />
-                </Border.Effect>
                 <Grid DataContext="{Binding Work}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -150,56 +153,154 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid>
-                        <TextBlock Text="Уведомления" FontSize="18" FontWeight="SemiBold" />
+                    <Grid Margin="0,0,0,12">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="Уведомления"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
                         <Button HorizontalAlignment="Right"
                                 Width="30"
                                 Height="30"
-                                Content="×"
                                 Style="{StaticResource ShellIconButtonStyle}"
-                                Click="NotificationCenterCloseButton_Click" />
+                                ToolTip="Закрыть"
+                                Click="NotificationCenterCloseButton_Click">
+                            <ui:SymbolIcon Symbol="Dismiss24" />
+                        </Button>
                     </Grid>
 
-                    <ComboBox Grid.Row="1"
-                              Margin="0,12,0,10"
+                    <ComboBox x:Name="NotificationFilterComboBox"
+                              Grid.Row="1"
+                              Margin="0,0,0,12"
                               SelectedIndex="{Binding NotificationTabIndex, Mode=TwoWay}">
-                        <ComboBoxItem Content="Все уведомления" />
-                        <ComboBoxItem Content="Ошибки" />
-                        <ComboBoxItem Content="Предупреждения" />
+                        <ComboBoxItem Content="Только проблемы" />
+                        <ComboBoxItem Content="Все события" />
+                        <ComboBoxItem Content="Только ошибки" />
+                        <ComboBoxItem Content="Только предупреждения" />
                         <ComboBoxItem Content="Успешные операции" />
                     </ComboBox>
 
-                    <ListBox Grid.Row="2"
+                    <ListBox x:Name="NotificationsListBox"
+                             Grid.Row="2"
                              MinHeight="180"
-                             MaxHeight="330"
+                             MaxHeight="390"
                              BorderThickness="0"
                              Background="Transparent"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                              ItemsSource="{Binding FilteredNotificationsView}"
                              SelectedItem="{Binding SelectedNotification, Mode=TwoWay}"
-                             ItemContainerStyle="{StaticResource NotificationListItemStyle}"
                              SelectionChanged="NotificationsListBox_SelectionChanged">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem"
+                                   BasedOn="{StaticResource NotificationListItemStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource AutoLineErrorSoftBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource AutoLineErrorBorderBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource AutoLineWarningSoftBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource AutoLineWarningBorderBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource AutoLineSuccessSoftBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource AutoLineSuccessBorderBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="30" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="58" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding CategoryIcon}" FontSize="16" Margin="0,1,9,0" />
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding CategoryText}" FontWeight="SemiBold" />
+                                    <ui:SymbolIcon Margin="0,1,8,0"
+                                                   VerticalAlignment="Top"
+                                                   FontSize="18">
+                                        <ui:SymbolIcon.Style>
+                                            <Style TargetType="ui:SymbolIcon">
+                                                <Setter Property="Symbol" Value="Info24" />
+                                                <Setter Property="Foreground" Value="{StaticResource AutoLineNeutralBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                        <Setter Property="Symbol" Value="ErrorCircle24" />
+                                                        <Setter Property="Foreground" Value="{StaticResource AutoLineErrorBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                        <Setter Property="Symbol" Value="Warning24" />
+                                                        <Setter Property="Foreground" Value="{StaticResource AutoLineWarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                        <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                                        <Setter Property="Foreground" Value="{StaticResource AutoLineSuccessBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:SymbolIcon.Style>
+                                    </ui:SymbolIcon>
+                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                        <Border HorizontalAlignment="Left"
+                                                Padding="7,2"
+                                                CornerRadius="8"
+                                                BorderThickness="1">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{StaticResource AutoLineNeutralSoftBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource AutoLineNeutralBorderBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource AutoLineErrorSoftBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AutoLineErrorBorderBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource AutoLineWarningSoftBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AutoLineWarningBorderBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource AutoLineSuccessSoftBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AutoLineSuccessBorderBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding CategoryText}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource AutoLineNeutralBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsError}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource AutoLineErrorBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource AutoLineWarningBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource AutoLineSuccessBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
                                         <TextBlock Text="{Binding Message}"
-                                                   Margin="0,3,0,0"
-                                                   MaxHeight="42"
+                                                   Margin="0,6,0,0"
+                                                   MaxHeight="58"
+                                                   LineHeight="18"
                                                    TextWrapping="Wrap"
-                                                   TextTrimming="CharacterEllipsis" />
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding Message}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                                    <StackPanel Grid.Column="2">
                                         <TextBlock Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   FontSize="11" />
-                                        <Ellipse Width="7" Height="7" Margin="0,8,0,0"
+                                                   FontSize="11"
+                                                   HorizontalAlignment="Right" />
+                                        <Ellipse Width="7" Height="7" Margin="0,9,0,0"
                                                  HorizontalAlignment="Right"
                                                  Fill="{DynamicResource AccentBrush}">
                                             <Ellipse.Style>
@@ -219,17 +320,31 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Border Grid.Row="3"
-                            Margin="0,10,0,0"
-                            Padding="10"
-                            Background="{DynamicResource SurfaceAltBrush}"
-                            CornerRadius="8">
-                        <TextBlock Text="{Binding SelectedNotification.Message, TargetNullValue=Выберите уведомление для просмотра подробностей.}"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                    </Border>
+                    <Button Grid.Row="3"
+                            Margin="0,12,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.NavigateToJournalCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                            Click="OpenFullJournal_Click"
+                            Style="{StaticResource AutoLineLinkButtonStyle}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="Открыть полный журнал событий" />
+                            <TextBlock Margin="8,0,0,0" Text="→" />
+                        </StackPanel>
+                    </Button>
                 </Grid>
             </Border>
-        </Popup>
+        </Grid>
+
+        <ui:ContentDialogHost x:Name="RootContentDialogHost"
+                              Grid.RowSpan="2"
+                              Panel.ZIndex="100"
+                              IsDisableSiblingsEnabled="True" />
+
+        <ui:SnackbarPresenter x:Name="RootSnackbarPresenter"
+                              Grid.RowSpan="2"
+                              Panel.ZIndex="110"
+                              Margin="24"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Bottom" />
     </Grid>
 </ui:FluentWindow>

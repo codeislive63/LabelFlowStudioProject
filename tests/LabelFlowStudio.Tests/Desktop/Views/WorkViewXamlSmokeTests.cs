@@ -2,6 +2,7 @@ using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.BoxProcessing.Weight;
 using LabelFlowStudio.Application.Tests.Infrastructure;
+using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
 using LabelFlowStudio.Desktop.Views.Work;
@@ -10,7 +11,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Threading;
+using System.ComponentModel;
+using UiProgressRing = Wpf.Ui.Controls.ProgressRing;
 
 namespace LabelFlowStudio.Application.Tests.Desktop.Views;
 
@@ -44,7 +48,10 @@ public sealed class WorkViewXamlSmokeTests
                 Content = view
             };
 
-            section.SelectMode(WorkMode.Automatic);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
+            const string longEvent =
+                "Длинное техническое предупреждение должно переноситься на две строки и не расширять мониторинговый экран по горизонтали.";
+            AddNotification(work, longEvent, NotificationCategory.Warning);
             ApplyLayout(view);
 
             var automaticView = Assert.IsType<AutomaticLineView>(FindVisualChild<AutomaticLineView>(view));
@@ -58,6 +65,19 @@ public sealed class WorkViewXamlSmokeTests
             Assert.DoesNotContain("Автоматический режим выбран", automaticText);
             Assert.DoesNotContain("Записей 55", automaticText);
             Assert.DoesNotContain("Статус: Данные загружены", automaticText);
+            Assert.DoesNotContain("ОЖИДАНИЕ", automaticText);
+            Assert.Single(
+                automaticText,
+                text => text == "Последний обработанный короб пока отсутствует");
+
+            var eventText = FindVisualChildren<TextBlock>(automaticView)
+                .Single(text => text.Text == longEvent);
+            Assert.Equal(TextWrapping.Wrap, eventText.TextWrapping);
+            Assert.Equal(TextTrimming.CharacterEllipsis, eventText.TextTrimming);
+            Assert.Equal(longEvent, eventText.ToolTip);
+            Assert.Equal(
+                ScrollBarVisibility.Disabled,
+                FindVisualChildren<ScrollViewer>(automaticView).First().HorizontalScrollBarVisibility);
 
             var modeSelector = Assert.IsType<WorkModeSelector>(FindVisualChild<WorkModeSelector>(automaticView));
             var modeButtons = FindVisualChildren<Button>(modeSelector).ToArray();
@@ -68,11 +88,81 @@ public sealed class WorkViewXamlSmokeTests
                 .Single(button => FindVisualChildren<TextBlock>(button).Any(text => text.Text == "Открыть журнал"));
             Assert.Same(shell.NavigateToJournalCommand, journalButton.Command);
 
-            section.SelectMode(WorkMode.Manual);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
+            work.Tenam = "4430558";
+            for (var index = 1; index <= 55; index++)
+            {
+                work.Records.Add(new LabelRecord
+                {
+                    Tenam = "4430558",
+                    Artnr = index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture)
+                });
+            }
             ApplyLayout(view);
 
             var manualView = Assert.IsType<ManualProcessingView>(FindVisualChild<ManualProcessingView>(view));
-            Assert.NotNull(FindVisualChild<DataGrid>(manualView));
+            var recordsGrid = Assert.IsType<DataGrid>(FindVisualChild<DataGrid>(manualView));
+            Assert.True(recordsGrid.EnableRowVirtualization);
+            Assert.True(recordsGrid.EnableColumnVirtualization);
+            Assert.Equal(ScrollBarVisibility.Auto, recordsGrid.HorizontalScrollBarVisibility);
+            Assert.Same(manual.PagedRecords, recordsGrid.ItemsSource);
+            Assert.Equal(10, recordsGrid.Items.Count);
+            Assert.Equal("Показано 1–10 из 55", manual.RangeText);
+            Assert.Equal(20, recordsGrid.Columns.Count);
+            Assert.All(recordsGrid.Columns, column =>
+            {
+                Assert.False(string.IsNullOrWhiteSpace(column.SortMemberPath));
+                Assert.NotNull(
+                    TypeDescriptor.GetProperties(typeof(LabelRecord))[column.SortMemberPath]);
+            });
+
+            var manualContent = Assert.IsType<Grid>(manualView.FindName("ManualContent"));
+            var tenamInputHost = Assert.IsType<Grid>(manualView.FindName("TenamInputHost"));
+            var tenamTextBox = Assert.IsType<TextBox>(manualView.FindName("TenamTextBox"));
+            var tenamPlaceholder = Assert.IsType<TextBlock>(manualView.FindName("ManualTenamPlaceholder"));
+            var loadingOverlay = Assert.IsType<Grid>(manualView.FindName("ManualLoadingOverlay"));
+            var loadingRing = Assert.IsType<UiProgressRing>(manualView.FindName("ManualLoadingProgressRing"));
+            var pageSizeComboBox = Assert.IsType<ComboBox>(manualView.FindName("PageSizeComboBox"));
+
+            Assert.Equal(1320, manualContent.MaxWidth);
+            Assert.Equal(880, tenamInputHost.MaxWidth);
+            Assert.Equal("4430558", tenamTextBox.Text);
+            Assert.Equal(Visibility.Collapsed, tenamPlaceholder.Visibility);
+            Assert.NotNull(tenamTextBox.Foreground);
+            Assert.NotNull(tenamTextBox.CaretBrush);
+            Assert.NotNull(tenamTextBox.SelectionBrush);
+            Assert.NotNull(tenamTextBox.SelectionTextBrush);
+            Assert.NotEqual(tenamTextBox.Background, tenamTextBox.Foreground);
+            Assert.Equal(1, tenamTextBox.SelectionOpacity);
+            Assert.Equal(0, Grid.GetRow(loadingOverlay));
+            Assert.True(loadingOverlay.IsHitTestVisible);
+            Assert.True(loadingRing.IsIndeterminate);
+            Assert.Empty(FindVisualChildren<ProgressBar>(manualView));
+            Assert.Equal(10, pageSizeComboBox.SelectedItem);
+            Assert.Equal(RenderMode.SoftwareOnly, RenderOptions.ProcessRenderMode);
+
+            var printButtons = FindVisualChildren<Button>(manualView)
+                .Where(button => button.Content is "Торцевая этикетка" or "Лист сброса")
+                .ToArray();
+            Assert.Equal(2, printButtons.Length);
+            Assert.All(printButtons, button =>
+            {
+                Assert.Equal(280, button.MaxWidth);
+                Assert.IsType<string>(button.Content);
+            });
+
+            manual.ApplySort(nameof(LabelRecord.Artnr), ListSortDirection.Descending);
+            manualView.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            var articleColumn = Assert.Single(
+                recordsGrid.Columns,
+                column => column.SortMemberPath == nameof(LabelRecord.Artnr));
+            Assert.Equal(ListSortDirection.Descending, articleColumn.SortDirection);
+
+            manual.NavigateToPage(2);
+            ApplyLayout(view);
+            var firstVisibleRow = Assert.IsType<DataGridRow>(
+                recordsGrid.ItemContainerGenerator.ContainerFromIndex(0));
+            Assert.Equal("11", firstVisibleRow.Header);
 
             window.Content = null;
         });
@@ -121,6 +211,34 @@ public sealed class WorkViewXamlSmokeTests
             new NoOpWeightService(),
             new FakeScanner(),
             NullLogger<MainViewModel>.Instance);
+    }
+
+    private static void AddNotification(
+        MainViewModel work,
+        string message,
+        NotificationCategory category)
+    {
+        var method = typeof(MainViewModel).GetMethod(
+            "AddNotification",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        Assert.NotNull(method);
+        method.Invoke(work, [message, category]);
+    }
+
+    private static void RaiseWorkModeChangedWithoutPersistence(MainViewModel work, WorkMode mode)
+    {
+        var field = typeof(MainViewModel).GetField(
+            "_currentWorkMode",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var method = typeof(ViewModelBase).GetMethod(
+            "OnPropertyChanged",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        Assert.NotNull(field);
+        Assert.NotNull(method);
+        field.SetValue(work, mode);
+        method.Invoke(work, [nameof(MainViewModel.CurrentWorkMode)]);
     }
 
     private static AutomaticLineViewModel CreateAutomaticViewModel(MainViewModel work)

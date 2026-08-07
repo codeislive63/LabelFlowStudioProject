@@ -1,16 +1,18 @@
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Desktop.Input;
 using LabelFlowStudio.Desktop.Navigation;
-using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
+using LabelFlowStudio.Desktop.Views;
 using LabelFlowStudio.Desktop.Views.Work;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace LabelFlowStudio.Desktop;
@@ -22,16 +24,28 @@ namespace LabelFlowStudio.Desktop;
 public partial class MainWindow : FluentWindow
 {
     private readonly ShellViewModel _viewModel;
+    private readonly IContentDialogService _contentDialogService;
+    private readonly ISnackbarService _snackbarService;
     private readonly KeyboardScannerInputAdapter _scannerInput = new();
     private readonly DispatcherTimer _scannerBufferTimer;
     private string _scannerTextMirroredToTenam = string.Empty;
+    private bool _isModalInteractionActive;
 
-    public MainWindow(ShellViewModel viewModel)
+    public MainWindow(
+        ShellViewModel viewModel,
+        IContentDialogService contentDialogService,
+        ISnackbarService snackbarService)
     {
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+        _contentDialogService = contentDialogService
+            ?? throw new ArgumentNullException(nameof(contentDialogService));
+        _snackbarService = snackbarService
+            ?? throw new ArgumentNullException(nameof(snackbarService));
 
         InitializeComponent();
         DataContext = viewModel;
+        _contentDialogService.SetDialogHost(RootContentDialogHost);
+        _snackbarService.SetSnackbarPresenter(RootSnackbarPresenter);
 
         _scannerBufferTimer = new DispatcherTimer
         {
@@ -40,13 +54,18 @@ public partial class MainWindow : FluentWindow
         _scannerBufferTimer.Tick += ScannerBufferTimer_Tick;
         _viewModel.PropertyChanged += OnShellPropertyChanged;
         _viewModel.Work.PropertyChanged += OnWorkPropertyChanged;
+        _viewModel.Settings.FeedbackRequested += OnSettingsFeedbackRequested;
         Activated += MainWindow_Activated;
         Closed += MainWindow_Closed;
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        await PrinterSetupWindow.EnsureConfiguredAsync(this, CancellationToken.None);
+        if (_viewModel.Settings.CreateInitialEditorIfRequired() is { } initialEditor)
+        {
+            await ShowInitialPrintSettingsDialogAsync(initialEditor, CancellationToken.None);
+        }
+
         await FocusWorkInputAsync();
     }
 
@@ -64,12 +83,6 @@ public partial class MainWindow : FluentWindow
         }
 
         await workView.RequestPrimaryInputFocusAsync();
-    }
-
-    private async void OnOpenPrintSettingsClick(object sender, RoutedEventArgs e)
-    {
-        await PrinterSetupWindow.ShowSettingsAsync(this, CancellationToken.None);
-        await FocusWorkInputAsync();
     }
 
     private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -119,7 +132,8 @@ public partial class MainWindow : FluentWindow
     {
         if (_viewModel.CurrentSection != AppSection.Work
             || _viewModel.Work.IsBusy
-            || _viewModel.Work.IsNotificationCenterOpen)
+            || _viewModel.Work.IsNotificationCenterOpen
+            || _isModalInteractionActive)
         {
             return false;
         }
@@ -203,12 +217,127 @@ public partial class MainWindow : FluentWindow
         }
     }
 
+    private async Task<bool> ShowInitialPrintSettingsDialogAsync(
+        PrintSettingsEditorViewModel editor,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(editor);
+
+        var errorText = new System.Windows.Controls.TextBlock
+        {
+            Margin = new Thickness(0, 12, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+            Visibility = Visibility.Collapsed
+        };
+        errorText.SetResourceReference(
+            System.Windows.Controls.TextBlock.ForegroundProperty,
+            "ErrorBrush");
+
+        var editorView = new PrintSettingsEditorView
+        {
+            DataContext = editor
+        };
+
+        var dialogContent = new StackPanel();
+        dialogContent.Children.Add(editorView);
+        dialogContent.Children.Add(errorText);
+
+        var scrollViewer = new ScrollViewer
+        {
+            Content = dialogContent,
+            MaxHeight = 570,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+
+        var dialog = new ContentDialog(RootContentDialogHost)
+        {
+            Title = "Первичная настройка печати",
+            Content = scrollViewer,
+            PrimaryButtonText = "Сохранить и продолжить",
+            CloseButtonText = "Отмена",
+            DefaultButton = ContentDialogButton.Primary,
+            DialogWidth = 940,
+            DialogMaxWidth = 980,
+            DialogMaxHeight = 720
+        };
+        dialog.SetBinding(
+            ContentDialog.IsPrimaryButtonEnabledProperty,
+            new Binding(nameof(PrintSettingsEditorViewModel.IsValid))
+            {
+                Source = editor,
+                Mode = BindingMode.OneWay
+            });
+
+        var allowPrimaryClose = false;
+        var saveInProgress = false;
+        dialog.Closing += async (_, eventArgs) =>
+        {
+            if (saveInProgress && !allowPrimaryClose)
+            {
+                eventArgs.Cancel = true;
+                return;
+            }
+
+            if (eventArgs.Result != ContentDialogResult.Primary || allowPrimaryClose)
+            {
+                return;
+            }
+
+            eventArgs.Cancel = true;
+            saveInProgress = true;
+            try
+            {
+                var result = await _viewModel.Settings.SaveEditorAsync(editor, cancellationToken);
+                if (!result.IsSuccess)
+                {
+                    errorText.Text = result.Message;
+                    errorText.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                allowPrimaryClose = true;
+                dialog.Hide(ContentDialogResult.Primary);
+            }
+            finally
+            {
+                saveInProgress = false;
+            }
+        };
+
+        _isModalInteractionActive = true;
+        ResetUnacceptedScannerSignal();
+        try
+        {
+            return await _contentDialogService.ShowAsync(dialog, cancellationToken)
+                == ContentDialogResult.Primary;
+        }
+        finally
+        {
+            _isModalInteractionActive = false;
+        }
+    }
+
+    private void OnSettingsFeedbackRequested(object? sender, SettingsFeedbackEventArgs eventArgs)
+    {
+        var isSuccess = eventArgs.Kind == SettingsFeedbackKind.Success;
+        _snackbarService.Show(
+            isSuccess ? "Настройки сохранены" : "Ошибка настроек",
+            eventArgs.Message,
+            isSuccess ? ControlAppearance.Success : ControlAppearance.Danger,
+            new SymbolIcon(isSuccess
+                ? SymbolRegular.CheckmarkCircle24
+                : SymbolRegular.ErrorCircle24),
+            TimeSpan.FromSeconds(4));
+    }
+
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         _scannerBufferTimer.Stop();
         _scannerBufferTimer.Tick -= ScannerBufferTimer_Tick;
         _viewModel.PropertyChanged -= OnShellPropertyChanged;
         _viewModel.Work.PropertyChanged -= OnWorkPropertyChanged;
+        _viewModel.Settings.FeedbackRequested -= OnSettingsFeedbackRequested;
         Activated -= MainWindow_Activated;
         Closed -= MainWindow_Closed;
     }
@@ -223,7 +352,12 @@ public partial class MainWindow : FluentWindow
         _viewModel.Work.IsNotificationCenterOpen = false;
     }
 
-    private void NotificationCenterPopup_Closed(object? sender, EventArgs e)
+    private void NotificationDrawerBackdrop_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.Work.IsNotificationCenterOpen = false;
+    }
+
+    private void OpenFullJournal_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.Work.IsNotificationCenterOpen = false;
     }

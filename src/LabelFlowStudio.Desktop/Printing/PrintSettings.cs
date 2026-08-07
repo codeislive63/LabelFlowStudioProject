@@ -22,4 +22,24 @@ public sealed class PrintSettings
     public bool IsComplete =>
         (!PrintEndLabelEnabled || !string.IsNullOrWhiteSpace(EndLabelPrinterName)) &&
         (!PrintStuffingSheetEnabled || !string.IsNullOrWhiteSpace(StuffingSheetPrinterName));
+
+    /// <summary>
+    /// Creates an independent snapshot. Settings editors must never bind to the
+    /// object currently used by the production printing pipeline.
+    /// </summary>
+    public PrintSettings Clone()
+    {
+        return new PrintSettings
+        {
+            PrintEndLabelEnabled = PrintEndLabelEnabled,
+            PrintStuffingSheetEnabled = PrintStuffingSheetEnabled,
+            EndLabelPrinterName = EndLabelPrinterName,
+            StuffingSheetPrinterName = StuffingSheetPrinterName,
+            EndLabelCopies = EndLabelCopies,
+            StuffingSheetCopies = StuffingSheetCopies,
+            UseScales = UseScales,
+            ManualScanAutoPrintEndLabelEnabled = ManualScanAutoPrintEndLabelEnabled,
+            WorkMode = WorkMode
+        };
+    }
 }

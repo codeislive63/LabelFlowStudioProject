@@ -52,7 +52,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private string _tenam = string.Empty;
     private string _statusMessage = string.Empty;
+    private BoxProcessingStatus? _lastProcessingStatus;
     private bool _isBusy;
+    private OracleConnectionState _oracleConnectionState = OracleConnectionState.Unknown;
+    private string _oracleConnectionStatusDetail = "Запрос к базе данных в текущем запуске ещё не выполнялся.";
+    private string _currentOracleQueryTenam = string.Empty;
     private bool _isScannerSubscribed;
 
     private string _lastProcessedTenam = string.Empty;
@@ -171,7 +175,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Индекс выбранной вкладки уведомлений
+    /// Индекс выбранного фильтра уведомлений. По умолчанию панель показывает
+    /// только проблемы, при этом успешные события остаются доступны через фильтр.
     /// </summary>
     public int NotificationTabIndex
     {
@@ -225,6 +230,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Количество непрочитанных проблем для shell-indicator. Отдельное свойство
+    /// не заставляет представление предполагать, что success-события всегда
+    /// должны входить в операторский счётчик.
+    /// </summary>
+    public int UnreadProblemNotificationsCount =>
+        UnreadErrorNotificationsCount + UnreadWarningNotificationsCount;
+
+    /// <summary>
     /// Возвращает признак непрочитанных ошибок
     /// </summary>
     public bool HasUnreadErrorNotifications => UnreadErrorNotificationsCount > 0;
@@ -238,24 +251,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     /// Возвращает признак непрочитанных успешных уведомлений
     /// </summary>
     public bool HasUnreadSuccessNotifications => UnreadSuccessNotificationsCount > 0;
-
-    /// <summary>
-    /// Цвет бейджа уведомлений
-    /// </summary>
-    public string NotificationBadgeColor => HasUnreadErrorNotifications
-        ? "#FFB00020"
-        : HasUnreadWarningNotifications
-            ? "#FFAF7A00"
-            : "#FF2E7D32";
-
-    /// <summary>
-    /// Цвет текста бейджа уведомлений
-    /// </summary>
-    public string NotificationBadgeTextColor => HasUnreadErrorNotifications
-        ? "White"
-        : HasUnreadWarningNotifications
-            ? "#FF1F1400"
-            : "#FFF1FFF5";
 
     /// <summary>
     /// Команда повторного запроса ручного веса
@@ -316,6 +311,46 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Структурный результат последней завершённой обработки. Используется только
+    /// представлением для выбора success/not-found/error state без разбора текста.
+    /// </summary>
+    public BoxProcessingStatus? LastProcessingStatus
+    {
+        get => _lastProcessingStatus;
+        private set => SetProperty(ref _lastProcessingStatus, value);
+    }
+
+    /// <summary>
+    /// Runtime-состояние Oracle, подтверждённое реальными запросами текущего запуска.
+    /// Бизнес-результаты обработки не интерпретируются как ошибки соединения.
+    /// </summary>
+    public OracleConnectionState OracleConnectionState
+    {
+        get => _oracleConnectionState;
+        private set => SetProperty(ref _oracleConnectionState, value);
+    }
+
+    /// <summary>
+    /// Краткое безопасное пояснение runtime-состояния Oracle.
+    /// Не содержит текста исключения или строки подключения.
+    /// </summary>
+    public string OracleConnectionStatusDetail
+    {
+        get => _oracleConnectionStatusDetail;
+        private set => SetProperty(ref _oracleConnectionStatusDetail, value);
+    }
+
+    /// <summary>
+    /// TENAM запроса, который сейчас проверяет доступность Oracle.
+    /// Пуст после завершения или отмены операции.
+    /// </summary>
+    public string CurrentOracleQueryTenam
+    {
+        get => _currentOracleQueryTenam;
+        private set => SetProperty(ref _currentOracleQueryTenam, value);
+    }
+
+    /// <summary>
     /// Признак активной операции обработки
     /// </summary>
     public bool IsBusy
@@ -365,7 +400,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (previousMode == WorkMode.Automatic && value == WorkMode.Manual)
             {
                 _automaticDrainRequestsRemaining = 1;
-                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", NotificationCategory.Success);
+                AddNotification("Переключение в ручной режим: следующий считанный короб будет обработан как автоматический, чтобы не потерять короб на конвейере.", NotificationCategory.Warning);
             }
 
             OnPropertyChanged(nameof(IsAutomaticMode));
@@ -505,8 +540,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "Failed to request manual weight again for TENAM {Tenam}", tenamSnapshot);
+            LastProcessingStatus = BoxProcessingStatus.Error;
             StatusMessage = "Не удалось повторно запросить ввод веса";
-            AddNotification($"Не удалось повторно запросить ввод веса для короба №{tenamSnapshot}: {exception.Message}", NotificationCategory.Error);
+            AddNotification(
+                $"Не удалось повторно получить данные для короба №{tenamSnapshot} из базы данных.",
+                NotificationCategory.Error);
         }
         finally
         {
@@ -536,9 +574,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
-            settings.WorkMode = workMode;
-            await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
+            await PrintSettingsStore.UpdateAsync(
+                settings =>
+                {
+                    settings.WorkMode = workMode;
+                    return settings;
+                },
+                CancellationToken.None);
         }
         catch (Exception exception)
         {
@@ -551,9 +593,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var settings = PrintSettingsStore.LoadOrDefault() ?? new PrintSettings();
-            settings.ManualScanAutoPrintEndLabelEnabled = enabled;
-            await PrintSettingsStore.SaveAsync(settings, CancellationToken.None);
+            await PrintSettingsStore.UpdateAsync(
+                settings =>
+                {
+                    settings.ManualScanAutoPrintEndLabelEnabled = enabled;
+                    return settings;
+                },
+                CancellationToken.None);
         }
         catch (Exception exception)
         {
@@ -585,6 +631,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         IsBusy = true;
         StatusMessage = "Загрузка";
+        LastProcessingStatus = null;
         Records.Clear();
         Tenam = string.Empty;
 
@@ -657,7 +704,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             _logger.LogWarning(exception, "Failed to load records");
 
-            ApplyFailedLoadState(exception.Message);
+            ApplyFailedLoadState("Не удалось получить данные из базы данных.");
         }
         finally
         {
@@ -877,8 +924,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         await _requestGate.WaitAsync(cancellationToken);
 
+        var previousState = OracleConnectionState;
+        var previousDetail = OracleConnectionStatusDetail;
+
         try
         {
+            await SetOracleConnectionStateAsync(
+                OracleConnectionState.Checking,
+                "Выполняется запрос к базе данных.",
+                request.Tenam);
+
             _logger.LogDebug(
                 "Start processing TENAM {Tenam} from {Origin} in mode {Mode}",
                 request.Tenam,
@@ -895,13 +950,45 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 origin,
                 response.Status);
 
+            // BoxProcessingStatus.Error также используется для бизнес-ошибок
+            // (например, конфликта веса). Сам факт возвращённого ответа означает,
+            // что запрос к источнику данных завершился без исключения доступа.
+            await SetOracleConnectionStateAsync(
+                OracleConnectionState.Connected,
+                "Последний запрос к базе данных выполнен успешно.");
+
             return response;
+        }
+        catch (OperationCanceledException)
+        {
+            await SetOracleConnectionStateAsync(previousState, previousDetail);
+            throw;
+        }
+        catch (Exception)
+        {
+            await SetOracleConnectionStateAsync(
+                OracleConnectionState.Error,
+                "Не удалось получить данные из базы данных.");
+            throw;
         }
         finally
         {
             _requestGate.Release();
         }
     }
+
+    private Task SetOracleConnectionStateAsync(
+        OracleConnectionState state,
+        string detail,
+        string currentTenam = "") =>
+        RunOnUiThreadAsync(() =>
+        {
+            CurrentOracleQueryTenam = state == OracleConnectionState.Checking
+                ? currentTenam
+                : string.Empty;
+            OracleConnectionStatusDetail = detail;
+            OracleConnectionState = state;
+        });
 
     // Создает новый токен отмены и отменяет предыдущий запрос
     private CancellationToken StartNewLoadCancellation()
@@ -930,6 +1017,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // Применяет результат обработки к состоянию экрана
     private void ApplyResponseState(BoxProcessingResponse response, string tenamSnapshot)
     {
+        LastProcessingStatus = response.Status;
+
         foreach (var record in response.Records)
         {
             Records.Add(record);
@@ -969,6 +1058,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // Применяет состояние ошибки после неудачной загрузки
     private void ApplyFailedLoadState(string errorMessage)
     {
+        LastProcessingStatus = BoxProcessingStatus.Error;
         StatusMessage = errorMessage;
         _lastLoadedResponse = null;
         _lastLoadedTenam = string.Empty;
@@ -1451,8 +1541,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasUnreadErrorNotifications));
         OnPropertyChanged(nameof(HasUnreadWarningNotifications));
         OnPropertyChanged(nameof(HasUnreadSuccessNotifications));
-        OnPropertyChanged(nameof(NotificationBadgeColor));
-        OnPropertyChanged(nameof(NotificationBadgeTextColor));
+        OnPropertyChanged(nameof(UnreadProblemNotificationsCount));
     }
 
     private void RefreshFilteredNotifications()
@@ -1486,9 +1575,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         return NotificationTabIndex switch
         {
-            1 => notification.Category == NotificationCategory.Error,
-            2 => notification.Category == NotificationCategory.Warning,
-            3 => notification.Category == NotificationCategory.Success,
+            0 => notification.Category is NotificationCategory.Error or NotificationCategory.Warning,
+            2 => notification.Category == NotificationCategory.Error,
+            3 => notification.Category == NotificationCategory.Warning,
+            4 => notification.Category == NotificationCategory.Success,
             _ => true
         };
     }

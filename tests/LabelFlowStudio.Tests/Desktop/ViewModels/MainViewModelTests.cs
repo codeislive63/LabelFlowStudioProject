@@ -38,6 +38,7 @@ public sealed class MainViewModelTests
 
             Assert.Equal(2, vm.Records.Count);
             Assert.Equal("OK", vm.StatusMessage);
+            Assert.Equal(BoxProcessingStatus.Success, vm.LastProcessingStatus);
         });
 
     [Fact]
@@ -104,7 +105,7 @@ public sealed class MainViewModelTests
         });
 
     [Fact]
-    public Task NotificationCenter_TracksUnreadAndErrorTabFiltering() =>
+    public Task NotificationCenter_DefaultsToProblemsAndTracksUnreadErrors() =>
         StaTestRunner.RunAsync(async () =>
         {
             var scanner = new FakeScanner();
@@ -117,8 +118,13 @@ public sealed class MainViewModelTests
             await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
             Assert.True(vm.UnreadNotificationsCount > 0);
+            Assert.True(vm.UnreadProblemNotificationsCount > 0);
             Assert.True(vm.HasUnreadErrorNotifications);
             Assert.NotEmpty(vm.Notifications);
+            Assert.Equal(0, vm.NotificationTabIndex);
+            Assert.All(
+                vm.FilteredNotificationsView.Cast<UiNotification>(),
+                notification => Assert.True(notification.IsError || notification.IsWarning));
 
             var unreadBeforeOpen = vm.UnreadNotificationsCount;
 
@@ -127,7 +133,7 @@ public sealed class MainViewModelTests
             Assert.True(vm.IsNotificationCenterOpen);
             Assert.Equal(unreadBeforeOpen, vm.UnreadNotificationsCount);
 
-            vm.NotificationTabIndex = 1;
+            vm.NotificationTabIndex = 2;
 
             Assert.All(vm.FilteredNotificationsView.Cast<UiNotification>(), notification => Assert.True(notification.IsError));
 
@@ -145,7 +151,7 @@ public sealed class MainViewModelTests
             var service = new FakeProcessingService();
             var vm = CreateViewModel(service, scanner);
 
-            vm.NotificationTabIndex = 2;
+            vm.NotificationTabIndex = 3;
 
             var addNotification = typeof(MainViewModel).GetMethod(
                 "AddNotification",
@@ -160,6 +166,30 @@ public sealed class MainViewModelTests
             Assert.Single(filtered);
             Assert.True(filtered[0].IsWarning);
             Assert.Same(filtered[0], vm.SelectedNotification);
+        });
+    }
+
+    [Fact]
+    public void NotificationCenter_SuccessEventsRemainAvailableThroughFilter()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var vm = CreateViewModel(new FakeProcessingService(), new FakeScanner());
+            var addNotification = typeof(MainViewModel).GetMethod(
+                "AddNotification",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+            Assert.NotNull(addNotification);
+            addNotification!.Invoke(vm, ["Короб обработан", NotificationCategory.Success]);
+
+            Assert.Empty(vm.FilteredNotificationsView.Cast<UiNotification>());
+            Assert.Equal(0, vm.UnreadProblemNotificationsCount);
+
+            vm.NotificationTabIndex = 4;
+
+            var filtered = vm.FilteredNotificationsView.Cast<UiNotification>().ToList();
+            Assert.Single(filtered);
+            Assert.True(filtered[0].IsSuccess);
         });
     }
 
@@ -205,7 +235,9 @@ public sealed class MainViewModelTests
 
             Assert.NotEmpty(vm.Notifications);
             Assert.True(vm.Notifications[0].IsError);
-            Assert.Contains("Ошибка сервиса", vm.Notifications[0].Message);
+            Assert.Contains("Не удалось получить данные из базы данных", vm.Notifications[0].Message);
+            Assert.DoesNotContain("Ошибка сервиса", vm.Notifications[0].Message);
+            Assert.Equal(BoxProcessingStatus.Error, vm.LastProcessingStatus);
         });
 
     private static MainViewModel CreateViewModel(

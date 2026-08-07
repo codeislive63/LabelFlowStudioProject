@@ -30,6 +30,11 @@ public partial class ManualProcessingView : UserControl
         if (e.NewValue is ManualProcessingViewModel viewModel)
         {
             SubscribeToViewModel(viewModel.Work);
+
+            if (IsLoaded)
+            {
+                RestoreSortIndicator(viewModel);
+            }
         }
     }
 
@@ -69,6 +74,11 @@ public partial class ManualProcessingView : UserControl
             SubscribeToViewModel(viewModel.Work);
         }
 
+        if (DataContext is ManualProcessingViewModel presentation)
+        {
+            RestoreSortIndicator(presentation);
+        }
+
         _ = RequestPrimaryInputFocusAsync();
     }
 
@@ -80,7 +90,16 @@ public partial class ManualProcessingView : UserControl
         }
     }
 
-    private void OnAnyButtonClick(object sender, RoutedEventArgs e) => _ = RequestPrimaryInputFocusAsync();
+    private void OnAnyButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject source
+            && IsDescendantOf(source, ManualPager))
+        {
+            return;
+        }
+
+        _ = RequestPrimaryInputFocusAsync();
+    }
 
     internal async Task RequestPrimaryInputFocusAsync()
     {
@@ -158,20 +177,72 @@ public partial class ManualProcessingView : UserControl
 
     private void RecordsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+        var offset = DataContext is ManualProcessingViewModel viewModel
+            ? (viewModel.CurrentPage - 1) * viewModel.PageSize
+            : 0;
+
+        e.Row.Header = (offset + e.Row.GetIndex() + 1).ToString();
     }
 
-    private async void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+    private void RecordsGrid_Sorting(object sender, DataGridSortingEventArgs e)
     {
-        var grid = (DataGrid)sender;
-        await Dispatcher.InvokeAsync(static () => { }, System.Windows.Threading.DispatcherPriority.Loaded);
-
-        foreach (var item in grid.Items)
+        if (DataContext is not ManualProcessingViewModel viewModel
+            || string.IsNullOrWhiteSpace(e.Column.SortMemberPath))
         {
-            if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
+            return;
+        }
+
+        e.Handled = true;
+
+        var nextDirection = e.Column.SortDirection == ListSortDirection.Ascending
+            ? ListSortDirection.Descending
+            : ListSortDirection.Ascending;
+
+        foreach (var column in RecordsGrid.Columns)
+        {
+            column.SortDirection = null;
+        }
+
+        e.Column.SortDirection = nextDirection;
+        viewModel.ApplySort(e.Column.SortMemberPath, nextDirection);
+
+        foreach (var item in RecordsGrid.Items)
+        {
+            if (RecordsGrid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
             {
-                row.Header = (row.GetIndex() + 1).ToString();
+                RecordsGrid_LoadingRow(RecordsGrid, new DataGridRowEventArgs(row));
             }
         }
     }
+
+    private void RestoreSortIndicator(ManualProcessingViewModel viewModel)
+    {
+        foreach (var column in RecordsGrid.Columns)
+        {
+            column.SortDirection = string.Equals(
+                column.SortMemberPath,
+                viewModel.SortPropertyName,
+                StringComparison.Ordinal)
+                    ? viewModel.SortDirection
+                    : null;
+        }
+    }
+
+    private static bool IsDescendantOf(DependencyObject source, DependencyObject ancestor)
+    {
+        for (var current = source; current is not null; current = GetParent(current))
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject value) =>
+        value is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+            ? System.Windows.Media.VisualTreeHelper.GetParent(value)
+            : LogicalTreeHelper.GetParent(value);
 }
