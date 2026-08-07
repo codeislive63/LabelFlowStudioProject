@@ -34,7 +34,7 @@ public sealed class ShellViewModelTests
         {
             using var fixture = new ShellFixture();
             var work = fixture.Work;
-            work.Tenam = "4430558";
+            fixture.Manual.TenamInput = "4430558";
             work.Records.Add(new LabelRecord { Tenam = "4430558", Artnr = "A-1" });
             var initialMode = work.CurrentWorkMode;
 
@@ -51,6 +51,7 @@ public sealed class ShellViewModelTests
             shell.NavigateToWorkCommand.Execute(null);
             Assert.Same(fixture.WorkSection, shell.CurrentSectionViewModel);
             Assert.Equal("4430558", work.Tenam);
+            Assert.Equal("4430558", fixture.Manual.TenamInput);
             Assert.Single(work.Records);
             Assert.Equal(initialMode, work.CurrentWorkMode);
         });

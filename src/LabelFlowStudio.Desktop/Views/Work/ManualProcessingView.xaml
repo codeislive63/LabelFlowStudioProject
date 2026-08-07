@@ -12,8 +12,10 @@
              mc:Ignorable="d"
              Loaded="ManualProcessingView_Loaded"
              IsVisibleChanged="ManualProcessingView_IsVisibleChanged">
-    <Grid DataContext="{Binding Work}"
-          Margin="{DynamicResource ShellPagePadding}">
+    <Grid x:Name="ManualContent"
+          Margin="{DynamicResource ShellPagePadding}"
+          MaxWidth="1320"
+          HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -21,132 +23,261 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <work:WorkModeSelector HorizontalAlignment="Left"
-                                   VerticalAlignment="Center" />
-
-            <Border Grid.Column="1"
-                    Padding="12,7"
-                    Background="{DynamicResource SurfaceAltBrush}"
-                    BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="9">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Записей"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Margin="8,0,0,0"
-                               FontWeight="SemiBold"
-                               Text="{Binding Records.Count}" />
-                </StackPanel>
-            </Border>
-        </Grid>
+        <work:WorkModeSelector Grid.Row="0"
+                               Margin="{StaticResource WorkGapBottom12}"
+                               HorizontalAlignment="Left"
+                               DataContext="{Binding Work}" />
 
         <Border Grid.Row="1"
-                Margin="0,0,0,12"
-                Padding="14"
-                Style="{StaticResource CardStyle}">
+                Margin="{StaticResource WorkGapBottom12}"
+                Style="{StaticResource ManualWorkCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="280" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0"
-                           Margin="0,0,10,0"
-                           VerticalAlignment="Center"
+                <TextBlock FontSize="12"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="TENAM" />
 
-                <TextBox x:Name="TenamTextBox"
-                         Grid.Column="1"
-                         Style="{StaticResource AppTextBoxStyle}"
-                         Text="{Binding Tenam, UpdateSourceTrigger=PropertyChanged}"
-                         GotKeyboardFocus="TenamTextBox_GotKeyboardFocus"
-                         PreviewKeyDown="TenamTextBox_PreviewKeyDown"
-                         PreviewTextInput="TenamTextBox_PreviewTextInput"
-                         DataObject.Pasting="TenamTextBox_Pasting" />
-
-                <Button Grid.Column="2"
-                        Command="{Binding OpenEndLabelPreviewCommand}"
-                        Style="{StaticResource WorkActionButtonStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,7,0" Symbol="BarcodeScanner24" />
-                        <TextBlock Text="Торцевая этикетка" />
-                    </StackPanel>
-                </Button>
-
-                <Button Grid.Column="3"
-                        Command="{Binding OpenStuffingSheetPreviewCommand}"
-                        Style="{StaticResource WorkActionButtonStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,7,0" Symbol="Print24" />
-                        <TextBlock Text="Лист сброса" />
-                    </StackPanel>
-                </Button>
-
-                <Button Grid.Column="4"
-                        Command="{Binding RequestManualWeightCommand}"
-                        Style="{StaticResource WorkActionButtonStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Margin="0,0,7,0" Text="⚖" />
-                        <TextBlock Text="Ввести вес" />
-                    </StackPanel>
-                </Button>
-
-                <CheckBox Grid.Row="1"
-                          Grid.Column="1"
-                          Grid.ColumnSpan="5"
-                          Margin="0,10,0,0"
-                          HorizontalAlignment="Left"
-                          Content="Печатать торцевую этикетку сразу после ручного сканирования"
-                          IsChecked="{Binding IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="2"
-                Margin="0,0,0,12"
-                Padding="12"
-                Style="{StaticResource CardStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock Margin="0,0,10,0"
-                               FontWeight="SemiBold"
+                <Grid x:Name="TenamInputHost"
+                      Grid.Row="1"
+                      Width="880"
+                      MaxWidth="880"
+                      Margin="0,8,0,12"
+                      HorizontalAlignment="Center">
+                    <TextBox x:Name="TenamTextBox"
+                             AutomationProperties.Name="TENAM"
+                             Style="{StaticResource ManualTenamTextBoxStyle}"
+                             Text="{Binding TenamInput, UpdateSourceTrigger=PropertyChanged}"
+                             GotKeyboardFocus="TenamTextBox_GotKeyboardFocus"
+                             PreviewKeyDown="TenamTextBox_PreviewKeyDown"
+                             PreviewTextInput="TenamTextBox_PreviewTextInput"
+                             DataObject.Pasting="TenamTextBox_Pasting" />
+                    <TextBlock x:Name="ManualTenamPlaceholder"
+                               Margin="13,0"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Text="Статус" />
-                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
-                </StackPanel>
-                <TextBlock Grid.Column="1"
-                           Margin="16,0,0,0"
-                           FontSize="20"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}"
-                           Text="{Binding LastProcessedTenam}" />
+                               Text="Введите или отсканируйте TENAM">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text.Length, ElementName=TenamTextBox}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <Grid Grid.Row="2"
+                      Width="572"
+                      MaxWidth="572"
+                      Margin="0,0,0,12"
+                      HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            MaxWidth="280"
+                            AutomationProperties.Name="Торцевая этикетка"
+                            Command="{Binding Work.OpenEndLabelPreviewCommand}"
+                            Content="Торцевая этикетка"
+                            Style="{StaticResource ManualPrimaryActionButtonStyle}" />
+
+                    <Button Grid.Column="2"
+                            MaxWidth="280"
+                            AutomationProperties.Name="Лист сброса"
+                            Command="{Binding Work.OpenStuffingSheetPreviewCommand}"
+                            Content="Лист сброса"
+                            Style="{StaticResource ManualPrimaryActionButtonStyle}" />
+                </Grid>
+
+                <Border Grid.Row="3"
+                        Width="760"
+                        MaxWidth="760"
+                        Padding="12,10"
+                        HorizontalAlignment="Center"
+                        Background="{StaticResource AutoLineNeutralSoftBrush}"
+                        CornerRadius="{StaticResource AutoLineRadius10}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Text="Автопечать торцевой этикетки" />
+                            <TextBlock Margin="0,3,0,0"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="Печатать сразу после успешной загрузки данных"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Button Grid.Column="1"
+                                Margin="16,0"
+                                AutomationProperties.Name="Ввести вес"
+                                Command="{Binding Work.RequestManualWeightCommand}"
+                                Content="Ввести вес">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ManualSecondaryActionButtonStyle}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Work.CanRequestManualWeight}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <ui:ToggleSwitch Grid.Column="2"
+                                         VerticalAlignment="Center"
+                                         AutomationProperties.Name="Автопечать торцевой этикетки"
+                                         IsEnabled="{Binding CanChangeManualOptions}"
+                                         IsChecked="{Binding Work.IsManualScanAutoPrintEndLabelEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         OffContent=""
+                                         OnContent="" />
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
+
+        <Grid Grid.Row="2" Margin="{StaticResource WorkGapBottom12}">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasRecords}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Margin="{StaticResource WorkGapRight12}"
+                    Style="{StaticResource ManualSummaryCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource ManualSummaryIconHostStyle}">
+                        <ui:SymbolIcon HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="21"
+                                       Foreground="{StaticResource AutoLineBlueBrush}"
+                                       Symbol="Box24" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Текущий короб" />
+                        <TextBlock Margin="0,4,0,0"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding CurrentBoxText}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Margin="{StaticResource WorkGapRight12}"
+                    Style="{StaticResource ManualSummaryCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource ManualSummaryIconHostStyle}">
+                        <ui:SymbolIcon x:Name="ManualDataStatusIcon"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="21"
+                                       Symbol="Database24">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Foreground" Value="{StaticResource AutoLineNeutralBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDataStatusSuccess}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource AutoLineSuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDataStatusWarning}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource AutoLineWarningBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDataStatusError}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource AutoLineErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Статус данных" />
+                        <TextBlock Margin="0,4,0,0"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding DataStatusText}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource ManualSummaryCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource ManualSummaryIconHostStyle}">
+                        <ui:SymbolIcon HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="21"
+                                       Foreground="{StaticResource AutoLineBlueBrush}"
+                                       Symbol="TableSimple24" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Записей" />
+                        <TextBlock Margin="0,4,0,0"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding TotalItems}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
 
         <Border Grid.Row="3"
                 Padding="0"
-                Style="{StaticResource CardStyle}">
+                Style="{StaticResource ManualWorkCardStyle}">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
                 <DataGrid x:Name="RecordsGrid"
+                          Grid.Row="0"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserSortColumns="True"
@@ -156,18 +287,20 @@
                           GridLinesVisibility="Horizontal"
                           HorizontalScrollBarVisibility="Auto"
                           IsReadOnly="True"
-                          ItemsSource="{Binding Records}"
+                          ItemsSource="{Binding PagedRecords}"
                           LoadingRow="RecordsGrid_LoadingRow"
                           RowHeight="34"
                           Sorting="RecordsGrid_Sorting"
-                          VerticalScrollBarVisibility="Auto">
+                          VerticalScrollBarVisibility="Auto"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling">
                     <DataGrid.Style>
-                        <Style BasedOn="{StaticResource AppDataGridStyle}"
-                               TargetType="DataGrid">
+                        <Style BasedOn="{StaticResource AppDataGridStyle}" TargetType="DataGrid">
                             <Setter Property="RowHeaderWidth" Value="44" />
                             <Setter Property="HeadersVisibility" Value="All" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                <DataTrigger Binding="{Binding HasRecords}" Value="False">
+                                    <Setter Property="Background" Value="{StaticResource AutoLineNeutralSoftBrush}" />
                                     <Setter Property="RowHeaderWidth" Value="0" />
                                     <Setter Property="HeadersVisibility" Value="Column" />
                                 </DataTrigger>
@@ -184,82 +317,204 @@
                         </Style>
                     </DataGrid.Resources>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Width="110" Binding="{Binding Tenam}" ElementStyle="{StaticResource CellTextStyle}" Header="TENAM" />
-                        <DataGridTextColumn Width="140" Binding="{Binding Lfaempfkdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код магазина" />
-                        <DataGridTextColumn Width="100" Binding="{Binding Tesortnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Короб в заказе" />
-                        <DataGridTextColumn Width="160" Binding="{Binding Artnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Артикул" />
-                        <DataGridTextColumn Width="260" Binding="{Binding Artbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Наименование" />
-                        <DataGridTextColumn Width="120" Binding="{Binding Bstmg}" ElementStyle="{StaticResource CellTextStyle}" Header="Кол-во в коробе" />
-                        <DataGridTextColumn Width="300" Binding="{Binding Bstchgnam5}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа" />
-                        <DataGridTextColumn Width="190" Binding="{Binding Aufid}" ElementStyle="{StaticResource CellTextStyle}" Header="AUFID" />
-                        <DataGridTextColumn Width="160" Binding="{Binding Lfakdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа (LFAKDNR)" />
-                        <DataGridTextColumn Width="160" Binding="{Binding Lfaempfort1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город" />
-                        <DataGridTextColumn Width="220" Binding="{Binding Lfaempfstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица" />
-                        <DataGridTextColumn Width="260" Binding="{Binding Gpbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Грузополучатель" />
-                        <DataGridTextColumn Width="90" Binding="{Binding Gpplz}" ElementStyle="{StaticResource CellTextStyle}" Header="Индекс" />
-                        <DataGridTextColumn Width="80" Binding="{Binding Lndnam}" ElementStyle="{StaticResource CellTextStyle}" Header="Страна" />
-                        <DataGridTextColumn Width="140" Binding="{Binding Gport1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город (GP)" />
-                        <DataGridTextColumn Width="220" Binding="{Binding Gpstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица (GP)" />
-                        <DataGridTextColumn Width="280" Binding="{Binding Adres}" ElementStyle="{StaticResource CellTextStyle}" Header="Адрес строкой" />
-                        <DataGridTextColumn Width="140" Binding="{Binding SumBst}" ElementStyle="{StaticResource CellTextStyle}" Header="Изделий в коробе" />
-                        <DataGridTextColumn Width="120" Binding="{Binding Brutto}" ElementStyle="{StaticResource CellTextStyle}" Header="Вес брутто, кг" />
-                        <DataGridTextColumn Width="90" Binding="{Binding Market}" ElementStyle="{StaticResource CellTextStyle}" Header="Маркет" />
+                        <DataGridTextColumn Width="110" Binding="{Binding Tenam}" ElementStyle="{StaticResource CellTextStyle}" Header="TENAM" SortMemberPath="Tenam" />
+                        <DataGridTextColumn Width="140" Binding="{Binding Lfaempfkdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код магазина" SortMemberPath="Lfaempfkdnr" />
+                        <DataGridTextColumn Width="100" Binding="{Binding Tesortnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Короб в заказе" SortMemberPath="Tesortnr" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Artnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Артикул" SortMemberPath="Artnr" />
+                        <DataGridTextColumn Width="260" Binding="{Binding Artbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Наименование" SortMemberPath="Artbez" />
+                        <DataGridTextColumn Width="120" Binding="{Binding Bstmg}" ElementStyle="{StaticResource CellTextStyle}" Header="Кол-во в коробе" SortMemberPath="Bstmg" />
+                        <DataGridTextColumn Width="300" Binding="{Binding Bstchgnam5}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа" SortMemberPath="Bstchgnam5" />
+                        <DataGridTextColumn Width="190" Binding="{Binding Aufid}" ElementStyle="{StaticResource CellTextStyle}" Header="AUFID" SortMemberPath="Aufid" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Lfakdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код заказа (LFAKDNR)" SortMemberPath="Lfakdnr" />
+                        <DataGridTextColumn Width="160" Binding="{Binding Lfaempfort1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город" SortMemberPath="Lfaempfort1" />
+                        <DataGridTextColumn Width="220" Binding="{Binding Lfaempfstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица" SortMemberPath="Lfaempfstrasse" />
+                        <DataGridTextColumn Width="260" Binding="{Binding Gpbez}" ElementStyle="{StaticResource CellTextStyle}" Header="Грузополучатель" SortMemberPath="Gpbez" />
+                        <DataGridTextColumn Width="90" Binding="{Binding Gpplz}" ElementStyle="{StaticResource CellTextStyle}" Header="Индекс" SortMemberPath="Gpplz" />
+                        <DataGridTextColumn Width="80" Binding="{Binding Lndnam}" ElementStyle="{StaticResource CellTextStyle}" Header="Страна" SortMemberPath="Lndnam" />
+                        <DataGridTextColumn Width="140" Binding="{Binding Gport1}" ElementStyle="{StaticResource CellTextStyle}" Header="Город (GP)" SortMemberPath="Gport1" />
+                        <DataGridTextColumn Width="220" Binding="{Binding Gpstrasse}" ElementStyle="{StaticResource CellTextStyle}" Header="Улица (GP)" SortMemberPath="Gpstrasse" />
+                        <DataGridTextColumn Width="280" Binding="{Binding Adres}" ElementStyle="{StaticResource CellTextStyle}" Header="Адрес строкой" SortMemberPath="Adres" />
+                        <DataGridTextColumn Width="140" Binding="{Binding SumBst}" ElementStyle="{StaticResource CellTextStyle}" Header="Изделий в коробе" SortMemberPath="SumBst" />
+                        <DataGridTextColumn Width="120" Binding="{Binding Brutto}" ElementStyle="{StaticResource CellTextStyle}" Header="Вес брутто, кг" SortMemberPath="Brutto" />
+                        <DataGridTextColumn Width="90" Binding="{Binding Market}" ElementStyle="{StaticResource CellTextStyle}" Header="Маркет" SortMemberPath="Market" />
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            IsHitTestVisible="False">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
+                <Border Grid.Row="0"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsHitTestVisible="False">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource ManualEmptyStateCardStyle}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Records.Count}" Value="0">
+                                <DataTrigger Binding="{Binding IsEmptyStateVisible}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </StackPanel.Style>
-                    <ui:SymbolIcon FontSize="32"
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock HorizontalAlignment="Center"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding EmptyStateTitle}"
+                                   TextAlignment="Center" />
+                        <TextBlock Margin="0,6,0,0"
+                                   HorizontalAlignment="Center"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Symbol="BarcodeScanner24" />
-                    <TextBlock Margin="0,10,0,0"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Text="Ожидание сканирования TENAM" />
-                </StackPanel>
+                                   Text="{Binding EmptyStateDescription}"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Grid x:Name="ManualLoadingOverlay"
+                      Grid.Row="0"
+                      Panel.ZIndex="90"
+                      Background="{DynamicResource SurfaceBrush}"
+                      IsHitTestVisible="True">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoadingOverlayVisible}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Border Padding="24,20"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource ManualEmptyStateCardStyle}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <ui:ProgressRing x:Name="ManualLoadingProgressRing"
+                                             Width="32"
+                                             Height="32"
+                                             HorizontalAlignment="Center"
+                                             Foreground="{StaticResource AutoLineBlueBrush}"
+                                             IsIndeterminate="True" />
+                            <TextBlock Margin="0,12,0,0"
+                                       HorizontalAlignment="Center"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Text="Загрузка данных" />
+                            <TextBlock Margin="0,5,0,0"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="{Binding LoadingDescription}"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border x:Name="ManualPager"
+                        Grid.Row="1"
+                        Padding="12,10"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                        BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Text="{Binding RangeText}" />
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button AutomationProperties.Name="Первая страница"
+                                    Command="{Binding FirstPageCommand}"
+                                    Content="«"
+                                    Style="{StaticResource ManualPagerButtonStyle}"
+                                    ToolTip="Первая страница" />
+                            <Button Margin="4,0,8,0"
+                                    AutomationProperties.Name="Предыдущая страница"
+                                    Command="{Binding PreviousPageCommand}"
+                                    Content="‹"
+                                    Style="{StaticResource ManualPagerButtonStyle}"
+                                    ToolTip="Предыдущая страница" />
+
+                            <ItemsControl ItemsSource="{Binding PageNavigationItems}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Button Command="{Binding Command}"
+                                                    Content="{Binding Text}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource ManualPagerPageButtonStyle}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                <Setter Property="Background" Value="{StaticResource AutoLineBlueBrush}" />
+                                                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
+                                                                <Setter Property="Foreground" Value="White" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <TextBlock Width="30"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="…"
+                                                       TextAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Margin="8,0,4,0"
+                                    AutomationProperties.Name="Следующая страница"
+                                    Command="{Binding NextPageCommand}"
+                                    Content="›"
+                                    Style="{StaticResource ManualPagerButtonStyle}"
+                                    ToolTip="Следующая страница" />
+                            <Button AutomationProperties.Name="Последняя страница"
+                                    Command="{Binding LastPageCommand}"
+                                    Content="»"
+                                    Style="{StaticResource ManualPagerButtonStyle}"
+                                    ToolTip="Последняя страница" />
+                        </StackPanel>
+
+                        <ComboBox x:Name="PageSizeComboBox"
+                                  Grid.Column="2"
+                                  MinWidth="132"
+                                  Height="34"
+                                  HorizontalAlignment="Right"
+                                  ItemsSource="{Binding PageSizeOptions}"
+                                  SelectedItem="{Binding PageSize, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat={}{0} на странице}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
-
-        <Grid Grid.RowSpan="4"
-              Panel.ZIndex="90"
-              IsHitTestVisible="False">
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
-            <Border Background="{DynamicResource AppBackgroundBrush}" Opacity="0.72" />
-            <Border Padding="20"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource CardStyle}">
-                <StackPanel Orientation="Horizontal">
-                    <ProgressBar Width="90"
-                                 Height="6"
-                                 VerticalAlignment="Center"
-                                 IsIndeterminate="True" />
-                    <TextBlock Margin="14,0,0,0"
-                               FontWeight="SemiBold"
-                               Text="{Binding StatusMessage}" />
-                </StackPanel>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>

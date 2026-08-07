@@ -22,19 +22,19 @@ public sealed class WorkPresentationViewModelTests
             var manual = new ManualProcessingViewModel(work);
 
             using var section = new WorkSectionViewModel(work, automatic, manual);
-            section.SelectMode(WorkMode.Automatic);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
 
             Assert.Same(automatic, section.CurrentModeViewModel);
             Assert.True(section.IsAutomaticMode);
             Assert.False(section.IsManualMode);
 
-            section.SelectMode(WorkMode.Manual);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
 
             Assert.Same(manual, section.CurrentModeViewModel);
             Assert.False(section.IsAutomaticMode);
             Assert.True(section.IsManualMode);
 
-            section.SelectMode(WorkMode.Automatic);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
 
             Assert.Same(automatic, section.CurrentModeViewModel);
         });
@@ -50,7 +50,7 @@ public sealed class WorkPresentationViewModelTests
             var manual = new ManualProcessingViewModel(work);
 
             var section = new WorkSectionViewModel(work, automatic, manual);
-            section.SelectMode(WorkMode.Manual);
+            RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
             section.Dispose();
 
             RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
@@ -161,12 +161,17 @@ public sealed class WorkPresentationViewModelTests
         StaTestRunner.Run(() =>
         {
             using var work = CreateWorkViewModel(new ImmediateProcessingService(), new FakeScanner());
+            SetWorkModeWithoutPersistence(work, WorkMode.Automatic);
             var snapshot = new AutomaticLineEquipmentSnapshot(
                 IsScannerRunning: false,
                 IsPrinterInstalled: false,
                 UseScales: false);
 
             using var automatic = new AutomaticLineViewModel(work, () => snapshot);
+            Assert.Equal(AutomaticLineState.Initializing, automatic.LineState);
+            Assert.True(automatic.IsInitializing);
+            Assert.False(automatic.IsSuccess);
+
             automatic.RefreshEquipmentStatus();
 
             Assert.True(automatic.HasEquipmentSnapshot);
@@ -174,7 +179,9 @@ public sealed class WorkPresentationViewModelTests
             Assert.Equal("Остановлен", automatic.ScannerStatusText);
             Assert.Equal("Не найден", automatic.PrinterStatusText);
             Assert.Equal("Отключены", automatic.ScalesStatusText);
-            Assert.Equal("Неизвестно", automatic.WmsStatusText);
+            Assert.Equal("Не проверено", automatic.WmsStatusText);
+            Assert.Equal(AutomaticLineState.Error, automatic.LineState);
+            Assert.False(automatic.IsSuccess);
 
             snapshot = new AutomaticLineEquipmentSnapshot(
                 IsScannerRunning: true,
@@ -188,6 +195,7 @@ public sealed class WorkPresentationViewModelTests
             Assert.Equal("Установлен", automatic.PrinterStatusText);
             Assert.True(automatic.IsScalesEnabled);
             Assert.Equal("Включены в настройках", automatic.ScalesStatusText);
+            Assert.Equal(AutomaticLineState.Idle, automatic.LineState);
         });
     }
 
@@ -268,9 +276,9 @@ public sealed class WorkPresentationViewModelTests
             AddNotification(work, "Ошибка ручной обработки", NotificationCategory.Error);
             RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
 
-            Assert.Equal(AutomaticLineState.Idle, automatic.LineState);
-            Assert.Equal("Линия работает", automatic.LineHeadline);
-            Assert.Equal("Ожидание следующего короба", automatic.LineSubtitle);
+            Assert.Equal(AutomaticLineState.Initializing, automatic.LineState);
+            Assert.Equal("Инициализация линии", automatic.LineHeadline);
+            Assert.Equal("Проверка состояния сканера", automatic.LineSubtitle);
         });
     }
 
@@ -286,6 +294,7 @@ public sealed class WorkPresentationViewModelTests
                 work,
                 () => new AutomaticLineEquipmentSnapshot(true, false, false),
                 () => now);
+            automatic.RefreshEquipmentStatus();
             work.Tenam = "4340558";
 
             work.LoadRecordsCommand.Execute(null);

@@ -1,0 +1,201 @@
+<UserControl x:Class="LabelFlowStudio.Desktop.Views.PrintSettingsEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel MaxWidth="{StaticResource SettingsEditorMaxWidth}">
+        <UniformGrid Columns="2"
+                     Margin="{StaticResource SettingsMarginBottom16}">
+            <Border Margin="{StaticResource SettingsMarginRight8}"
+                    Style="{StaticResource SettingsCardStyle}">
+                <StackPanel>
+                    <TextBlock Margin="{StaticResource SettingsMarginBottom16}"
+                               Style="{StaticResource SettingsSectionTitleStyle}"
+                               Text="Торцевые этикетки" />
+
+                    <ui:ToggleSwitch Margin="{StaticResource SettingsMarginBottom16}"
+                                     Content="Печатать торцевую этикетку"
+                                     IsChecked="{Binding PrintEndLabelEnabled, Mode=TwoWay}" />
+
+                    <TextBlock Style="{StaticResource SettingsFieldLabelStyle}"
+                               Text="Принтер" />
+                    <ComboBox x:Name="EndLabelPrinterComboBox"
+                               Margin="{StaticResource SettingsMarginBottom8}"
+                               IsEnabled="{Binding PrintEndLabelEnabled}"
+                               ItemsSource="{Binding AvailablePrinters}"
+                               SelectedItem="{Binding EndLabelPrinterName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               Style="{StaticResource SettingsComboBoxStyle}" />
+
+                    <Grid x:Name="EndLabelPrinterStatus"
+                          Margin="{StaticResource SettingsMarginBottom12}">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding PrintEndLabelEnabled}" Value="True" />
+                                            <Condition Binding="{Binding IsEndLabelPrinterInstalled}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Width="{StaticResource SettingsStatusDotSize}"
+                                 Height="{StaticResource SettingsStatusDotSize}"
+                                 Margin="{StaticResource SettingsMarginRight8}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource AutoLineNeutralBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEndLabelPrinterMissing}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding EndLabelPrinterStateText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock"
+                                       BasedOn="{StaticResource SettingsPrinterStatusTextStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEndLabelPrinterMissing}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource SettingsFieldLabelStyle}"
+                               Text="Количество копий" />
+                    <ui:NumberBox x:Name="EndLabelCopiesNumberBox"
+                                  Width="{StaticResource SettingsCopiesControlWidth}"
+                                  HorizontalAlignment="Left"
+                                  IsEnabled="{Binding PrintEndLabelEnabled}"
+                                  MaxDecimalPlaces="0"
+                                  Maximum="99"
+                                  Minimum="1"
+                                  SmallChange="1"
+                                  SpinButtonPlacementMode="Compact"
+                                  Value="{Binding EndLabelCopies, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="{StaticResource SettingsMarginTop8}"
+                               Style="{StaticResource SettingsValidationTextStyle}"
+                               Text="{Binding EndLabelCopiesValidationMessage}" />
+                </StackPanel>
+            </Border>
+
+            <Border Margin="{StaticResource SettingsMarginLeft8}"
+                    Style="{StaticResource SettingsCardStyle}">
+                <StackPanel>
+                    <TextBlock Margin="{StaticResource SettingsMarginBottom16}"
+                               Style="{StaticResource SettingsSectionTitleStyle}"
+                               Text="Листы сброса" />
+
+                    <ui:ToggleSwitch Margin="{StaticResource SettingsMarginBottom16}"
+                                     Content="Печатать лист сброса"
+                                     IsChecked="{Binding PrintStuffingSheetEnabled, Mode=TwoWay}" />
+
+                    <TextBlock Style="{StaticResource SettingsFieldLabelStyle}"
+                               Text="Принтер" />
+                    <ComboBox x:Name="StuffingSheetPrinterComboBox"
+                               Margin="{StaticResource SettingsMarginBottom8}"
+                               IsEnabled="{Binding PrintStuffingSheetEnabled}"
+                               ItemsSource="{Binding AvailablePrinters}"
+                               SelectedItem="{Binding StuffingSheetPrinterName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               Style="{StaticResource SettingsComboBoxStyle}" />
+
+                    <Grid x:Name="StuffingSheetPrinterStatus"
+                          Margin="{StaticResource SettingsMarginBottom12}">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding PrintStuffingSheetEnabled}" Value="True" />
+                                            <Condition Binding="{Binding IsStuffingSheetPrinterInstalled}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Width="{StaticResource SettingsStatusDotSize}"
+                                 Height="{StaticResource SettingsStatusDotSize}"
+                                 Margin="{StaticResource SettingsMarginRight8}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource AutoLineNeutralBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStuffingSheetPrinterMissing}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding StuffingSheetPrinterStateText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock"
+                                       BasedOn="{StaticResource SettingsPrinterStatusTextStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStuffingSheetPrinterMissing}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource SettingsFieldLabelStyle}"
+                               Text="Количество копий" />
+                    <ui:NumberBox x:Name="StuffingSheetCopiesNumberBox"
+                                  Width="{StaticResource SettingsCopiesControlWidth}"
+                                  HorizontalAlignment="Left"
+                                  IsEnabled="{Binding PrintStuffingSheetEnabled}"
+                                  MaxDecimalPlaces="0"
+                                  Maximum="99"
+                                  Minimum="1"
+                                  SmallChange="1"
+                                  SpinButtonPlacementMode="Compact"
+                                  Value="{Binding StuffingSheetCopies, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Margin="{StaticResource SettingsMarginTop8}"
+                               Style="{StaticResource SettingsValidationTextStyle}"
+                               Text="{Binding StuffingSheetCopiesValidationMessage}" />
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Border Style="{StaticResource SettingsCardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock VerticalAlignment="Center"
+                           Style="{StaticResource SettingsSectionTitleStyle}"
+                           Text="Весы" />
+                <ui:ToggleSwitch Grid.Column="1"
+                                 Content="Использовать весы"
+                                 IsChecked="{Binding UseScales, Mode=TwoWay}"
+                                 VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

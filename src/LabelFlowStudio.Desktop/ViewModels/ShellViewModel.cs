@@ -35,7 +35,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         NavigateToWorkCommand = new RelayCommand(() => NavigateTo(AppSection.Work));
         NavigateToJournalCommand = new RelayCommand(() => NavigateTo(AppSection.Journal));
-        NavigateToSettingsCommand = new RelayCommand(() => NavigateTo(AppSection.Settings));
+        NavigateToSettingsCommand = new RelayCommand(OpenSettingsSection);
     }
 
     public MainViewModel Work { get; }
@@ -79,6 +79,16 @@ public sealed class ShellViewModel : ViewModelBase
     public ICommand NavigateToJournalCommand { get; }
 
     public ICommand NavigateToSettingsCommand { get; }
+
+    private void OpenSettingsSection()
+    {
+        if (CurrentSection != AppSection.Settings)
+        {
+            Settings.RefreshDraftFromActive();
+        }
+
+        NavigateTo(AppSection.Settings);
+    }
 
     private void NavigateTo(AppSection section)
     {

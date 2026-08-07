@@ -1,6 +1,8 @@
 using LabelFlowStudio.Desktop;
+using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Desktop.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Wpf.Ui;
 
 namespace LabelFlowStudio.Application.Tests.Desktop;
 
@@ -15,6 +17,11 @@ public sealed class DesktopServiceCollectionExtensionsTests
     [InlineData(typeof(SettingsViewModel))]
     [InlineData(typeof(ShellViewModel))]
     [InlineData(typeof(MainWindow))]
+    [InlineData(typeof(IPrintSettingsRepository))]
+    [InlineData(typeof(IPrinterCatalog))]
+    [InlineData(typeof(IPrintSettingsEditorFactory))]
+    [InlineData(typeof(IContentDialogService))]
+    [InlineData(typeof(ISnackbarService))]
     public void AddLabelFlowDesktop_RegistersStableShellGraphAsSingleton(Type serviceType)
     {
         var services = new ServiceCollection();
