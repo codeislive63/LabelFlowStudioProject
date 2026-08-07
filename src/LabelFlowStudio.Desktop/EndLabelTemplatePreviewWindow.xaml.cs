@@ -5,7 +5,6 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using Microsoft.Win32;
 using System.Drawing;
-using System.Drawing.Printing;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -40,8 +39,8 @@ public partial class EndLabelTemplatePreviewWindow : Window
 
     private DispatcherTimer? _toastTimer;
 
-    private const string PreferredPrinterName = "zebra_torec";
-    private const int PreferredCopies = 2;
+    private const CoreWebView2PrintDialogKind InteractivePrintDialogKind =
+        CoreWebView2PrintDialogKind.Browser;
 
     // UI state (Tokens panel)
     private bool _tokensHidden;
@@ -612,8 +611,8 @@ public partial class EndLabelTemplatePreviewWindow : Window
             return;
         }
 
-        var showGrid = ShowGridMenuItem.IsChecked;
-        var showBounds = ShowBoundsMenuItem.IsChecked;
+        var showGrid = ShowGridMenuItem.IsChecked == true;
+        var showBounds = ShowBoundsMenuItem.IsChecked == true;
 
         var script =
             "(function () {" +
@@ -922,21 +921,7 @@ public partial class EndLabelTemplatePreviewWindow : Window
                 return;
             }
 
-            var (didPrint, printerName) = await TryPrintToConfiguredPrinterAsync(PreviewWebView, CancellationToken.None);
-
-            if (didPrint)
-            {
-                ShowToast($"Отправлено на принтер: {printerName}");
-                MessageBox.Show(
-                    this,
-                    $"Короб №{_tenam}: торцевая этикетка отправлена на печать.\nПринтер: {printerName}",
-                    "Печать выполнена",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
-            }
-
-            PreviewWebView.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            PreviewWebView.CoreWebView2.ShowPrintUI(InteractivePrintDialogKind);
             ShowToast("Открыто окно печати");
         }
         catch (Exception exception)
@@ -944,46 +929,6 @@ public partial class EndLabelTemplatePreviewWindow : Window
             ShowToast("Ошибка печати");
             MessageBox.Show(this, exception.Message, "Ошибка печати", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private static async Task<bool> TryPrintToPreferredPrinterAsync(WebView2 webView, CancellationToken cancellationToken)
-    {
-        if (webView.CoreWebView2 is null)
-        {
-            return false;
-        }
-
-        if (!IsPrinterInstalled(PreferredPrinterName))
-        {
-            return false;
-        }
-
-        for (var i = 0; i < PreferredCopies; i++)
-        {
-            var settings = webView.CoreWebView2.Environment.CreatePrintSettings();
-            settings.PrinterName = PreferredPrinterName;
-
-            var status = await webView.CoreWebView2.PrintAsync(settings);
-            if (status != CoreWebView2PrintStatus.Succeeded)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool IsPrinterInstalled(string printerName)
-    {
-        foreach (var installedPrinter in PrinterSettings.InstalledPrinters)
-        {
-            if (installedPrinter is string name && string.Equals(name, printerName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     // ===========================
@@ -1060,44 +1005,6 @@ public partial class EndLabelTemplatePreviewWindow : Window
         };
 
         _toastTimer.Start();
-    }
-
-    private static async Task<(bool didPrint, string printerName)> TryPrintToConfiguredPrinterAsync(
-    WebView2 webView,
-    CancellationToken cancellationToken)
-    {
-        var settings = PrintSettingsStore.TryLoad();
-        var printerName = settings?.EndLabelPrinterName ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(printerName))
-        {
-            return (false, string.Empty);
-        }
-
-        if (!PrinterDiscovery.IsPrinterInstalled(printerName))
-        {
-            return (false, printerName);
-        }
-
-        var copies = settings?.EndLabelCopies ?? 2;
-        if (copies <= 0)
-        {
-            copies = 2;
-        }
-
-        for (var i = 0; i < copies; i++)
-        {
-            var printSettings = webView.CoreWebView2.Environment.CreatePrintSettings();
-            printSettings.ShouldPrintBackgrounds = true;
-            printSettings.ShouldPrintHeaderAndFooter = false;
-            printSettings.PrinterName = printerName;
-
-            await webView.CoreWebView2.PrintAsync(printSettings);
-
-            await Task.Delay(100, cancellationToken);
-        }
-
-        return (true, printerName);
     }
 
     private sealed record TemplateToken(string Label, string InsertText, string Detail);

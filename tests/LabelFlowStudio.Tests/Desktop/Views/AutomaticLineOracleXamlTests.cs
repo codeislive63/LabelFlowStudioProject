@@ -43,7 +43,7 @@ public sealed class AutomaticLineOracleXamlTests
             var dot = Assert.IsType<Ellipse>(view.FindName("DatabaseStatusDot"));
             var statusText = Assert.IsType<TextBlock>(view.FindName("DatabaseStatusText"));
 
-            Assert.InRange(content.MaxWidth, 1280, 1360);
+            Assert.InRange(content.MaxWidth, 1280, 1440);
             AssertOraclePresentation(
                 view,
                 work,

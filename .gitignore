@@ -370,3 +370,4 @@ CoverageReport/
 /LabelFlowStudio.iss
 /Output
 /src/LabelFlowStudio.Desktop/appsettings.json
+/src/LabelFlowStudio.Templates/Editor/monaco-esm/assets

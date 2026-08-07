@@ -262,6 +262,8 @@
     </div>
 
     <script>
+        let monaco = null
+
         const state = {
             editor: null,
             fallback: document.getElementById('fallback'),
@@ -274,9 +276,7 @@
             suppressChange: false,
             pendingInit: null,
 
-            completionProviderDisposable: null,
-
-            vsBaseUrl: null
+            completionProviderDisposable: null
         }
 
         const rootEl = document.getElementById('root')
@@ -293,18 +293,24 @@
                     window.chrome.webview.postMessage(message)
                 }
             } catch {
-                // ignore
+                // WebView2 может быть недоступен вне приложения.
             }
         }
 
         function debounce(fn, delayMs) {
             let timerId = null
+
             return function () {
                 const args = arguments
+
                 if (timerId) {
                     clearTimeout(timerId)
                 }
-                timerId = setTimeout(() => fn.apply(null, args), delayMs)
+
+                timerId = setTimeout(
+                    () => fn.apply(null, args),
+                    delayMs
+                )
             }
         }
 
@@ -318,11 +324,10 @@
         function setTokensHidden(hidden, notifyHost) {
             state.tokensHidden = !!hidden
 
-            if (state.tokensHidden) {
-                rootEl.classList.add('tokensHidden')
-            } else {
-                rootEl.classList.remove('tokensHidden')
-            }
+            rootEl.classList.toggle(
+                'tokensHidden',
+                state.tokensHidden
+            )
 
             if (state.editor) {
                 state.editor.layout()
@@ -330,37 +335,62 @@
             }
 
             if (notifyHost) {
-                post({ type: 'tokensPanelToggled', hidden: state.tokensHidden })
+                post({
+                    type: 'tokensPanelToggled',
+                    hidden: state.tokensHidden
+                })
             }
         }
 
         function renderTokens() {
-            const filter = (state.filter || '').trim().toLowerCase()
+            const filter =
+                (state.filter || '')
+                    .trim()
+                    .toLowerCase()
 
             tokensListEl.innerHTML = ''
 
-            const list = Array.isArray(state.tokens) ? state.tokens : []
+            const list =
+                Array.isArray(state.tokens)
+                    ? state.tokens
+                    : []
+
             for (const t of list) {
-                const label = (t && (t.label || '')) || ''
-                const detail = (t && (t.detail || '')) || ''
-                const insertText = (t && (t.insertText || t.label || '')) || ''
+                const label =
+                    (t && (t.label || '')) || ''
+
+                const detail =
+                    (t && (t.detail || '')) || ''
+
+                const insertText =
+                    (t &&
+                        (t.insertText ||
+                            t.label ||
+                            '')) || ''
 
                 if (filter) {
-                    const hay = (label + ' ' + detail).toLowerCase()
+                    const hay =
+                        (label + ' ' + detail)
+                            .toLowerCase()
+
                     if (!hay.includes(filter)) {
                         continue
                     }
                 }
 
-                const card = document.createElement('div')
+                const card =
+                    document.createElement('div')
+
                 card.className = 'token'
+
                 card.innerHTML =
                     `<div class="label">${escapeHtml(label)}</div>` +
                     `<div class="detail">${escapeHtml(detail)}</div>`
 
-                card.addEventListener('click', () => {
-                    insertTokenText(insertText)
-                })
+                card.addEventListener(
+                    'click',
+                    () => insertTokenText(insertText)
+                )
 
                 tokensListEl.appendChild(card)
             }
@@ -370,34 +400,61 @@
             const value = text || ''
 
             if (state.editor) {
-                const selection = state.editor.getSelection()
+                const selection =
+                    state.editor.getSelection()
+
                 if (!selection) {
                     return
                 }
 
-                state.editor.executeEdits('token', [{
-                    range: selection,
-                    text: value,
-                    forceMoveMarkers: true
-                }])
+                state.editor.executeEdits(
+                    'template-token',
+                    [{
+                        range: selection,
+                        text: value,
+                        forceMoveMarkers: true
+                    }]
+                )
 
                 state.editor.focus()
                 return
             }
 
-            if (state.usingFallback && state.fallback) {
+            if (
+                state.usingFallback &&
+                state.fallback
+            ) {
                 const el = state.fallback
-                const start = el.selectionStart || 0
-                const end = el.selectionEnd || 0
-                const before = el.value.substring(0, start)
-                const after = el.value.substring(end)
 
-                el.value = before + value + after
-                el.selectionStart = start + value.length
-                el.selectionEnd = start + value.length
+                const start =
+                    el.selectionStart || 0
+
+                const end =
+                    el.selectionEnd || 0
+
+                const before =
+                    el.value.substring(0, start)
+
+                const after =
+                    el.value.substring(end)
+
+                el.value =
+                    before +
+                    value +
+                    after
+
+                el.selectionStart =
+                    start + value.length
+
+                el.selectionEnd =
+                    start + value.length
+
                 el.focus()
 
-                post({ type: 'contentChanged', value: el.value })
+                post({
+                    type: 'contentChanged',
+                    value: el.value
+                })
             }
         }
 
@@ -405,118 +462,218 @@
             const text = value || ''
 
             if (state.editor) {
-                const viewState = keepViewState ? state.editor.saveViewState() : null
+                const viewState =
+                    keepViewState
+                        ? state.editor.saveViewState()
+                        : null
 
                 state.suppressChange = true
+
                 state.editor.setValue(text)
+
                 state.suppressChange = false
 
                 if (viewState) {
-                    state.editor.restoreViewState(viewState)
+                    state.editor.restoreViewState(
+                        viewState
+                    )
                 }
 
                 state.editor.focus()
                 return
             }
 
-            if (state.usingFallback && state.fallback) {
+            if (
+                state.usingFallback &&
+                state.fallback
+            ) {
                 state.suppressChange = true
                 state.fallback.value = text
                 state.suppressChange = false
             }
         }
 
-        function computeBraceReplaceRange(model, position) {
-            const lineNumber = position.lineNumber
-            const line = model.getLineContent(lineNumber)
-            const cursorIndex = position.column - 1
+        function computeBraceReplaceRange(
+            model,
+            position
+        ) {
+            const lineNumber =
+                position.lineNumber
+
+            const line =
+                model.getLineContent(lineNumber)
+
+            const cursorIndex =
+                position.column - 1
 
             let braceCount = 0
+
             while (braceCount < 2) {
-                const idx = cursorIndex - 1 - braceCount
+                const idx =
+                    cursorIndex -
+                    1 -
+                    braceCount
+
                 if (idx < 0) {
                     break
                 }
+
                 if (line[idx] !== '{') {
                     break
                 }
+
                 braceCount++
             }
 
-            const startColumn = position.column - braceCount
-            return new monaco.Range(lineNumber, startColumn, lineNumber, position.column)
+            const startColumn =
+                position.column -
+                braceCount
+
+            return new monaco.Range(
+                lineNumber,
+                startColumn,
+                lineNumber,
+                position.column
+            )
         }
 
         function registerTokenCompletionProvider() {
-            if (!window.monaco) {
+            if (!monaco) {
                 return
             }
 
-            if (state.completionProviderDisposable) {
-                state.completionProviderDisposable.dispose()
-                state.completionProviderDisposable = null
+            if (
+                state.completionProviderDisposable
+            ) {
+                state.completionProviderDisposable
+                    .dispose()
+
+                state.completionProviderDisposable =
+                    null
             }
 
-            state.completionProviderDisposable = monaco.languages.registerCompletionItemProvider('html', {
-                triggerCharacters: ['{'],
-                provideCompletionItems: function (model, position) {
-                    const list = Array.isArray(state.tokens) ? state.tokens : []
-                    const suggestions = []
-                    let idx = 0
+            state.completionProviderDisposable =
+                monaco.languages
+                    .registerCompletionItemProvider(
+                        'html',
+                        {
+                            triggerCharacters: ['{'],
 
-                    const range = computeBraceReplaceRange(model, position)
+                            provideCompletionItems(
+                                model,
+                                position
+                            ) {
+                                const list =
+                                    Array.isArray(
+                                        state.tokens
+                                    )
+                                        ? state.tokens
+                                        : []
 
-                    for (const t of list) {
-                        if (!t) {
-                            continue
+                                const suggestions = []
+
+                                const range =
+                                    computeBraceReplaceRange(
+                                        model,
+                                        position
+                                    )
+
+                                let idx = 0
+
+                                for (const t of list) {
+                                    if (!t) {
+                                        continue
+                                    }
+
+                                    const insert =
+                                        t.insertText ||
+                                        t.label ||
+                                        ''
+
+                                    const label =
+                                        t.label ||
+                                        insert
+
+                                    if (!label) {
+                                        continue
+                                    }
+
+                                    suggestions.push({
+                                        label,
+
+                                        kind:
+                                            monaco.languages
+                                                .CompletionItemKind
+                                                .Variable,
+
+                                        detail:
+                                            t.detail || '',
+
+                                        insertText:
+                                            insert,
+
+                                        range,
+
+                                        sortText:
+                                            String(idx)
+                                                .padStart(
+                                                    5,
+                                                    '0'
+                                                )
+                                    })
+
+                                    idx++
+                                }
+
+                                return {
+                                    suggestions
+                                }
+                            }
                         }
-
-                        const insert = (t.insertText || t.label || '')
-                        const label = (t.label || insert)
-
-                        if (!label) {
-                            continue
-                        }
-
-                        suggestions.push({
-                            label: label,
-                            kind: monaco.languages.CompletionItemKind.Variable,
-                            detail: t.detail || '',
-                            insertText: insert,
-                            range: range,
-                            sortText: String(idx).padStart(5, '0')
-                        })
-
-                        idx++
-                    }
-
-                    return { suggestions: suggestions }
-                }
-            })
+                    )
         }
 
         function applyInit(message) {
-            state.tokens = message.tokens || []
+            state.tokens =
+                message.tokens || []
+
             state.filter = ''
+
             tokenSearchEl.value = ''
 
             renderTokens()
             registerTokenCompletionProvider()
 
-            setTokensHidden(!!message.tokensHidden, false)
-            setValue(message.value || '', false)
+            setTokensHidden(
+                !!message.tokensHidden,
+                false
+            )
 
-            leftStatusEl.textContent = 'Готово'
+            setValue(
+                message.value || '',
+                false
+            )
+
+            leftStatusEl.textContent =
+                'Готово'
         }
 
         function handleHostMessage(message) {
-            if (!message || !message.type) {
+            if (
+                !message ||
+                !message.type
+            ) {
                 return
             }
 
             if (message.type === 'init') {
-                if (!state.editor && !state.usingFallback) {
-                    state.pendingInit = message
+                if (
+                    !state.editor &&
+                    !state.usingFallback
+                ) {
+                    state.pendingInit =
+                        message
+
                     return
                 }
 
@@ -524,215 +681,468 @@
                 return
             }
 
-            if (message.type === 'setValue') {
-                setValue(message.value || '', true)
-                leftStatusEl.textContent = 'Импорт выполнен'
+            if (
+                message.type === 'setValue'
+            ) {
+                setValue(
+                    message.value || '',
+                    true
+                )
+
+                leftStatusEl.textContent =
+                    'Импорт выполнен'
+
                 return
             }
         }
 
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script')
-                script.src = src
-                script.async = true
-                script.onload = () => resolve()
-                script.onerror = () => reject(new Error('Failed to load script: ' + src))
-                document.head.appendChild(script)
-            })
-        }
-
         function loadCss(href) {
-            return new Promise((resolve, reject) => {
-                const link = document.createElement('link')
-                link.rel = 'stylesheet'
-                link.href = href
-                link.onload = () => resolve()
-                link.onerror = () => reject(new Error('Failed to load css: ' + href))
-                document.head.appendChild(link)
-            })
+            return new Promise(
+                (resolve, reject) => {
+                    const link =
+                        document.createElement(
+                            'link'
+                        )
+
+                    link.rel = 'stylesheet'
+                    link.href = href
+
+                    link.onload =
+                        () => resolve()
+
+                    link.onerror =
+                        () => reject(
+                            new Error(
+                                'Failed to load CSS: ' +
+                                href
+                            )
+                        )
+
+                    document.head.appendChild(link)
+                }
+            )
         }
 
         function ensureFallback() {
+            if (state.usingFallback) {
+                return
+            }
+
             state.usingFallback = true
 
-            editorHostEl.style.display = 'none'
-            state.fallback.style.display = 'block'
+            editorHostEl.style.display =
+                'none'
 
-            state.fallback.addEventListener('input', debounce(() => {
-                if (state.suppressChange) {
-                    return
-                }
-                post({ type: 'contentChanged', value: state.fallback.value })
-                leftStatusEl.textContent = 'Изменения не сохранены'
-            }, 200))
+            state.fallback.style.display =
+                'block'
 
-            state.fallback.addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-                    e.preventDefault()
-                    post({ type: 'saveRequested' })
-                    leftStatusEl.textContent = 'Сохранение'
+            state.fallback.addEventListener(
+                'input',
+                debounce(() => {
+                    if (state.suppressChange) {
+                        return
+                    }
+
+                    post({
+                        type: 'contentChanged',
+                        value:
+                            state.fallback.value
+                    })
+
+                    leftStatusEl.textContent =
+                        'Изменения не сохранены'
+                }, 200)
+            )
+
+            state.fallback.addEventListener(
+                'keydown',
+                e => {
+                    if (
+                        (e.ctrlKey ||
+                            e.metaKey) &&
+                        e.key
+                            .toLowerCase() ===
+                        's'
+                    ) {
+                        e.preventDefault()
+
+                        post({
+                            type: 'saveRequested'
+                        })
+
+                        leftStatusEl.textContent =
+                            'Сохранение'
+                    }
                 }
-            })
+            )
         }
 
         function isSuggestWidgetVisible() {
-            return !!document.querySelector('.suggest-widget.visible')
+            return !!document.querySelector(
+                '.suggest-widget.visible'
+            )
         }
 
-        async function tryStartMonaco(vsBaseUrl, loaderUrl, cssUrl) {
-            try {
-                await loadCss(cssUrl)
-                await loadScript(loaderUrl)
+        function configureTheme() {
+            monaco.editor.defineTheme(
+                'labelflow-light',
+                {
+                    base: 'vs',
+                    inherit: true,
+                    rules: [],
 
-                state.vsBaseUrl = vsBaseUrl
+                    colors: {
+                        'editor.background':
+                            '#FFFFFF',
 
-                window.MonacoEnvironment = {
-                    getWorkerUrl: function () {
-                        const workerMain = `${state.vsBaseUrl}/base/worker/workerMain.js`
-                        const bootstrap =
-                            `self.MonacoEnvironment = { baseUrl: '${state.vsBaseUrl}' };` +
-                            `importScripts('${workerMain}');`
+                        'editor.foreground':
+                            '#1F2937',
 
-                        return `data:text/javascript;charset=utf-8,${encodeURIComponent(bootstrap)}`
+                        'editorLineNumber.foreground':
+                            '#98A2B3',
+
+                        'editorLineNumber.activeForeground':
+                            '#2463D4',
+
+                        'editor.selectionBackground':
+                            '#DCE9FF',
+
+                        'editor.inactiveSelectionBackground':
+                            '#EEF4FF',
+
+                        'editor.lineHighlightBackground':
+                            '#F8FAFC',
+
+                        'editorIndentGuide.background1':
+                            '#EEF0F3',
+
+                        'editorIndentGuide.activeBackground1':
+                            '#CBD5E1'
                     }
                 }
+            )
+        }
 
-                window.require.config({ paths: { vs: state.vsBaseUrl } })
+        function createMonacoEditor() {
+            configureTheme()
 
-                await new Promise((resolve) => {
-                    window.require(['vs/editor/editor.main'], function () {
-                        state.editor = monaco.editor.create(editorHostEl, {
-                            value: '',
-                            language: 'html',
-                            theme: 'vs',
-                            automaticLayout: true,
+            state.editor =
+                monaco.editor.create(
+                    editorHostEl,
+                    {
+                        value: '',
+                        language: 'html',
+                        theme: 'labelflow-light',
 
-                            minimap: { enabled: false },
-                            fontFamily: state.editor ? undefined : 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Roboto Mono", monospace',
-                            fontSize: 13,
-                            lineHeight: 20,
+                        automaticLayout: true,
 
-                            wordWrap: 'on',
-                            wrappingIndent: 'same',
-                            scrollBeyondLastLine: false,
-                            smoothScrolling: true,
+                        minimap: {
+                            enabled: false
+                        },
 
-                            tabSize: 2,
-                            insertSpaces: true,
-                            autoIndent: 'full',
-                            formatOnPaste: true,
-                            formatOnType: true,
+                        fontFamily:
+                            'ui-monospace, ' +
+                            'SFMono-Regular, ' +
+                            'Menlo, Monaco, ' +
+                            'Consolas, ' +
+                            '"Liberation Mono", ' +
+                            '"Roboto Mono", ' +
+                            'monospace',
 
-                            quickSuggestions: true,
-                            suggestOnTriggerCharacters: true,
+                        fontSize: 13,
+                        lineHeight: 20,
 
-                            scrollbar: {
-                                verticalScrollbarSize: 12,
-                                horizontalScrollbarSize: 12
-                            },
+                        padding: {
+                            top: 10,
+                            bottom: 10
+                        },
 
-                            fixedOverflowWidgets: true
-                        })
+                        wordWrap: 'on',
+                        wrappingIndent: 'same',
 
-                        // Ctrl+S
-                        state.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                            post({ type: 'saveRequested' })
-                            leftStatusEl.textContent = 'Сохранение'
-                        })
+                        scrollBeyondLastLine:
+                            false,
 
-                        // QoL: фикс "Up прыгает на первую строку"
-                        state.editor.onKeyDown((e) => {
-                            if (e.keyCode !== monaco.KeyCode.UpArrow) {
-                                return
-                            }
-                            if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
-                                return
-                            }
-                            if (isSuggestWidgetVisible()) {
-                                return
-                            }
+                        smoothScrolling: true,
 
-                            const model = state.editor.getModel()
-                            const pos = state.editor.getPosition()
-                            if (!model || !pos) {
-                                return
-                            }
-                            if (pos.lineNumber <= 1) {
-                                return
-                            }
+                        cursorBlinking:
+                            'smooth',
 
-                            const newLine = pos.lineNumber - 1
-                            const newColumn = Math.min(pos.column, model.getLineMaxColumn(newLine))
+                        cursorSmoothCaretAnimation:
+                            'on',
 
-                            state.editor.setPosition({ lineNumber: newLine, column: newColumn })
-                            state.editor.revealPositionInCenterIfOutsideViewport({ lineNumber: newLine, column: newColumn })
+                        tabSize: 2,
+                        insertSpaces: true,
 
-                            e.preventDefault()
-                            e.stopPropagation()
-                        })
+                        autoIndent: 'full',
 
-                        const pushChange = debounce(() => {
-                            post({ type: 'contentChanged', value: state.editor.getValue() })
-                            leftStatusEl.textContent = 'Изменения не сохранены'
-                        }, 180)
+                        formatOnPaste: true,
+                        formatOnType: true,
 
-                        state.editor.onDidChangeModelContent(() => {
-                            if (state.suppressChange) {
-                                return
-                            }
-                            pushChange()
-                        })
+                        quickSuggestions: true,
 
-                        resolve()
+                        suggestOnTriggerCharacters:
+                            true,
+
+                        bracketPairColorization: {
+                            enabled: true
+                        },
+
+                        guides: {
+                            indentation: true,
+                            bracketPairs: true
+                        },
+
+                        renderWhitespace:
+                            'selection',
+
+                        stickyScroll: {
+                            enabled: false
+                        },
+
+                        scrollbar: {
+                            verticalScrollbarSize:
+                                10,
+
+                            horizontalScrollbarSize:
+                                10
+                        },
+
+                        fixedOverflowWidgets: true
+                    }
+                )
+
+            // Ctrl+S
+            state.editor.addCommand(
+                monaco.KeyMod.CtrlCmd |
+                monaco.KeyCode.KeyS,
+
+                () => {
+                    post({
+                        type: 'saveRequested'
                     })
+
+                    leftStatusEl.textContent =
+                        'Сохранение'
+                }
+            )
+
+            // Сохраняем твой фикс поведения UpArrow.
+            state.editor.onKeyDown(e => {
+                if (
+                    e.keyCode !==
+                    monaco.KeyCode.UpArrow
+                ) {
+                    return
+                }
+
+                if (
+                    e.ctrlKey ||
+                    e.altKey ||
+                    e.metaKey ||
+                    e.shiftKey
+                ) {
+                    return
+                }
+
+                if (
+                    isSuggestWidgetVisible()
+                ) {
+                    return
+                }
+
+                const model =
+                    state.editor.getModel()
+
+                const pos =
+                    state.editor.getPosition()
+
+                if (
+                    !model ||
+                    !pos ||
+                    pos.lineNumber <= 1
+                ) {
+                    return
+                }
+
+                const newLine =
+                    pos.lineNumber - 1
+
+                const newColumn =
+                    Math.min(
+                        pos.column,
+                        model.getLineMaxColumn(
+                            newLine
+                        )
+                    )
+
+                state.editor.setPosition({
+                    lineNumber: newLine,
+                    column: newColumn
                 })
 
+                state.editor
+                    .revealPositionInCenterIfOutsideViewport({
+                        lineNumber: newLine,
+                        column: newColumn
+                    })
+
+                e.preventDefault()
+                e.stopPropagation()
+            })
+
+            const pushChange =
+                debounce(() => {
+                    post({
+                        type: 'contentChanged',
+                        value:
+                            state.editor
+                                .getValue()
+                    })
+
+                    leftStatusEl.textContent =
+                        'Изменения не сохранены'
+                }, 180)
+
+            state.editor
+                .onDidChangeModelContent(
+                    () => {
+                        if (
+                            state.suppressChange
+                        ) {
+                            return
+                        }
+
+                        pushChange()
+                    }
+                )
+        }
+
+        async function tryStartMonaco() {
+            try {
+                leftStatusEl.textContent =
+                    'Загрузка Monaco'
+
+                await loadCss(
+                    './monaco-esm/monaco.css'
+                )
+
+                const module =
+                    await import(
+                        './monaco-esm/monaco-bootstrap.js'
+                    )
+
+                monaco =
+                    module.monaco ||
+                    window.monaco
+
+                if (!monaco) {
+                    throw new Error(
+                        'Monaco API was not exported'
+                    )
+                }
+
+                createMonacoEditor()
+
                 return true
-            } catch {
+            } catch (error) {
+                console.error(
+                    'Monaco initialization failed:',
+                    error
+                )
+
+                leftStatusEl.textContent =
+                    'Упрощённый редактор'
+
+                post({
+                    type:
+                        'editorInitializationFailed',
+
+                    message:
+                        error instanceof Error
+                            ? error.message
+                            : String(error)
+                })
+
                 return false
             }
         }
 
         async function start() {
-            // WebView2 messages
-            if (window.chrome && window.chrome.webview) {
-                window.chrome.webview.addEventListener('message', (e) => handleHostMessage(e.data || {}))
+            // Сначала подключаем WebView2,
+            // чтобы не потерять init,
+            // пока Monaco загружается.
+            if (
+                window.chrome &&
+                window.chrome.webview
+            ) {
+                window.chrome.webview
+                    .addEventListener(
+                        'message',
+                        e => handleHostMessage(
+                            e.data || {}
+                        )
+                    )
             }
 
-            // UI
-            tokenSearchEl.addEventListener('input', () => {
-                state.filter = tokenSearchEl.value || ''
-                renderTokens()
-            })
+            tokenSearchEl.addEventListener(
+                'input',
+                () => {
+                    state.filter =
+                        tokenSearchEl.value ||
+                        ''
 
-            tokensHandleEl.addEventListener('click', () => setTokensHidden(false, true))
-            closeTokensBtnEl.addEventListener('click', () => setTokensHidden(true, true))
-
-            // 1) bundled app resources only. Do not use CDN here: the editor must
-            // keep working in offline/proxy-restricted environments.
-            const localOk = await tryStartMonaco(
-                'https://app/Editor/monaco/vs',
-                'monaco/vs/loader.js',
-                'monaco/vs/editor/editor.main.css'
+                    renderTokens()
+                }
             )
 
-            // 2) local textarea fallback
-            if (!localOk) {
+            tokensHandleEl.addEventListener(
+                'click',
+                () =>
+                    setTokensHidden(
+                        false,
+                        true
+                    )
+            )
+
+            closeTokensBtnEl.addEventListener(
+                'click',
+                () =>
+                    setTokensHidden(
+                        true,
+                        true
+                    )
+            )
+
+            // Новый Monaco 0.56 ESM.
+            const monacoOk =
+                await tryStartMonaco()
+
+            // Fallback оставляем исключительно
+            // как аварийный режим.
+            if (!monacoOk) {
                 ensureFallback()
             }
 
-            // Ready handshake
-            post({ type: 'ready' })
+            // Сохраняем существующий
+            // handshake с WPF.
+            post({
+                type: 'ready'
+            })
 
             if (state.pendingInit) {
-                applyInit(state.pendingInit)
+                applyInit(
+                    state.pendingInit
+                )
+
                 state.pendingInit = null
             }
 
             if (state.editor) {
                 state.editor.focus()
-            } else if (state.usingFallback) {
+            } else if (
+                state.usingFallback
+            ) {
                 state.fallback.focus()
             }
         }

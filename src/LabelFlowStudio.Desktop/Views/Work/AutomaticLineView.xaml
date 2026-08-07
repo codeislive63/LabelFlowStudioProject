@@ -553,95 +553,162 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="5" Style="{StaticResource AutoLineCardStyle}">
+            <!-- Последние события.
+     Намеренно оформлены как лёгкая секция, а не ещё одна большая карточка. -->
+            <Border Grid.Row="5"
+        Margin="4,2,4,0"
+        Padding="0,12,0,0"
+        Background="Transparent"
+        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+        BorderThickness="0,1,0,0">
+
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" Style="{StaticResource AutoLineSectionTitleStyle}" Text="Последние события" />
-                        <Button Grid.Column="1"
-                                Command="{Binding DataContext.NavigateToJournalCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                Style="{StaticResource AutoLineLinkButtonStyle}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Открыть журнал" />
-                                <TextBlock Margin="8,0,0,0" Text="→" />
-                            </StackPanel>
-                        </Button>
+                    <!-- Заголовок -->
+                    <Grid Grid.Row="0"
+              Margin="8,0,8,4">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock VerticalAlignment="Center"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Text="Последние события" />
+
+                        <TextBlock Grid.Column="1"
+                       VerticalAlignment="Center"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       Text="Текущий запуск" />
                     </Grid>
 
+                    <!-- События -->
                     <ItemsControl Grid.Row="1"
-                                  Margin="0,8,0,0"
-                                  ClipToBounds="True"
-                                  ItemsSource="{Binding RecentEvents}"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                      Margin="0,2,0,0"
+                      ClipToBounds="True"
+                      ItemsSource="{Binding RecentEvents}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+
                         <ItemsControl.Style>
                             <Style TargetType="ItemsControl">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasRecentEvents}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding HasRecentEvents}"
+                                     Value="False">
+                                        <Setter Property="Visibility"
+                                    Value="Collapsed" />
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </ItemsControl.Style>
+
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type viewModels:AutomaticLineEvent}">
+
                                 <Border Style="{StaticResource AutoLineEventItemStyle}">
+
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="56" />
-                                            <ColumnDefinition Width="26" />
+                                            <ColumnDefinition Width="64" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock VerticalAlignment="Top"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" />
-                                        <TextBlock Grid.Column="1"
-                                                   VerticalAlignment="Top"
-                                                   FontFamily="Segoe UI Symbol"
-                                                   FontWeight="SemiBold"
-                                                   Text="{Binding CategoryIcon}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{StaticResource AutoLineNeutralBrush}" />
+
+                                        <!-- Время -->
+                                        <TextBlock Grid.Column="0"
+                                       VerticalAlignment="Center"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" />
+
+                                        <!-- Маленькая статусная точка вместо громкого значка -->
+                                        <Ellipse Grid.Column="1"
+                                     Width="7"
+                                     Height="7"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Center">
+
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+
+                                                    <Setter Property="Fill"
+                                                Value="{StaticResource AutoLineNeutralBrush}" />
+
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSuccess}" Value="True"><Setter Property="Foreground" Value="{StaticResource AutoLineSuccessBrush}" /></DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsWarning}" Value="True"><Setter Property="Foreground" Value="{StaticResource AutoLineWarningBrush}" /></DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsError}" Value="True"><Setter Property="Foreground" Value="{StaticResource AutoLineErrorBrush}" /></DataTrigger>
+
+                                                        <DataTrigger Binding="{Binding IsSuccess}"
+                                                         Value="True">
+                                                            <Setter Property="Fill"
+                                                        Value="{StaticResource AutoLineSuccessBrush}" />
+                                                        </DataTrigger>
+
+                                                        <DataTrigger Binding="{Binding IsWarning}"
+                                                         Value="True">
+                                                            <Setter Property="Fill"
+                                                        Value="{StaticResource AutoLineWarningBrush}" />
+                                                        </DataTrigger>
+
+                                                        <DataTrigger Binding="{Binding IsError}"
+                                                         Value="True">
+                                                            <Setter Property="Fill"
+                                                        Value="{StaticResource AutoLineErrorBrush}" />
+                                                        </DataTrigger>
+
                                                     </Style.Triggers>
                                                 </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+
+                                        <!-- Сообщение -->
                                         <TextBlock Grid.Column="2"
-                                                   FontSize="12"
-                                                   LineHeight="16"
-                                                   MaxHeight="32"
-                                                   Text="{Binding Message}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   TextWrapping="Wrap"
-                                                   ToolTip="{Binding Message}" />
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       LineHeight="17"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="{Binding Message}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="Wrap"
+                                       ToolTip="{Binding Message}" />
+
                                     </Grid>
                                 </Border>
+
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Empty state -->
                     <TextBlock Grid.Row="1"
-                               Margin="0,16,0,8"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Text="Событий текущего запуска пока нет">
+                   Margin="8,8,8,2"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   Text="Событий текущего запуска пока нет">
+
                         <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource AutoLineMutedTextStyle}">
-                                <Setter Property="Visibility" Value="Collapsed" />
+                            <Style TargetType="TextBlock">
+
+                                <Setter Property="Visibility"
+                            Value="Collapsed" />
+
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding HasRecentEvents}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding HasRecentEvents}"
+                                     Value="False">
+                                        <Setter Property="Visibility"
+                                    Value="Visible" />
+                                    </DataTrigger>
                                 </Style.Triggers>
+
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+
                 </Grid>
             </Border>
         </Grid>

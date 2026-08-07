@@ -79,7 +79,7 @@ public sealed class WorkViewXamlSmokeTests
                 ScrollBarVisibility.Disabled,
                 FindVisualChildren<ScrollViewer>(automaticView).First().HorizontalScrollBarVisibility);
 
-            var modeSelector = Assert.IsType<WorkModeSelector>(FindVisualChild<WorkModeSelector>(automaticView));
+            var modeSelector = Assert.IsType<WorkModeSelector>(FindVisualChild<WorkModeSelector>(view));
             var modeButtons = FindVisualChildren<Button>(modeSelector).ToArray();
             Assert.Contains(modeButtons, button => ReferenceEquals(button.Command, work.SwitchToAutomaticModeCommand));
             Assert.Contains(modeButtons, button => ReferenceEquals(button.Command, work.SwitchToManualModeCommand));
@@ -117,15 +117,16 @@ public sealed class WorkViewXamlSmokeTests
             });
 
             var manualContent = Assert.IsType<Grid>(manualView.FindName("ManualContent"));
-            var tenamInputHost = Assert.IsType<Grid>(manualView.FindName("TenamInputHost"));
+            var tenamInputHost = Assert.IsType<Border>(manualView.FindName("TenamInputHost"));
+            var tenamEditorHost = Assert.IsType<StackPanel>(VisualTreeHelper.GetParent(tenamInputHost));
             var tenamTextBox = Assert.IsType<TextBox>(manualView.FindName("TenamTextBox"));
             var tenamPlaceholder = Assert.IsType<TextBlock>(manualView.FindName("ManualTenamPlaceholder"));
             var loadingOverlay = Assert.IsType<Grid>(manualView.FindName("ManualLoadingOverlay"));
             var loadingRing = Assert.IsType<UiProgressRing>(manualView.FindName("ManualLoadingProgressRing"));
             var pageSizeComboBox = Assert.IsType<ComboBox>(manualView.FindName("PageSizeComboBox"));
 
-            Assert.Equal(1320, manualContent.MaxWidth);
-            Assert.Equal(880, tenamInputHost.MaxWidth);
+            Assert.Equal(1440, manualContent.MaxWidth);
+            Assert.Equal(880, tenamEditorHost.MaxWidth);
             Assert.Equal("4430558", tenamTextBox.Text);
             Assert.Equal(Visibility.Collapsed, tenamPlaceholder.Visibility);
             Assert.NotNull(tenamTextBox.Foreground);
@@ -133,7 +134,7 @@ public sealed class WorkViewXamlSmokeTests
             Assert.NotNull(tenamTextBox.SelectionBrush);
             Assert.NotNull(tenamTextBox.SelectionTextBrush);
             Assert.NotEqual(tenamTextBox.Background, tenamTextBox.Foreground);
-            Assert.Equal(1, tenamTextBox.SelectionOpacity);
+            Assert.Equal(0.22, tenamTextBox.SelectionOpacity, precision: 2);
             Assert.Equal(0, Grid.GetRow(loadingOverlay));
             Assert.True(loadingOverlay.IsHitTestVisible);
             Assert.True(loadingRing.IsIndeterminate);

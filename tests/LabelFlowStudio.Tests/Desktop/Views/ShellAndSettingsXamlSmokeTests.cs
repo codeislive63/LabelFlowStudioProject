@@ -46,6 +46,10 @@ public sealed class ShellAndSettingsXamlSmokeTests
             var drawer = Assert.IsType<Border>(window.FindName("NotificationDrawer"));
             var notifications = Assert.IsType<ListBox>(window.FindName("NotificationsListBox"));
             var filter = Assert.IsType<ComboBox>(window.FindName("NotificationFilterComboBox"));
+            var printMenu = Assert.IsType<Menu>(window.FindName("PrintMenu"));
+            var printMenuItem = Assert.IsType<MenuItem>(window.FindName("PrintMenuItem"));
+            var endLabelEditor = Assert.IsType<MenuItem>(window.FindName("EndLabelEditorMenuItem"));
+            var stuffingSheetEditor = Assert.IsType<MenuItem>(window.FindName("StuffingSheetEditorMenuItem"));
 
             Assert.InRange(drawer.Width, 400, 420);
             Assert.Equal(
@@ -53,8 +57,14 @@ public sealed class ShellAndSettingsXamlSmokeTests
                 ScrollViewer.GetHorizontalScrollBarVisibility(notifications));
             Assert.Equal("Только проблемы", ((ComboBoxItem)filter.Items[0]).Content);
             Assert.Equal(0, fixture.Work.NotificationTabIndex);
+            Assert.Single(printMenu.Items);
+            Assert.Equal("Печать", printMenuItem.Header);
+            Assert.Equal("Редактор торцевой этикетки", endLabelEditor.Header);
+            Assert.Equal("Редактор листа сброса", stuffingSheetEditor.Header);
+            Assert.Same(fixture.Work.OpenEndLabelPreviewCommand, endLabelEditor.Command);
+            Assert.Same(fixture.Work.OpenStuffingSheetPreviewCommand, stuffingSheetEditor.Command);
             Assert.Null(window.FindName("PrintSettingsButton"));
-            Assert.False(window.ExtendsContentIntoTitleBar);
+            Assert.True(window.ExtendsContentIntoTitleBar);
             Assert.Equal("LabelFlowStudio", window.Title);
             Assert.Null(window.FindName("ShellTitleBar"));
             Assert.NotNull(window.FindName("RootContentDialogHost"));
@@ -253,7 +263,9 @@ public sealed class ShellAndSettingsXamlSmokeTests
                 .ToArray();
             Assert.Contains("Торцевые этикетки", labels);
             Assert.Contains("Листы сброса", labels);
-            Assert.Contains("Весы", labels);
+            Assert.Contains(
+                FindLogicalChildren<UiToggleSwitch>(editorView),
+                toggle => Equals(toggle.Content, "Использовать весы"));
             Assert.Empty(fixture.Repository.Active.EndLabelPrinterName);
             Assert.Equal(2, fixture.Repository.Active.EndLabelCopies);
             window.Close();

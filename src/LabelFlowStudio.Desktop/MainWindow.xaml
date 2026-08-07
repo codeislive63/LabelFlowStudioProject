@@ -37,81 +37,83 @@
                 Background="{DynamicResource ShellHeaderBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="0,0,0,1">
-            <Grid Margin="14,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal">
-                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
-                                 GroupName="AppSections"
-                                 IsChecked="{Binding IsWorkSectionOpen, Mode=OneWay}"
-                                 Command="{Binding NavigateToWorkCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Pipeline24" Margin="0,0,7,0" />
-                            <TextBlock Text="Работа" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </RadioButton>
+            <Grid Margin="14,6">
+                <StackPanel HorizontalAlignment="Right"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center">
 
-                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
-                                 GroupName="AppSections"
-                                 IsChecked="{Binding IsJournalSectionOpen, Mode=OneWay}"
-                                 Command="{Binding NavigateToJournalCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="History24" Margin="0,0,7,0" />
-                            <TextBlock Text="Журнал" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </RadioButton>
+                    <!-- Настройки -->
+                    <Button Margin="0,0,10,0"
+                    ToolTip="Настройки"
+                    Command="{Binding NavigateToSettingsCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button"
+                           BasedOn="{StaticResource ShellIconButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSettingsSectionOpen}"
+                                         Value="True">
+                                        <Setter Property="Background"
+                                        Value="{DynamicResource ShellNavigationSelectedBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
 
-                    <RadioButton Style="{StaticResource ShellNavigationToggleStyle}"
-                                 GroupName="AppSections"
-                                 IsChecked="{Binding IsSettingsSectionOpen, Mode=OneWay}"
-                                 Command="{Binding NavigateToSettingsCommand}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Settings24" Margin="0,0,7,0" />
-                            <TextBlock Text="Настройки" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </RadioButton>
-                </StackPanel>
+                        <ui:SymbolIcon Symbol="Settings24" />
+                    </Button>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Уведомления -->
                     <Button x:Name="NotificationCenterButton"
-                            Style="{StaticResource ShellIconButtonStyle}"
-                            ToolTip="Уведомления"
-                            Click="NotificationCenterButton_Click">
+                    Style="{StaticResource ShellIconButtonStyle}"
+                    ToolTip="Уведомления"
+                    Click="NotificationCenterButton_Click">
+
                         <Grid>
                             <ui:SymbolIcon Symbol="Alert24" />
+
                             <Border MinWidth="18"
-                                    Height="18"
-                                    Padding="4,0"
-                                    Margin="0,-9,-12,0"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    CornerRadius="9">
+                            Height="18"
+                            Padding="4,0"
+                            Margin="0,-9,-12,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            CornerRadius="9">
+
                                 <Border.Style>
                                     <Style TargetType="Border">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}" />
+                                        <Setter Property="Visibility"
+                                        Value="Visible" />
+
+                                        <Setter Property="Background"
+                                        Value="{DynamicResource WarningBrush}" />
+
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Work.UnreadProblemNotificationsCount}" Value="0">
-                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            <DataTrigger Binding="{Binding Work.UnreadProblemNotificationsCount}"
+                                                 Value="0">
+                                                <Setter Property="Visibility"
+                                                Value="Collapsed" />
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding Work.HasUnreadErrorNotifications}" Value="True">
-                                                <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
+
+                                            <DataTrigger Binding="{Binding Work.HasUnreadErrorNotifications}"
+                                                 Value="True">
+                                                <Setter Property="Background"
+                                                Value="{DynamicResource ErrorBrush}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
+
                                 <TextBlock Text="{Binding Work.UnreadProblemNotificationsCount}"
-                                           Foreground="{StaticResource SeverityOnColorBrush}"
-                                           FontSize="10"
-                                           FontWeight="Bold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
+                                   Foreground="{StaticResource SeverityOnColorBrush}"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
                             </Border>
                         </Grid>
                     </Button>
+
                 </StackPanel>
             </Grid>
         </Border>
