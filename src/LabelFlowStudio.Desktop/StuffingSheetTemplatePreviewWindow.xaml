@@ -1,11 +1,12 @@
-<Window x:Class="LabelFlowStudio.Desktop.StuffingSheetTemplatePreviewWindow"
+﻿<Window x:Class="LabelFlowStudio.Desktop.StuffingSheetTemplatePreviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Лист сброса"
-        Height="800"
-        Width="1200"
+        Height="820"
+        Width="1280"
         MinHeight="650"
         MinWidth="1000"
         Background="{DynamicResource AppBackgroundBrush}"
@@ -25,8 +26,6 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-
-        <!-- Tooltip -->
         <Style TargetType="{x:Type ToolTip}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="HasDropShadow" Value="True"/>
@@ -37,57 +36,44 @@
                         <Border Background="{DynamicResource SurfaceBrush}"
                                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="10"
+                                CornerRadius="8"
                                 Padding="10,6">
                             <TextBlock Text="{TemplateBinding Content}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontWeight="SemiBold"/>
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <!-- VS-like menu -->
-        <Style x:Key="VsMenuStyle" TargetType="Menu">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-
-        <Style x:Key="VsMenuItemStyle" TargetType="MenuItem">
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="VsMenuDropItemStyle" TargetType="MenuItem">
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <!-- Window buttons -->
-        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="44"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -95,7 +81,84 @@
             </Setter>
         </Style>
 
-        <!-- Preview tools -->
+        <Style x:Key="PrimaryToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ViewModeToggleStyle" TargetType="RadioButton">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Border"
+                                Margin="2"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="EditorOptionStyle" TargetType="CheckBox">
+            <Setter Property="Margin" Value="16,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
         <Style x:Key="PreviewToolButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="34"/>
@@ -108,131 +171,139 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
+                        <Border x:Name="Border"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12">
+                                CornerRadius="10">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Opacity" Value="0.55"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceAltBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="44"/>
+            <RowDefinition Height="64"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- TITLE BAR -->
-        <Border Grid.Row="0"
+        <Border Grid.Row="0" 
+                Background="{DynamicResource ShellHeaderBrush}"    
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                BorderThickness="0,0,0,1">
+
+            <ui:TitleBar
+                Height="44"
+                Title="Редактор листа сброса"
+                ShowMinimize="True"
+                ShowMaximize="True"
+                ShowClose="True"
+                CanMaximize="True"
+                Background="{DynamicResource ShellHeaderBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                ButtonsForeground="{DynamicResource TextPrimaryBrush}"
+                shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+        </Border>
+
+        <Border Grid.Row="1"
                 Background="{DynamicResource SurfaceAltBrush}"
                 BorderBrush="{DynamicResource SurfaceBorderBrush}"
                 BorderThickness="0,0,0,1"
-                Padding="10,6"
-                MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown"
-                shell:WindowChrome.IsHitTestVisibleInChrome="True">
-
+                Padding="16,10">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Menu -->
-                <Menu Grid.Column="0" Style="{StaticResource VsMenuStyle}">
-                    <MenuItem Header="Файл" Style="{StaticResource VsMenuItemStyle}">
-                        <MenuItem Header="Импорт"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Click="OnImportClick"
-                                  InputGestureText="Ctrl+O"/>
-                        <MenuItem Header="Сохранить для приложения"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Click="OnSaveClick"
-                                  InputGestureText="Ctrl+S"/>
-                        <MenuItem Header="Экспорт"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Click="OnExportClick"
-                                  InputGestureText="Ctrl+E"/>
-                        <Separator/>
-                        <MenuItem Header="Печать"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Click="OnPrintClick"
-                                  InputGestureText="Ctrl+P"/>
-                    </MenuItem>
+                <Border Grid.Column="0"
+                        Background="{DynamicResource SurfaceAltBrush}"
+                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="2">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="ViewPreviewMenuItem"
+                                     GroupName="TemplateViewMode"
+                                     Content="Preview"
+                                     Style="{StaticResource ViewModeToggleStyle}"
+                                     Click="OnViewModeMenuClick"/>
+                        <RadioButton x:Name="ViewSplitMenuItem"
+                                     GroupName="TemplateViewMode"
+                                     Content="Split"
+                                     Style="{StaticResource ViewModeToggleStyle}"
+                                     Click="OnViewModeMenuClick"/>
+                        <RadioButton x:Name="ViewCodeMenuItem"
+                                     GroupName="TemplateViewMode"
+                                     Content="Code"
+                                     Style="{StaticResource ViewModeToggleStyle}"
+                                     Click="OnViewModeMenuClick"/>
+                    </StackPanel>
+                </Border>
 
-                    <MenuItem Header="Вид" Style="{StaticResource VsMenuItemStyle}">
-                        <MenuItem x:Name="ViewPreviewMenuItem"
-                                  Header="Preview"
-                                  IsCheckable="True"
-                                  Click="OnViewModeMenuClick"/>
-                        <MenuItem x:Name="ViewSplitMenuItem"
-                                  Header="Split"
-                                  IsCheckable="True"
-                                  Click="OnViewModeMenuClick"/>
-                        <MenuItem x:Name="ViewCodeMenuItem"
-                                  Header="Code"
-                                  IsCheckable="True"
-                                  Click="OnViewModeMenuClick"/>
-                    </MenuItem>
-
-                    <MenuItem Header="Редактор" Style="{StaticResource VsMenuItemStyle}">
-                        <MenuItem x:Name="ShowBoundsMenuItem"
-                                  Header="Показать границы"
-                                  IsCheckable="True"
-                                  IsChecked="True"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Checked="OnEditorFlagsChanged"
-                                  Unchecked="OnEditorFlagsChanged"/>
-                        <MenuItem x:Name="ShowGridMenuItem"
-                                  Header="Показать сетку"
-                                  IsCheckable="True"
-                                  IsChecked="False"
-                                  Style="{StaticResource VsMenuDropItemStyle}"
-                                  Checked="OnEditorFlagsChanged"
-                                  Unchecked="OnEditorFlagsChanged"/>
-                    </MenuItem>
-                </Menu>
-
-                <!-- Window buttons -->
-                <StackPanel Grid.Column="2"
+                <StackPanel Grid.Column="1"
+                            Margin="10,0,0,0"
                             Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnMinimizeClick" ToolTip="Свернуть">
-                        <TextBlock Text="—" FontSize="14" FontWeight="Bold"/>
-                    </Button>
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnMaximizeRestoreClick" ToolTip="Развернуть">
-                        <TextBlock Text="▢" FontSize="13" FontWeight="Bold"/>
-                    </Button>
-                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="OnCloseClick" ToolTip="Закрыть">
-                        <TextBlock Text="✕" FontSize="13" FontWeight="Bold"/>
-                    </Button>
+                            VerticalAlignment="Center">
+                    <CheckBox x:Name="ShowBoundsMenuItem"
+                              Content="Границы"
+                              IsChecked="True"
+                              Style="{StaticResource EditorOptionStyle}"
+                              Checked="OnEditorFlagsChanged"
+                              Unchecked="OnEditorFlagsChanged"/>
+                    <CheckBox x:Name="ShowGridMenuItem"
+                              Content="Сетка"
+                              IsChecked="False"
+                              Style="{StaticResource EditorOptionStyle}"
+                              Checked="OnEditorFlagsChanged"
+                              Unchecked="OnEditorFlagsChanged"/>
                 </StackPanel>
 
+                <StackPanel Grid.Column="3"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <Button Content="Импорт"
+                            ToolTip="Ctrl+O"
+                            Click="OnImportClick"
+                            Style="{StaticResource ToolbarButtonStyle}"/>
+                    <Button Content="Экспорт"
+                            ToolTip="Ctrl+E"
+                            Click="OnExportClick"
+                            Style="{StaticResource ToolbarButtonStyle}"/>
+                    <Button Content="Сохранить"
+                            ToolTip="Ctrl+S"
+                            Click="OnSaveClick"
+                            Style="{StaticResource ToolbarButtonStyle}"/>
+                    <Button Content="Печать"
+                            ToolTip="Ctrl+P"
+                            Click="OnPrintClick"
+                            Style="{StaticResource PrimaryToolbarButtonStyle}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- CONTENT -->
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="16" Padding="0">
-            <Grid Background="{DynamicResource SurfaceBrush}">
+        <Border Grid.Row="2"
+                Margin="16"
+                Padding="8"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource SurfaceBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12">
+            <Grid ClipToBounds="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="EditorColumn" Width="0"/>
                     <ColumnDefinition x:Name="SplitterColumn" Width="0"/>
@@ -240,8 +311,9 @@
                     <ColumnDefinition x:Name="ToolsColumn" Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Editor -->
-                <wv2:WebView2 x:Name="EditorWebView" Grid.Column="0" Focusable="True" />
+                <wv2:WebView2 x:Name="EditorWebView"
+                              Grid.Column="0"
+                              Focusable="True"/>
 
                 <GridSplitter x:Name="MainSplitter"
                               Grid.Column="1"
@@ -250,81 +322,70 @@
                               VerticalAlignment="Stretch"
                               Background="{DynamicResource SurfaceBorderBrush}"/>
 
-                <!-- Preview -->
-                <Grid x:Name="PreviewHost" Margin="0,0,12,0" Grid.Column="2" Background="{DynamicResource SurfaceBrush}">
+                <Grid x:Name="PreviewHost"
+                      Grid.Column="2"
+                      Margin="0,0,4,0"
+                      Background="{DynamicResource SurfaceBrush}">
                     <wv2:WebView2 x:Name="PreviewWebView"
                                   NavigationCompleted="OnPreviewNavigationCompleted"
                                   PreviewMouseWheel="OnPreviewMouseWheel"/>
                 </Grid>
 
-                <!-- Preview tools -->
                 <Border x:Name="PreviewToolsPanel"
                         Grid.Column="3"
+                        Width="58"
+                        Margin="0,0,2,16"
+                        Padding="8"
                         VerticalAlignment="Bottom"
                         HorizontalAlignment="Right"
-                        Margin="0,0,10,40"
                         Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource SurfaceBorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="14"
-                        Padding="10"
-                        Width="65"
+                        CornerRadius="12"
                         Visibility="Visible">
                     <StackPanel>
-                        <Button Style="{StaticResource PreviewToolButtonStyle}"
+                        <Button Content="−"
                                 ToolTip="Уменьшить"
                                 Click="OnZoomOutClick"
-                                Content="−"/>
-
-                        <Button Style="{StaticResource PreviewToolButtonStyle}"
+                                Style="{StaticResource PreviewToolButtonStyle}"/>
+                        <Button Content="+"
                                 ToolTip="Увеличить"
                                 Click="OnZoomInClick"
-                                Content="+"/>
-
-                        <Button Style="{StaticResource PreviewToolButtonStyle}"
-                                ToolTip="1:1"
-                                Click="OnZoomResetClick">
-                            <TextBlock Text="1:1"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                Style="{StaticResource PreviewToolButtonStyle}"/>
+                        <Button ToolTip="1:1"
+                                Click="OnZoomResetClick"
+                                Style="{StaticResource PreviewToolButtonStyle}">
+                            <TextBlock Text="1:1" FontWeight="SemiBold"/>
                         </Button>
-
-                        <Border Margin="0,2,0,0"
-                                Background="Transparent"
-                                CornerRadius="10"
-                                Padding="6,4">
-                            <TextBlock x:Name="ZoomText"
-                                       Text="100%"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       HorizontalAlignment="Center"/>
-                        </Border>
+                        <TextBlock x:Name="ZoomText"
+                                   Margin="0,2,0,0"
+                                   Text="100%"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Toast -->
                 <Border x:Name="ToastPanel"
                         Panel.ZIndex="200"
                         Visibility="Collapsed"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,18"
+                        Padding="14,10"
                         Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource SurfaceBorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="12"
-                        Padding="14,10">
+                        CornerRadius="10">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="24" ShadowDepth="10" Opacity="0.18"/>
                     </Border.Effect>
-
                     <TextBlock x:Name="ToastText"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </Border>
-
             </Grid>
         </Border>
-
     </Grid>
 </Window>

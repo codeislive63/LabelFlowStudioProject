@@ -7,6 +7,7 @@ using LabelFlowStudio.Core.Models;
 using LabelFlowStudio.Desktop.ViewModels;
 using LabelFlowStudio.Devices.BoxScanner;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 
 namespace LabelFlowStudio.Application.Tests.Desktop.ViewModels;
 
@@ -39,6 +40,45 @@ public sealed class MainViewModelTests
             Assert.Equal(2, vm.Records.Count);
             Assert.Equal("OK", vm.StatusMessage);
             Assert.Equal(BoxProcessingStatus.Success, vm.LastProcessingStatus);
+        });
+
+    [Theory]
+    [InlineData(WorkMode.Manual)]
+    [InlineData(WorkMode.Automatic)]
+    public Task TemplateEditorCommands_AreAvailableAfterRealDataLoad_InEitherWorkMode(WorkMode mode) =>
+        StaTestRunner.RunAsync(async () =>
+        {
+            var service = new FakeProcessingService
+            {
+                Response = CreateSuccessResponse(
+                    message: "Данные загружены",
+                    records:
+                    [
+                        new() { Tenam = "4340558", Artnr = "A", Artbez = "X", Bstmg = 1m }
+                    ])
+            };
+            var vm = CreateViewModel(service, new FakeScanner());
+            SetWorkModeWithoutPersistence(vm, mode);
+
+            Assert.False(vm.OpenEndLabelPreviewCommand.CanExecute(null));
+            Assert.False(vm.OpenStuffingSheetPreviewCommand.CanExecute(null));
+
+            if (mode == WorkMode.Automatic)
+            {
+                vm.ReceiveTenamFromScanner("4340558");
+            }
+            else
+            {
+                vm.Tenam = "4340558";
+                vm.LoadRecordsCommand.Execute(null);
+            }
+
+            await service.WaitCalledAsync();
+            await WaitHelpers.WaitUntilAsync(() => !vm.IsBusy, TimeSpan.FromSeconds(2));
+
+            Assert.True(vm.OpenEndLabelPreviewCommand.CanExecute(null));
+            Assert.True(vm.OpenStuffingSheetPreviewCommand.CanExecute(null));
+            Assert.Equal(mode, vm.CurrentWorkMode);
         });
 
     [Fact]
@@ -250,6 +290,21 @@ public sealed class MainViewModelTests
             weightService ?? new FakeBoxWeightService(),
             scanner,
             NullLogger<MainViewModel>.Instance);
+    }
+
+    private static void SetWorkModeWithoutPersistence(MainViewModel viewModel, WorkMode mode)
+    {
+        var field = typeof(MainViewModel).GetField(
+            "_currentWorkMode",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        var notify = typeof(ViewModelBase).GetMethod(
+            "OnPropertyChanged",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(field);
+        Assert.NotNull(notify);
+        field.SetValue(viewModel, mode);
+        notify.Invoke(viewModel, [nameof(MainViewModel.CurrentWorkMode)]);
     }
 
     private static BoxProcessingResponse CreateSuccessResponse(

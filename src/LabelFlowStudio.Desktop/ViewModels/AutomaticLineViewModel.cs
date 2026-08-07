@@ -100,7 +100,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         AutomaticLineState.Printing => ResolveStatusMessage("Печать"),
         AutomaticLineState.Success => "Короб обработан",
         AutomaticLineState.Warning => "Требуется внимание",
-        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning => "Линия остановлена",
+        AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning => "Линия не готова",
         AutomaticLineState.Error => "Ошибка линии",
         _ => "Линия работает"
     };
@@ -118,7 +118,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         AutomaticLineState.Processing => ResolveStatusMessage("Короб обрабатывается"),
         AutomaticLineState.Printing => ResolveStatusMessage("Документ отправляется на печать"),
         AutomaticLineState.Error when HasEquipmentSnapshot && !IsScannerRunning =>
-            "Сканер остановлен",
+            "Сканер не готов",
         AutomaticLineState.Error when IsOracleStatusError => OracleStatusToolTip,
         AutomaticLineState.Warning or AutomaticLineState.Error =>
             ResolveLineIssueMessage(),
@@ -210,7 +210,7 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     public string ScannerStatusText => !HasEquipmentSnapshot
         ? "Проверка…"
-        : IsScannerRunning ? "Работает" : "Остановлен";
+        : IsScannerRunning ? "Работает" : "Не готов";
 
     public bool IsPrinterInstalled
     {

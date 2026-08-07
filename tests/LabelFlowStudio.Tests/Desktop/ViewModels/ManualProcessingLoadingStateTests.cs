@@ -164,12 +164,17 @@ public sealed class ManualProcessingLoadingStateTests
             Assert.Equal(BoxProcessingStatus.Error, work.LastProcessingStatus);
         });
 
-    private static MainViewModel CreateWork(IBoxProcessingService service) =>
-        new(
+    private static MainViewModel CreateWork(IBoxProcessingService service)
+    {
+        var work = new MainViewModel(
             service,
             new NoOpWeightService(),
             new FakeScanner(),
             NullLogger<MainViewModel>.Instance);
+
+        RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
+        return work;
+    }
 
     private static void RaiseWorkModeChangedWithoutPersistence(MainViewModel work, WorkMode mode)
     {
