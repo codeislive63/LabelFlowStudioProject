@@ -14,6 +14,7 @@
              IsVisibleChanged="ManualProcessingView_IsVisibleChanged">
     <Grid x:Name="ManualContent"
           MaxWidth="1440"
+          Margin="0,12,0,0"
           HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -255,6 +256,7 @@
 
         <Border Grid.Row="3"
                 Padding="0"
+                VerticalAlignment="Stretch"
                 Style="{StaticResource ManualWorkCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -264,6 +266,10 @@
 
                 <DataGrid x:Name="RecordsGrid"
                           Grid.Row="0"
+                          VerticalAlignment="Stretch"
+                          FrozenColumnCount="2"
+                          Background="Transparent"
+                          BorderThickness="0"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserSortColumns="True"
@@ -281,46 +287,28 @@
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling">
                     <DataGrid.Style>
-                        <Style BasedOn="{StaticResource AppDataGridStyle}" TargetType="DataGrid">
-                            <Setter Property="RowHeaderWidth" Value="42" />
-                            <Setter Property="HeadersVisibility" Value="All" />
+                        <Style BasedOn="{StaticResource AppDataGridStyle}"
+           TargetType="DataGrid">
+
+                            <Setter Property="RowHeaderWidth"
+                Value="0" />
+
+                            <Setter Property="HeadersVisibility"
+                Value="Column" />
+
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasRecords}" Value="False">
-                                    <Setter Property="Background" Value="{StaticResource AutoLineNeutralSoftBrush}" />
-                                    <Setter Property="RowHeaderWidth" Value="0" />
-                                    <Setter Property="HeadersVisibility" Value="Column" />
+                                <DataTrigger Binding="{Binding HasRecords}"
+                         Value="False">
+                                    <Setter Property="Background"
+                        Value="{StaticResource AutoLineNeutralSoftBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </DataGrid.Style>
                     <DataGrid.Resources>
-                        <Style TargetType="DataGridRowHeader">
-                            <Setter Property="Width" Value="42" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-                            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}" />
-                            <Setter Property="BorderThickness" Value="0,0,1,1" />
-                            <Setter Property="HorizontalContentAlignment" Value="Center" />
-                            <Setter Property="VerticalContentAlignment" Value="Center" />
-                            <Setter Property="FontSize" Value="12" />
-                            <Setter Property="FontWeight" Value="Normal" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="DataGridRowHeader">
-                                        <Border Background="{TemplateBinding Background}"
-                                                BorderBrush="{TemplateBinding BorderBrush}"
-                                                BorderThickness="{TemplateBinding BorderThickness}">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="MinHeight" Value="32" />
                         </Style>
-
-
-
                         <Style x:Key="CellTextStyle" TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                             <Setter Property="TextWrapping" Value="NoWrap" />
@@ -330,6 +318,19 @@
                         </Style>
                     </DataGrid.Resources>
                     <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="42" Header="№" CanUserResize="False" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type DataGridRow}},
+                                               Path=Header}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Width="110" Binding="{Binding Tenam}" ElementStyle="{StaticResource CellTextStyle}" Header="TENAM" SortMemberPath="Tenam" />
                         <DataGridTextColumn Width="140" Binding="{Binding Lfaempfkdnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Код магазина" SortMemberPath="Lfaempfkdnr" />
                         <DataGridTextColumn Width="100" Binding="{Binding Tesortnr}" ElementStyle="{StaticResource CellTextStyle}" Header="Короб в заказе" SortMemberPath="Tesortnr" />
@@ -424,9 +425,10 @@
 
                 <Border x:Name="ManualPager"
                         Grid.Row="1"
+                        Panel.ZIndex="10"
                         Padding="12,8"
-                        BorderBrush="{DynamicResource SurfaceBorderBrush}"
-                        BorderThickness="0,1,0,0">
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderThickness="0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -438,92 +440,116 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Text="{Binding RangeText}" />
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button AutomationProperties.Name="Первая страница"
-                                    Command="{Binding FirstPageCommand}"
-                                    Content="«"
-                                    Style="{StaticResource ManualPagerButtonStyle}"
-                                    ToolTip="Первая страница" />
-                            <Button Margin="4,0,8,0"
-                                    AutomationProperties.Name="Предыдущая страница"
-                                    Command="{Binding PreviousPageCommand}"
-                                    Content="‹"
-                                    Style="{StaticResource ManualPagerButtonStyle}"
-                                    ToolTip="Предыдущая страница" />
+                        <StackPanel Grid.Column="1"
+            Orientation="Horizontal"
+            VerticalAlignment="Center">
 
+                            <!-- Назад -->
+                            <Button Margin="0,0,6,0"
+            AutomationProperties.Name="Предыдущая страница"
+            Command="{Binding PreviousPageCommand}"
+            Content="‹"
+            Style="{StaticResource ManualPagerButtonStyle}"
+            ToolTip="Предыдущая страница" />
+
+                            <!-- Номера страниц -->
                             <ItemsControl ItemsSource="{Binding PageNavigationItems}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <StackPanel Orientation="Horizontal" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
+
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid>
+
                                             <Button Command="{Binding Command}"
-                                                    Content="{Binding Text}">
+                            Content="{Binding Text}">
                                                 <Button.Style>
-                                                    <Style TargetType="Button" BasedOn="{StaticResource ManualPagerPageButtonStyle}">
+                                                    <Style TargetType="Button"
+                                   BasedOn="{StaticResource ManualPagerPageButtonStyle}">
+
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                <Setter Property="Background" Value="{StaticResource AutoLineBlueBrush}" />
-                                                                <Setter Property="BorderBrush" Value="{StaticResource AutoLineBlueBrush}" />
-                                                                <Setter Property="Foreground" Value="White" />
+                                                            <DataTrigger Binding="{Binding IsCurrent}"
+                                                 Value="True">
+                                                                <Setter Property="Background"
+                                                Value="{StaticResource AutoLineBlueBrush}" />
+                                                                <Setter Property="BorderBrush"
+                                                Value="{StaticResource AutoLineBlueBrush}" />
+                                                                <Setter Property="Foreground"
+                                                Value="White" />
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
-                                                                <Setter Property="Visibility" Value="Collapsed" />
+
+                                                            <DataTrigger Binding="{Binding IsEllipsis}"
+                                                 Value="True">
+                                                                <Setter Property="Visibility"
+                                                Value="Collapsed" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
+
                                                     </Style>
                                                 </Button.Style>
                                             </Button>
-                                            <TextBlock Width="30"
-                                                       HorizontalAlignment="Center"
-                                                       VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                       Text="…"
-                                                       TextAlignment="Center">
+
+                                            <TextBlock Width="26"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="…"
+                               TextAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Setter Property="Visibility"
+                                        Value="Collapsed" />
+
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            <DataTrigger Binding="{Binding IsEllipsis}"
+                                                 Value="True">
+                                                                <Setter Property="Visibility"
+                                                Value="Visible" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
+
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <Button Margin="8,0,4,0"
-                                    AutomationProperties.Name="Следующая страница"
-                                    Command="{Binding NextPageCommand}"
-                                    Content="›"
-                                    Style="{StaticResource ManualPagerButtonStyle}"
-                                    ToolTip="Следующая страница" />
-                            <Button AutomationProperties.Name="Последняя страница"
-                                    Command="{Binding LastPageCommand}"
-                                    Content="»"
-                                    Style="{StaticResource ManualPagerButtonStyle}"
-                                    ToolTip="Последняя страница" />
+                            <!-- Вперёд -->
+                            <Button Margin="6,0,0,0"
+            AutomationProperties.Name="Следующая страница"
+            Command="{Binding NextPageCommand}"
+            Content="›"
+            Style="{StaticResource ManualPagerButtonStyle}"
+            ToolTip="Следующая страница" />
+
                         </StackPanel>
 
                         <ComboBox x:Name="PageSizeComboBox"
                                   Grid.Column="2"
-                                  MinWidth="132"
+                                  Panel.ZIndex="20"
+                                  MinWidth="150"
                                   Height="34"
                                   HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
                                   ItemsSource="{Binding PageSizeOptions}"
-                                  SelectedItem="{Binding PageSize, Mode=TwoWay}">
+                                  SelectedItem="{Binding PageSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsTextSearchEnabled="False"
+                                  MaxDropDownHeight="160"
+                                  PreviewMouseLeftButtonDown="PageSizeComboBox_PreviewMouseLeftButtonDown"
+                                  DropDownOpened="PageSizeComboBox_DropDownOpened"
+                                  DropDownClosed="PageSizeComboBox_DropDownClosed">
+
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding StringFormat={}{0} на странице}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
+
                         </ComboBox>
                     </Grid>
                 </Border>

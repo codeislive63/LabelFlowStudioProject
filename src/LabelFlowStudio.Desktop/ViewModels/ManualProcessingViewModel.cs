@@ -689,7 +689,8 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
             yield break;
         }
 
-        if (totalPages <= 7)
+        // Для маленького количества страниц всё помещается без многоточия.
+        if (totalPages <= 5)
         {
             for (var page = 1; page <= totalPages; page++)
             {
@@ -699,34 +700,64 @@ public sealed class ManualProcessingViewModel : ViewModelBase, IDisposable
             yield break;
         }
 
+        // Начало диапазона:
+        // 1 2 3 … 10
+        if (currentPage <= 2)
+        {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+            yield return null;
+            yield return totalPages;
+            yield break;
+        }
+
+        // Третья страница:
+        // 1 2 3 4 … 10
+        if (currentPage == 3)
+        {
+            yield return 1;
+            yield return 2;
+            yield return 3;
+            yield return 4;
+            yield return null;
+            yield return totalPages;
+            yield break;
+        }
+
+        // Конец диапазона:
+        // 1 … 8 9 10
+        if (currentPage >= totalPages - 1)
+        {
+            yield return 1;
+            yield return null;
+            yield return totalPages - 2;
+            yield return totalPages - 1;
+            yield return totalPages;
+            yield break;
+        }
+
+        // Предпоследняя зона:
+        // 1 … 7 8 9 10
+        if (currentPage == totalPages - 2)
+        {
+            yield return 1;
+            yield return null;
+            yield return totalPages - 3;
+            yield return totalPages - 2;
+            yield return totalPages - 1;
+            yield return totalPages;
+            yield break;
+        }
+
+        // Середина:
+        // 1 … 4 5 6 … 10
         yield return 1;
-
-        if (currentPage <= 4)
-        {
-            for (var page = 2; page <= 5; page++)
-            {
-                yield return page;
-            }
-
-            yield return null;
-        }
-        else if (currentPage >= totalPages - 3)
-        {
-            yield return null;
-            for (var page = totalPages - 4; page < totalPages; page++)
-            {
-                yield return page;
-            }
-        }
-        else
-        {
-            yield return null;
-            yield return currentPage - 1;
-            yield return currentPage;
-            yield return currentPage + 1;
-            yield return null;
-        }
-
+        yield return null;
+        yield return currentPage - 1;
+        yield return currentPage;
+        yield return currentPage + 1;
+        yield return null;
         yield return totalPages;
     }
 

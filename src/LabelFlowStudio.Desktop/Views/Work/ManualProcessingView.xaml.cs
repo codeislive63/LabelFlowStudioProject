@@ -14,6 +14,7 @@ namespace LabelFlowStudio.Desktop.Views.Work;
 public partial class ManualProcessingView : UserControl
 {
     private MainViewModel? _subscribedViewModel;
+    private bool _isPageSizeDropDownOpen;
 
     public ManualProcessingView()
     {
@@ -92,6 +93,11 @@ public partial class ManualProcessingView : UserControl
 
     private void OnAnyButtonClick(object sender, RoutedEventArgs e)
     {
+        if (_isPageSizeDropDownOpen)
+        {
+            return;
+        }
+
         if (e.OriginalSource is DependencyObject source
             && IsDescendantOf(source, ManualPager))
         {
@@ -104,6 +110,8 @@ public partial class ManualProcessingView : UserControl
     internal async Task RequestPrimaryInputFocusAsync()
     {
         if (!IsVisible
+            || _isPageSizeDropDownOpen
+            || PageSizeComboBox.IsKeyboardFocusWithin
             || Window.GetWindow(this) is not { IsActive: true })
         {
             return;
@@ -117,6 +125,8 @@ public partial class ManualProcessingView : UserControl
         await Dispatcher.InvokeAsync(static () => { }, System.Windows.Threading.DispatcherPriority.Input);
 
         if (!IsVisible
+            || _isPageSizeDropDownOpen
+            || PageSizeComboBox.IsKeyboardFocusWithin
             || !TenamTextBox.IsVisible
             || Window.GetWindow(this) is not { IsActive: true }
             || Keyboard.FocusedElement is TextBoxBase focusedAfterAwait
@@ -247,4 +257,43 @@ public partial class ManualProcessingView : UserControl
         value is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
             ? System.Windows.Media.VisualTreeHelper.GetParent(value)
             : LogicalTreeHelper.GetParent(value);
+
+    private void PageSizeComboBox_PreviewMouseLeftButtonDown(
+    object sender,
+    MouseButtonEventArgs e)
+    {
+        if (sender is not ComboBox comboBox
+            || comboBox.IsDropDownOpen)
+        {
+            return;
+        }
+
+        // Открываем список сами и поглощаем первоначальный MouseDown.
+        // Так один и тот же клик не успевает открыть список,
+        // затем попасть в появившийся Popup и выбрать значение.
+        _isPageSizeDropDownOpen = true;
+
+        comboBox.Focus();
+        comboBox.IsDropDownOpen = true;
+
+        e.Handled = true;
+    }
+
+    private void PageSizeComboBox_DropDownOpened(
+        object sender,
+        EventArgs e)
+    {
+        _isPageSizeDropDownOpen = true;
+    }
+
+    private void PageSizeComboBox_DropDownClosed(
+        object sender,
+        EventArgs e)
+    {
+        _isPageSizeDropDownOpen = false;
+
+        // После завершения выбора возвращаем привычное для оператора
+        // состояние: следующий скан снова сразу попадёт в TENAM.
+        _ = RequestPrimaryInputFocusAsync();
+    }
 }
