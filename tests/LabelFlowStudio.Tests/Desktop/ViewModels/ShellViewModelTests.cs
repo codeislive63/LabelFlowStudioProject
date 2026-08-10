@@ -37,8 +37,15 @@ public sealed class ShellViewModelTests
             fixture.Manual.TenamInput = "4430558";
             work.Records.Add(new LabelRecord { Tenam = "4430558", Artnr = "A-1" });
             var initialMode = work.CurrentWorkMode;
+            var initialWorkTenam = work.Tenam;
 
             var shell = fixture.Shell;
+
+            shell.NavigateToManualCommand.Execute(null);
+            Assert.Equal(AppSection.Manual, shell.CurrentSection);
+            Assert.Same(fixture.Manual, shell.CurrentSectionViewModel);
+            Assert.Equal("4430558", fixture.Manual.TenamInput);
+            Assert.Equal(initialMode, work.CurrentWorkMode);
 
             shell.NavigateToJournalCommand.Execute(null);
             Assert.Equal(AppSection.Journal, shell.CurrentSection);
@@ -50,7 +57,7 @@ public sealed class ShellViewModelTests
 
             shell.NavigateToWorkCommand.Execute(null);
             Assert.Same(fixture.WorkSection, shell.CurrentSectionViewModel);
-            Assert.Equal("4430558", work.Tenam);
+            Assert.Equal(initialWorkTenam, work.Tenam);
             Assert.Equal("4430558", fixture.Manual.TenamInput);
             Assert.Single(work.Records);
             Assert.Equal(initialMode, work.CurrentWorkMode);
@@ -77,7 +84,7 @@ public sealed class ShellViewModelTests
     public void AppSection_ContainsOnlyIndependentTopLevelSections()
     {
         Assert.Equal(
-            [AppSection.Work, AppSection.Journal, AppSection.Settings],
+            [AppSection.Work, AppSection.Journal, AppSection.Settings, AppSection.Manual],
             Enum.GetValues<AppSection>());
     }
 

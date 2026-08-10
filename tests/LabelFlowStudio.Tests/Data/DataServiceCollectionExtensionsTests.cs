@@ -52,5 +52,9 @@ public sealed class DataServiceCollectionExtensionsTests
             descriptor => descriptor.ServiceType == typeof(ILabelRepository)
                 && descriptor.ImplementationType == typeof(LabelRepository)
                 && descriptor.Lifetime == ServiceLifetime.Singleton);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IAutomaticProcessingHistoryStore)
+                && descriptor.Lifetime == ServiceLifetime.Singleton);
     }
 }

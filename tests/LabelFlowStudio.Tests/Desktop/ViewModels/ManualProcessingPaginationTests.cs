@@ -183,7 +183,7 @@ public sealed class ManualProcessingPaginationTests
     }
 
     [Fact]
-    public void Projection_ResetsForNewTenamAndReplacementRecordSet()
+    public void Projection_IgnoresCommandInputAndResetsForReplacementRecordSet()
     {
         StaTestRunner.Run(() =>
         {
@@ -192,10 +192,12 @@ public sealed class ManualProcessingPaginationTests
             AddRecords(work, 55, "4430558");
             manual.NavigateToPage(4);
 
-            work.Tenam = "4430559";
+            manual.TenamInput = "4430559";
+            work.Tenam = manual.TenamInput;
 
-            Assert.Equal(1, manual.CurrentPage);
-            Assert.Equal("001", manual.PagedRecords[0].Artnr);
+            Assert.Equal(4, manual.CurrentPage);
+            Assert.Equal("031", manual.PagedRecords[0].Artnr);
+            Assert.Equal("4430559", manual.TenamInput);
 
             manual.NavigateToPage(3);
             work.Records.Clear();
@@ -239,7 +241,7 @@ public sealed class ManualProcessingPaginationTests
     }
 
     [Fact]
-    public void PageNavigationItems_KeepFirstAndLastPagesVisibleAtWindowEdges()
+    public void PageNavigationItems_KeepCompactBoundaryContextAtWindowEdges()
     {
         StaTestRunner.Run(() =>
         {
@@ -248,13 +250,13 @@ public sealed class ManualProcessingPaginationTests
             AddRecords(work, 125);
 
             Assert.Equal(
-                ["1", "2", "3", "4", "5", "…", "13"],
+                ["1", "2", "3", "…", "13"],
                 manual.PageNavigationItems.Select(item => item.Text));
 
             manual.LastPageCommand.Execute(null);
 
             Assert.Equal(
-                ["1", "…", "9", "10", "11", "12", "13"],
+                ["1", "…", "11", "12", "13"],
                 manual.PageNavigationItems.Select(item => item.Text));
             Assert.True(manual.PageNavigationItems[^1].IsCurrent);
         });

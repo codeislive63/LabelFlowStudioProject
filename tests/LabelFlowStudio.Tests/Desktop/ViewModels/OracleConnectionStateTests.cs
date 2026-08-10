@@ -32,8 +32,7 @@ public sealed class OracleConnectionStateTests
             Assert.True(automatic.IsOracleStatusUnknown);
             Assert.Equal("Не проверено", automatic.OracleStatusText);
 
-            work.Tenam = "4430558";
-            work.LoadRecordsCommand.Execute(null);
+            work.ReceiveTenamFromScanner("4430558");
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -66,8 +65,7 @@ public sealed class OracleConnectionStateTests
             using var automatic = CreateAutomatic(work);
             automatic.RefreshEquipmentStatus();
 
-            work.Tenam = "4430558";
-            work.LoadRecordsCommand.Execute(null);
+            work.ReceiveTenamFromScanner("4430558");
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.Equal(OracleConnectionState.Checking, work.OracleConnectionState);
@@ -77,7 +75,7 @@ public sealed class OracleConnectionStateTests
 
             Assert.Empty(work.CurrentOracleQueryTenam);
             Assert.True(automatic.IsOracleStatusError);
-            Assert.Equal("Ошибка", automatic.OracleStatusText);
+            Assert.Equal("Нет соединения", automatic.OracleStatusText);
             Assert.Equal("Не удалось получить данные из базы данных.", automatic.OracleStatusToolTip);
             Assert.DoesNotContain("secret", automatic.OracleStatusToolTip, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(AutomaticLineState.Error, automatic.LineState);

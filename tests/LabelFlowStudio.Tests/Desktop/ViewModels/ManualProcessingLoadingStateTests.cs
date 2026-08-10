@@ -15,7 +15,7 @@ namespace LabelFlowStudio.Application.Tests.Desktop.ViewModels;
 public sealed class ManualProcessingLoadingStateTests
 {
     [Fact]
-    public void AutomaticTenam_NeverBecomesAStaleManualSubmission()
+    public void AutomaticTenam_DoesNotOverwriteIndependentManualDraft()
     {
         StaTestRunner.Run(() =>
         {
@@ -26,13 +26,14 @@ public sealed class ManualProcessingLoadingStateTests
 
             RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Automatic);
 
-            Assert.Empty(manual.TenamInput);
+            Assert.Equal("4430500", manual.TenamInput);
             work.Tenam = "4430501";
-            Assert.Empty(manual.TenamInput);
+            Assert.Equal("4430500", manual.TenamInput);
 
             RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
 
-            Assert.Empty(manual.TenamInput);
+            Assert.Equal("4430500", manual.TenamInput);
+            Assert.Equal("4430501", work.Tenam);
         });
     }
 
@@ -55,7 +56,8 @@ public sealed class ManualProcessingLoadingStateTests
                 }
             };
 
-            work.Tenam = "4430558";
+            manual.TenamInput = "4430558";
+            work.Tenam = manual.TenamInput;
             work.LoadRecordsCommand.Execute(null);
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -105,7 +107,8 @@ public sealed class ManualProcessingLoadingStateTests
                 }
             };
 
-            work.Tenam = "4430559";
+            manual.TenamInput = "4430559";
+            work.Tenam = manual.TenamInput;
             work.LoadRecordsCommand.Execute(null);
 
             await WaitHelpers.WaitUntilAsync(
@@ -133,7 +136,8 @@ public sealed class ManualProcessingLoadingStateTests
                 loadingShowDelay: TimeSpan.Zero,
                 minimumLoadingVisible: TimeSpan.FromMilliseconds(30));
 
-            work.Tenam = "4430560";
+            manual.TenamInput = "4430560";
+            work.Tenam = manual.TenamInput;
             work.LoadRecordsCommand.Execute(null);
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));

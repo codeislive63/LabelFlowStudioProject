@@ -1,8 +1,10 @@
 using LabelFlowStudio.Application.BoxProcessing;
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
 using LabelFlowStudio.Application.BoxProcessing.Weight;
+using LabelFlowStudio.Application.Statistics;
 using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Core.Models;
+using LabelFlowStudio.Core.Statistics;
 using LabelFlowStudio.Desktop.BoxProcessing;
 using LabelFlowStudio.Desktop.Commands;
 using LabelFlowStudio.Desktop.Printing;
@@ -33,6 +35,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly ILogger<MainViewModel> _logger;
 
     private readonly IDataSourceHealthCheck? _dataSourceHealthCheck;
+    private readonly IAutomaticProcessingStatisticsService? _automaticProcessingStatistics;
 
     private readonly SemaphoreSlim _scannerGate = new(1, 1);
     private readonly SemaphoreSlim _requestGate = new(1, 1);
@@ -92,13 +95,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         IBoxWeightService boxWeightService,
         IBoxScanner boxScanner,
         ILogger<MainViewModel> logger,
-        IDataSourceHealthCheck? dataSourceHealthCheck = null)
+        IDataSourceHealthCheck? dataSourceHealthCheck = null,
+        IAutomaticProcessingStatisticsService? automaticProcessingStatistics = null)
     {
         _boxProcessingService = boxProcessingService ?? throw new ArgumentNullException(nameof(boxProcessingService));
         _boxWeightService = boxWeightService ?? throw new ArgumentNullException(nameof(boxWeightService));
         _boxScanner = boxScanner ?? throw new ArgumentNullException(nameof(boxScanner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dataSourceHealthCheck = dataSourceHealthCheck;
+        _automaticProcessingStatistics = automaticProcessingStatistics;
         _uiContext = SynchronizationContext.Current;
 
         Records = new ObservableCollection<LabelRecord>();
@@ -704,6 +709,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         var tenamSnapshot = Tenam?.Trim() ?? string.Empty;
         var cancellationToken = StartNewLoadCancellation();
+        AutomaticProcessingAttemptContext? automaticAttempt = null;
+        var automaticOutcome = AutomaticProcessingOutcome.Success;
 
         IsBusy = true;
         ActiveRequestMode = requestMode;
@@ -738,7 +745,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var response = await ProcessRequestWithoutUiBlockingAsync(
                 request,
                 requestMode == WorkMode.Automatic ? "AutomaticLine" : "ManualProcessing",
-                cancellationToken);
+                cancellationToken,
+                requestMode == WorkMode.Automatic
+                    ? () => automaticAttempt = TryBeginAutomaticAttempt(tenamSnapshot)
+                    : null);
+
+            automaticOutcome = ResolveAutomaticOutcome(response.Status);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -786,13 +798,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
             if (requestMode == WorkMode.Automatic)
             {
-                await TryAutoPrintAsync(
+                var printOutcome = await TryAutoPrintAsync(
                     response,
                     tenamSnapshot,
                     cancellationToken,
                     requestMode,
                     printDropSheet: true,
                     printEndLabel: true);
+
+                automaticOutcome = CombineOutcomes(automaticOutcome, printOutcome);
             }
             else if (shouldAutoPrintInManualTool)
             {
@@ -807,6 +821,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException)
         {
+            automaticOutcome = CombineOutcomes(
+                automaticOutcome,
+                AutomaticProcessingOutcome.Warning);
             StatusMessage = "Операция отменена";
 
             if (requestMode == WorkMode.Manual)
@@ -816,6 +833,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
+            automaticOutcome = AutomaticProcessingOutcome.Error;
             _logger.LogWarning(exception, "Failed to load records");
 
             ApplyFailedLoadState(
@@ -827,6 +845,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             ActiveRequestMode = null;
             IsBusy = false;
             SchedulePendingProcessing();
+
+            if (automaticAttempt is not null)
+            {
+                await TryCompleteAutomaticAttemptAsync(
+                    automaticAttempt,
+                    automaticOutcome);
+            }
         }
     }
 
@@ -1114,7 +1139,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private async Task<BoxProcessingResponse> ProcessRequestWithoutUiBlockingAsync(
         BoxProcessingRequest request,
         string origin,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action? onProcessingStarted = null)
     {
         await _requestGate.WaitAsync(cancellationToken);
 
@@ -1133,6 +1159,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 request.Tenam,
                 origin,
                 request.Mode);
+
+            onProcessingStarted?.Invoke();
 
             var response = await Task.Run(
                 () => _boxProcessingService.ProcessAsync(request, cancellationToken),
@@ -1305,7 +1333,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         RequestManualWeightCommand.RaiseCanExecuteChanged();
     }
     // Выполняет бесшумную автопечать после успешной обработки
-    private async Task TryAutoPrintAsync(
+    private async Task<AutomaticProcessingOutcome?> TryAutoPrintAsync(
         BoxProcessingResponse response,
         string tenam,
         CancellationToken cancellationToken,
@@ -1322,13 +1350,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         if (settings is null || !settings.IsComplete)
         {
             StatusMessage = "Не настроены принтеры для быстрой печати";
-            return;
+            return IsPrintRequired(response, printDropSheet, printEndLabel)
+                ? AutomaticProcessingOutcome.Warning
+                : null;
         }
 
         if ((!settings.PrintEndLabelEnabled || !printEndLabel) && (!settings.PrintStuffingSheetEnabled || !printDropSheet))
         {
             StatusMessage = "Автопечать отключена в настройках";
-            return;
+            return null;
         }
 
         // Сначала печатаем лист сброса, затем торцевую этикетку
@@ -1351,7 +1381,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 var reason = ResolvePrintFailureReason(settings.StuffingSheetPrinterName);
                 StatusMessage = "Не удалось напечатать лист сброса";
                 AddNotification($"{notificationPrefix}Лист сброса №{tenam} не отправлен на печать. {reason}", NotificationCategory.Error);
-                return;
+                return AutomaticProcessingOutcome.Error;
             }
 
             AddNotification($"{notificationPrefix}Лист сброса №{tenam} отправлен на печать ({settings.StuffingSheetPrinterName})", NotificationCategory.Success);
@@ -1377,14 +1407,85 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                 var reason = ResolvePrintFailureReason(settings.EndLabelPrinterName);
                 StatusMessage = "Не удалось напечатать торцевую этикетку";
                 AddNotification($"{notificationPrefix}Торцевая этикетка №{tenam} не отправлена на печать. {reason}", NotificationCategory.Error);
-                return;
+                return AutomaticProcessingOutcome.Error;
             }
 
             AddNotification($"{notificationPrefix}Торцевая этикетка №{tenam} отправлена на печать ({settings.EndLabelPrinterName})", NotificationCategory.Success);
         }
 
         StatusMessage = "Отправлено на печать";
+        return null;
     }
+
+    private AutomaticProcessingAttemptContext? TryBeginAutomaticAttempt(string tenam)
+    {
+        if (_automaticProcessingStatistics is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return _automaticProcessingStatistics.BeginAttempt(tenam);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Failed to start local statistics tracking for automatic TENAM {Tenam}",
+                tenam);
+            return null;
+        }
+    }
+
+    private async Task TryCompleteAutomaticAttemptAsync(
+        AutomaticProcessingAttemptContext attempt,
+        AutomaticProcessingOutcome outcome)
+    {
+        try
+        {
+            await _automaticProcessingStatistics!.CompleteAttemptAsync(
+                attempt,
+                outcome,
+                CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            // Local monitoring data must never interrupt the production queue.
+            _logger.LogWarning(
+                exception,
+                "Failed to persist automatic processing statistics for TENAM {Tenam}",
+                attempt.Tenam);
+        }
+    }
+
+    private static AutomaticProcessingOutcome ResolveAutomaticOutcome(
+        BoxProcessingStatus status) => status switch
+        {
+            BoxProcessingStatus.Success => AutomaticProcessingOutcome.Success,
+            BoxProcessingStatus.NotFound or BoxProcessingStatus.NeedWeight =>
+                AutomaticProcessingOutcome.Warning,
+            BoxProcessingStatus.Error => AutomaticProcessingOutcome.Error,
+            _ => AutomaticProcessingOutcome.Error
+        };
+
+    private static AutomaticProcessingOutcome CombineOutcomes(
+        AutomaticProcessingOutcome current,
+        AutomaticProcessingOutcome? additional) =>
+        additional is null || current >= additional.Value
+            ? current
+            : additional.Value;
+
+    private static bool IsPrintRequired(
+        BoxProcessingResponse response,
+        bool printDropSheet,
+        bool printEndLabel) =>
+        (printDropSheet
+         && (response.PrintPlan.PrintDropSheet
+             || response.PrintPlan.PrintEmptyDropSheet))
+        || (printEndLabel
+            && response.Status == BoxProcessingStatus.Success
+            && response.PrintPlan.PrintEndLabels);
 
     // Проверяет доступность предпросмотра торцевой этикетки
     private bool CanOpenEndLabelPreview()

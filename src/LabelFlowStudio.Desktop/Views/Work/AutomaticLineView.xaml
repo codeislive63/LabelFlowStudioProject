@@ -372,7 +372,7 @@
                 </Grid>
             </Border>
 
-            <!-- KPI sources do not exist yet: all four cards deliberately stay unavailable. -->
+            <!-- Current local calendar-day statistics from the automatic-processing store. -->
             <Grid Grid.Row="3" Margin="{StaticResource WorkGapBottom12}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -389,8 +389,14 @@
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="За смену" />
-                            <TextBlock Margin="0,3,0,0" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AutoLineNeutralBrush}" Text="–" />
-                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Нет данных" />
+                            <TextBlock x:Name="ShiftCompletedValueText"
+                                       Margin="0,3,0,0"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource AutoLineNeutralBrush}"
+                                       Text="{Binding ShiftCompletedValueText}" />
+                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}"
+                                       Text="{Binding ShiftCompletedCaptionText}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -403,8 +409,14 @@
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Успешно" />
-                            <TextBlock Margin="0,3,0,0" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AutoLineNeutralBrush}" Text="–" />
-                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Нет данных" />
+                            <TextBlock x:Name="ShiftSuccessValueText"
+                                       Margin="0,3,0,0"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource AutoLineNeutralBrush}"
+                                       Text="{Binding ShiftSuccessValueText}" />
+                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}"
+                                       Text="{Binding ShiftSuccessCaptionText}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -417,8 +429,14 @@
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Ошибки" />
-                            <TextBlock Margin="0,3,0,0" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AutoLineNeutralBrush}" Text="–" />
-                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Нет данных" />
+                            <TextBlock x:Name="ShiftErrorValueText"
+                                       Margin="0,3,0,0"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource AutoLineNeutralBrush}"
+                                       Text="{Binding ShiftErrorValueText}" />
+                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}"
+                                       Text="{Binding ShiftErrorCaptionText}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -431,8 +449,14 @@
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Скорость" />
-                            <TextBlock Margin="0,3,0,0" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AutoLineNeutralBrush}" Text="–" />
-                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}" Text="Нет данных" />
+                            <TextBlock x:Name="ShiftSpeedValueText"
+                                       Margin="0,3,0,0"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource AutoLineNeutralBrush}"
+                                       Text="{Binding ShiftSpeedValueText}" />
+                            <TextBlock Style="{StaticResource AutoLineMutedTextStyle}"
+                                       Text="{Binding ShiftSpeedCaptionText}" />
                         </StackPanel>
                     </Grid>
                 </Border>

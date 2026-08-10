@@ -81,7 +81,7 @@ public sealed class AutomaticLineOracleXamlTests
                 dot,
                 statusText,
                 OracleConnectionState.Error,
-                "Ошибка",
+                "Нет соединения",
                 "Не удалось получить данные из базы данных.",
                 "AutoLineErrorBrush");
 
