@@ -29,6 +29,10 @@
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="7.0.0" />
 
+    <!-- Local SQLite persistence -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+
     <!-- Oracle EF Core provider -->
     <PackageVersion Include="Oracle.EntityFrameworkCore" Version="6.21.170" />
 

@@ -22,7 +22,7 @@ namespace LabelFlowStudio.Application.Tests.Desktop.Views;
 public sealed class WorkViewXamlSmokeTests
 {
     [Fact]
-    public void AppResources_LoadWorkSectionAndBothModeViewsWithoutForbiddenAutomaticContent()
+    public void AppResources_LoadAutomaticWorkAndManualSectionViewsWithoutForbiddenContent()
     {
         var printerShutdownBefore = IsSilentPrinterShutdownRequested();
 
@@ -34,17 +34,11 @@ public sealed class WorkViewXamlSmokeTests
             Assert.IsType<WorkSectionView>(template.LoadContent());
             using var work = CreateWorkViewModel();
             using var automatic = CreateAutomaticViewModel(work);
-            var manual = new ManualProcessingViewModel(work);
+            using var manual = new ManualProcessingViewModel(work);
             using var section = new WorkSectionViewModel(work, automatic, manual);
             var view = new WorkSectionView { DataContext = section };
-            var shell = new ShellViewModel(
-                work,
-                section,
-                new JournalViewModel(),
-                new SettingsViewModel());
             var window = new Window
             {
-                DataContext = shell,
                 Content = view
             };
 
@@ -58,6 +52,18 @@ public sealed class WorkViewXamlSmokeTests
             Assert.Null(FindVisualChild<DataGrid>(automaticView));
             Assert.True(FindVisualChildren<TextBlock>(automaticView).Count(item => item.Text == "–") >= 4);
             Assert.True(FindVisualChildren<TextBlock>(automaticView).Count(item => item.Text == "Нет данных") >= 4);
+            Assert.Equal(
+                automatic.ShiftCompletedValueText,
+                Assert.IsType<TextBlock>(automaticView.FindName("ShiftCompletedValueText")).Text);
+            Assert.Equal(
+                automatic.ShiftSuccessValueText,
+                Assert.IsType<TextBlock>(automaticView.FindName("ShiftSuccessValueText")).Text);
+            Assert.Equal(
+                automatic.ShiftErrorValueText,
+                Assert.IsType<TextBlock>(automaticView.FindName("ShiftErrorValueText")).Text);
+            Assert.Equal(
+                automatic.ShiftSpeedValueText,
+                Assert.IsType<TextBlock>(automaticView.FindName("ShiftSpeedValueText")).Text);
 
             var automaticText = FindVisualChildren<TextBlock>(automaticView)
                 .Select(item => item.Text)
@@ -79,17 +85,8 @@ public sealed class WorkViewXamlSmokeTests
                 ScrollBarVisibility.Disabled,
                 FindVisualChildren<ScrollViewer>(automaticView).First().HorizontalScrollBarVisibility);
 
-            var modeSelector = Assert.IsType<WorkModeSelector>(FindVisualChild<WorkModeSelector>(view));
-            var modeButtons = FindVisualChildren<Button>(modeSelector).ToArray();
-            Assert.Contains(modeButtons, button => ReferenceEquals(button.Command, work.SwitchToAutomaticModeCommand));
-            Assert.Contains(modeButtons, button => ReferenceEquals(button.Command, work.SwitchToManualModeCommand));
-
-            var journalButton = FindVisualChildren<Button>(automaticView)
-                .Single(button => FindVisualChildren<TextBlock>(button).Any(text => text.Text == "Открыть журнал"));
-            Assert.Same(shell.NavigateToJournalCommand, journalButton.Command);
-
             RaiseWorkModeChangedWithoutPersistence(work, WorkMode.Manual);
-            work.Tenam = "4430558";
+            manual.TenamInput = "4430558";
             for (var index = 1; index <= 55; index++)
             {
                 work.Records.Add(new LabelRecord
@@ -98,9 +95,10 @@ public sealed class WorkViewXamlSmokeTests
                     Artnr = index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture)
                 });
             }
-            ApplyLayout(view);
+            var manualView = new ManualProcessingView { DataContext = manual };
+            window.Content = manualView;
+            ApplyLayout(manualView);
 
-            var manualView = Assert.IsType<ManualProcessingView>(FindVisualChild<ManualProcessingView>(view));
             var recordsGrid = Assert.IsType<DataGrid>(FindVisualChild<DataGrid>(manualView));
             Assert.True(recordsGrid.EnableRowVirtualization);
             Assert.True(recordsGrid.EnableColumnVirtualization);
@@ -108,8 +106,10 @@ public sealed class WorkViewXamlSmokeTests
             Assert.Same(manual.PagedRecords, recordsGrid.ItemsSource);
             Assert.Equal(10, recordsGrid.Items.Count);
             Assert.Equal("Показано 1–10 из 55", manual.RangeText);
-            Assert.Equal(20, recordsGrid.Columns.Count);
-            Assert.All(recordsGrid.Columns, column =>
+            Assert.Equal(21, recordsGrid.Columns.Count);
+            Assert.Equal("№", recordsGrid.Columns[0].Header);
+            Assert.False(recordsGrid.Columns[0].CanUserSort);
+            Assert.All(recordsGrid.Columns.Skip(1), column =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(column.SortMemberPath));
                 Assert.NotNull(

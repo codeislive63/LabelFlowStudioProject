@@ -1,6 +1,7 @@
 ﻿using LabelFlowStudio.Core.Abstractions;
 using LabelFlowStudio.Data.Oracle;
 using LabelFlowStudio.Data.Oracle.Repositories;
+using LabelFlowStudio.Data.Statistics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,9 @@ public static class DataServiceCollectionExtensions
 
         services.AddSingleton<ILabelRepository, LabelRepository>();
         services.AddSingleton<IDataSourceHealthCheck, OracleDataSourceHealthCheck>();
+        services.AddSingleton<IAutomaticProcessingHistoryStore>(_ =>
+            new SqliteAutomaticProcessingHistoryStore(
+                AutomaticProcessingDatabasePathResolver.Resolve(configuration)));
 
         return services;
     }

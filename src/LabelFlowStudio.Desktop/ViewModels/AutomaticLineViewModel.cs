@@ -1,8 +1,10 @@
 using LabelFlowStudio.Application.BoxProcessing.Contracts;
+using LabelFlowStudio.Application.Statistics;
 using LabelFlowStudio.Desktop.Printing;
 using LabelFlowStudio.Devices.BoxScanner;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace LabelFlowStudio.Desktop.ViewModels;
 
@@ -18,6 +20,9 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     private readonly Func<AutomaticLineEquipmentSnapshot> _equipmentSnapshotProvider;
     private readonly Func<DateTime> _clock;
+    private readonly IAutomaticProcessingStatisticsService? _statisticsService;
+    private readonly SynchronizationContext? _synchronizationContext;
+    private readonly object _statisticsRefreshSync = new();
     private IReadOnlyList<AutomaticLineEvent> _recentEvents = [];
     private AutomaticLineEvent? _currentLineEvent;
     private DateTime? _successStateExpiresAt;
@@ -27,28 +32,52 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
     private bool _isScalesEnabled;
     private bool _hasEquipmentSnapshot;
     private int _equipmentRefreshPending;
+    private Task? _statisticsRefreshTask;
+    private bool _statisticsRefreshRequested;
+    private DateOnly? _statisticsLocalDate;
+    private string _shiftCompletedValueText = "–";
+    private string _shiftCompletedCaptionText = "Нет данных";
+    private string _shiftSuccessValueText = "–";
+    private string _shiftSuccessCaptionText = "Нет данных";
+    private string _shiftErrorValueText = "–";
+    private string _shiftErrorCaptionText = "Нет данных";
+    private string _shiftSpeedValueText = "–";
+    private string _shiftSpeedCaptionText = "Нет данных";
     private bool _disposed;
 
-    public AutomaticLineViewModel(MainViewModel work, IBoxScanner boxScanner)
+    public AutomaticLineViewModel(
+        MainViewModel work,
+        IBoxScanner boxScanner,
+        IAutomaticProcessingStatisticsService statisticsService)
         : this(
             work,
             CreateEquipmentSnapshotProvider(
-                boxScanner ?? throw new ArgumentNullException(nameof(boxScanner))))
+                boxScanner ?? throw new ArgumentNullException(nameof(boxScanner))),
+            statisticsService: statisticsService
+                ?? throw new ArgumentNullException(nameof(statisticsService)))
     {
     }
 
     internal AutomaticLineViewModel(
         MainViewModel work,
         Func<AutomaticLineEquipmentSnapshot> equipmentSnapshotProvider,
-        Func<DateTime>? clock = null)
+        Func<DateTime>? clock = null,
+        IAutomaticProcessingStatisticsService? statisticsService = null)
     {
         Work = work ?? throw new ArgumentNullException(nameof(work));
         _equipmentSnapshotProvider = equipmentSnapshotProvider
             ?? throw new ArgumentNullException(nameof(equipmentSnapshotProvider));
         _clock = clock ?? (() => DateTime.Now);
+        _statisticsService = statisticsService;
+        _synchronizationContext = SynchronizationContext.Current;
 
         Work.PropertyChanged += OnWorkPropertyChanged;
         Work.Notifications.CollectionChanged += OnNotificationsCollectionChanged;
+
+        if (_statisticsService is not null)
+        {
+            _statisticsService.StatisticsChanged += OnStatisticsChanged;
+        }
 
         RefreshRecentEvents();
     }
@@ -272,6 +301,87 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
 
     public string NoDataText => "Нет данных";
 
+    public string ShiftCompletedValueText
+    {
+        get => _shiftCompletedValueText;
+        private set => SetProperty(ref _shiftCompletedValueText, value);
+    }
+
+    public string ShiftCompletedCaptionText
+    {
+        get => _shiftCompletedCaptionText;
+        private set => SetProperty(ref _shiftCompletedCaptionText, value);
+    }
+
+    public string ShiftSuccessValueText
+    {
+        get => _shiftSuccessValueText;
+        private set => SetProperty(ref _shiftSuccessValueText, value);
+    }
+
+    public string ShiftSuccessCaptionText
+    {
+        get => _shiftSuccessCaptionText;
+        private set => SetProperty(ref _shiftSuccessCaptionText, value);
+    }
+
+    public string ShiftErrorValueText
+    {
+        get => _shiftErrorValueText;
+        private set => SetProperty(ref _shiftErrorValueText, value);
+    }
+
+    public string ShiftErrorCaptionText
+    {
+        get => _shiftErrorCaptionText;
+        private set => SetProperty(ref _shiftErrorCaptionText, value);
+    }
+
+    public string ShiftSpeedValueText
+    {
+        get => _shiftSpeedValueText;
+        private set => SetProperty(ref _shiftSpeedValueText, value);
+    }
+
+    public string ShiftSpeedCaptionText
+    {
+        get => _shiftSpeedCaptionText;
+        private set => SetProperty(ref _shiftSpeedCaptionText, value);
+    }
+
+    public Task RefreshStatisticsAsync()
+    {
+        lock (_statisticsRefreshSync)
+        {
+            if (_disposed || _statisticsService is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            _statisticsRefreshRequested = true;
+
+            if (_statisticsRefreshTask is not null)
+            {
+                return _statisticsRefreshTask;
+            }
+
+            _statisticsRefreshTask = RefreshStatisticsLoopAsync();
+            return _statisticsRefreshTask;
+        }
+    }
+
+    public Task RefreshStatisticsIfLocalDayChangedAsync()
+    {
+        if (_disposed || _statisticsService is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _statisticsLocalDate != _statisticsService.CurrentLocalDate
+            ? RefreshStatisticsAsync()
+            : Task.CompletedTask;
+    }
+
     public async Task RefreshEquipmentStatusAsync()
     {
         if (_disposed || Interlocked.Exchange(ref _equipmentRefreshPending, 1) != 0)
@@ -297,6 +407,135 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         {
             Interlocked.Exchange(ref _equipmentRefreshPending, 0);
         }
+    }
+
+    private async Task RefreshStatisticsLoopAsync()
+    {
+        // Ensure the shared task is assigned before even a fully synchronous test
+        // implementation can finish its first read.
+        await Task.Yield();
+
+        while (true)
+        {
+            lock (_statisticsRefreshSync)
+            {
+                _statisticsRefreshRequested = false;
+            }
+
+            await RefreshStatisticsCoreAsync();
+
+            lock (_statisticsRefreshSync)
+            {
+                if (_statisticsRefreshRequested && !_disposed)
+                {
+                    continue;
+                }
+
+                _statisticsRefreshTask = null;
+                return;
+            }
+        }
+    }
+
+    private async Task RefreshStatisticsCoreAsync()
+    {
+        if (_statisticsService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var snapshot = await _statisticsService.GetCurrentDayAsync();
+            await RunOnCapturedContextAsync(() => ApplyStatisticsSnapshot(snapshot));
+        }
+        catch
+        {
+            await RunOnCapturedContextAsync(ApplyStatisticsUnavailable);
+        }
+    }
+
+    private void ApplyStatisticsSnapshot(AutomaticProcessingKpiSnapshot snapshot)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _statisticsLocalDate = snapshot.LocalDate;
+
+        ShiftCompletedValueText = snapshot.CompletedCount.ToString(CultureInfo.CurrentCulture);
+        ShiftCompletedCaptionText = "за сегодня";
+        ShiftSuccessValueText = snapshot.SuccessCount.ToString(CultureInfo.CurrentCulture);
+        ShiftSuccessCaptionText = "за сегодня";
+        ShiftErrorValueText = snapshot.ErrorCount.ToString(CultureInfo.CurrentCulture);
+        ShiftErrorCaptionText = "за сегодня";
+
+        if (snapshot.CompletedCount >= 2 && snapshot.BoxesPerHour is > 0)
+        {
+            ShiftSpeedValueText = snapshot.BoxesPerHour.Value.ToString(
+                "0",
+                CultureInfo.CurrentCulture);
+            ShiftSpeedCaptionText = "кор/ч";
+        }
+        else
+        {
+            ShiftSpeedValueText = NoDataValue;
+            ShiftSpeedCaptionText = "Недостаточно данных";
+        }
+    }
+
+    private void ApplyStatisticsUnavailable()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _statisticsLocalDate = null;
+        ShiftCompletedValueText = NoDataValue;
+        ShiftCompletedCaptionText = "Недоступно";
+        ShiftSuccessValueText = NoDataValue;
+        ShiftSuccessCaptionText = "Недоступно";
+        ShiftErrorValueText = NoDataValue;
+        ShiftErrorCaptionText = "Недоступно";
+        ShiftSpeedValueText = NoDataValue;
+        ShiftSpeedCaptionText = "Недоступно";
+    }
+
+    private Task RunOnCapturedContextAsync(Action action)
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_synchronizationContext is null
+            || ReferenceEquals(SynchronizationContext.Current, _synchronizationContext))
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _synchronizationContext.Post(
+            _ =>
+            {
+                try
+                {
+                    action();
+                    completion.TrySetResult();
+                }
+                catch (Exception exception)
+                {
+                    completion.TrySetException(exception);
+                }
+            },
+            null);
+
+        return completion.Task;
     }
 
     public void RefreshMonitoringState()
@@ -347,9 +586,14 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        _disposed = true;
         Work.PropertyChanged -= OnWorkPropertyChanged;
         Work.Notifications.CollectionChanged -= OnNotificationsCollectionChanged;
-        _disposed = true;
+
+        if (_statisticsService is not null)
+        {
+            _statisticsService.StatisticsChanged -= OnStatisticsChanged;
+        }
     }
 
     internal static AutomaticLineState ResolveLineState(
@@ -505,6 +749,11 @@ public sealed class AutomaticLineViewModel : ViewModelBase, IDisposable
         RefreshRecentEvents();
         NotifyLastBoxChanged();
         NotifyLineStateChanged();
+    }
+
+    private void OnStatisticsChanged(object? sender, EventArgs eventArgs)
+    {
+        _ = RefreshStatisticsAsync();
     }
 
     private void RefreshRecentEvents()

@@ -57,7 +57,7 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_PreservesLatestWorkModeAndManualAutoprint()
+    public async Task SaveAsync_AppliesDraftWorkModeAndPreservesLatestManualAutoprint()
     {
         var active = CreateValidSettings();
         active.WorkMode = WorkMode.Manual;
@@ -75,7 +75,7 @@ public sealed class SettingsViewModelTests
 
         Assert.True(saved);
         Assert.Equal(11, repository.Active.EndLabelCopies);
-        Assert.Equal(WorkMode.Automatic, repository.Active.WorkMode);
+        Assert.Equal(WorkMode.Manual, repository.Active.WorkMode);
         Assert.True(repository.Active.ManualScanAutoPrintEndLabelEnabled);
     }
 

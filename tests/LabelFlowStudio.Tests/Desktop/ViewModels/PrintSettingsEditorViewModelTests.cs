@@ -97,7 +97,7 @@ public sealed class PrintSettingsEditorViewModelTests
     }
 
     [Fact]
-    public void MergeWithLatestActive_PreservesRuntimeOwnedFields()
+    public void MergeWithLatestActive_AppliesDraftWorkModeAndPreservesManualAutoprint()
     {
         var opened = CreateValidSettings();
         opened.WorkMode = WorkMode.Manual;
@@ -112,7 +112,7 @@ public sealed class PrintSettingsEditorViewModelTests
         var merged = editor.MergeWithLatestActive(latest);
 
         Assert.Equal(8, merged.EndLabelCopies);
-        Assert.Equal(WorkMode.Automatic, merged.WorkMode);
+        Assert.Equal(WorkMode.Manual, merged.WorkMode);
         Assert.True(merged.ManualScanAutoPrintEndLabelEnabled);
         Assert.NotSame(latest, merged);
     }

@@ -43,9 +43,11 @@ public sealed class MainViewModelTests
         });
 
     [Theory]
-    [InlineData(WorkMode.Manual)]
-    [InlineData(WorkMode.Automatic)]
-    public Task TemplateEditorCommands_AreAvailableAfterRealDataLoad_InEitherWorkMode(WorkMode mode) =>
+    [InlineData(WorkMode.Manual, true)]
+    [InlineData(WorkMode.Automatic, false)]
+    public Task TemplateEditorCommands_ReflectWhetherManualEditorDataWasLoaded(
+        WorkMode mode,
+        bool expectedAvailability) =>
         StaTestRunner.RunAsync(async () =>
         {
             var service = new FakeProcessingService
@@ -76,8 +78,8 @@ public sealed class MainViewModelTests
             await service.WaitCalledAsync();
             await WaitHelpers.WaitUntilAsync(() => !vm.IsBusy, TimeSpan.FromSeconds(2));
 
-            Assert.True(vm.OpenEndLabelPreviewCommand.CanExecute(null));
-            Assert.True(vm.OpenStuffingSheetPreviewCommand.CanExecute(null));
+            Assert.Equal(expectedAvailability, vm.OpenEndLabelPreviewCommand.CanExecute(null));
+            Assert.Equal(expectedAvailability, vm.OpenStuffingSheetPreviewCommand.CanExecute(null));
             Assert.Equal(mode, vm.CurrentWorkMode);
         });
 
@@ -257,7 +259,7 @@ public sealed class MainViewModelTests
             await WaitHelpers.WaitUntilAsync(() => vm.IsBusy == false, TimeSpan.FromSeconds(2));
 
             Assert.NotEmpty(vm.Notifications);
-            Assert.Equal("Короб №4340558: Данные загружены", vm.Notifications[0].Message);
+            Assert.Equal("Ручная обработка: Короб №4340558: Данные загружены", vm.Notifications[0].Message);
         });
 
     [Fact]

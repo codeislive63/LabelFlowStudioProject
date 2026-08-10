@@ -76,9 +76,9 @@ public sealed class WorkPresentationViewModelTests
             using var work = CreateWorkViewModel(service, new FakeScanner());
             SetWorkModeWithoutPersistence(work, WorkMode.Automatic);
             using var automatic = CreateAutomaticViewModel(work);
-            work.Tenam = "4340558";
+            automatic.RefreshEquipmentStatus();
 
-            work.LoadRecordsCommand.Execute(null);
+            work.ReceiveTenamFromScanner("4340558");
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
             await WaitHelpers.WaitUntilAsync(() => !work.IsBusy, TimeSpan.FromSeconds(2));
@@ -122,8 +122,8 @@ public sealed class WorkPresentationViewModelTests
             using var work = CreateWorkViewModel(service, new FakeScanner());
             SetWorkModeWithoutPersistence(work, WorkMode.Automatic);
             using var automatic = CreateAutomaticViewModel(work);
-            work.Tenam = "4340558";
-            work.LoadRecordsCommand.Execute(null);
+            automatic.RefreshEquipmentStatus();
+            work.ReceiveTenamFromScanner("4340558");
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
             await WaitHelpers.WaitUntilAsync(() => !work.IsBusy, TimeSpan.FromSeconds(2));
@@ -176,7 +176,7 @@ public sealed class WorkPresentationViewModelTests
 
             Assert.True(automatic.HasEquipmentSnapshot);
             Assert.False(automatic.IsScannerRunning);
-            Assert.Equal("Остановлен", automatic.ScannerStatusText);
+            Assert.Equal("Не готов", automatic.ScannerStatusText);
             Assert.Equal("Не найден", automatic.PrinterStatusText);
             Assert.Equal("Отключены", automatic.ScalesStatusText);
             Assert.Equal("Не проверено", automatic.WmsStatusText);
@@ -295,9 +295,8 @@ public sealed class WorkPresentationViewModelTests
                 () => new AutomaticLineEquipmentSnapshot(true, false, false),
                 () => now);
             automatic.RefreshEquipmentStatus();
-            work.Tenam = "4340558";
 
-            work.LoadRecordsCommand.Execute(null);
+            work.ReceiveTenamFromScanner("4340558");
 
             await service.Called.Task.WaitAsync(TimeSpan.FromSeconds(2));
             await WaitHelpers.WaitUntilAsync(() => !work.IsBusy, TimeSpan.FromSeconds(2));

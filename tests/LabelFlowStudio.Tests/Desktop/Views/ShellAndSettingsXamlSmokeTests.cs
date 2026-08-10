@@ -46,10 +46,10 @@ public sealed class ShellAndSettingsXamlSmokeTests
             var drawer = Assert.IsType<Border>(window.FindName("NotificationDrawer"));
             var notifications = Assert.IsType<ListBox>(window.FindName("NotificationsListBox"));
             var filter = Assert.IsType<ComboBox>(window.FindName("NotificationFilterComboBox"));
-            var printMenu = Assert.IsType<Menu>(window.FindName("PrintMenu"));
-            var printMenuItem = Assert.IsType<MenuItem>(window.FindName("PrintMenuItem"));
-            var endLabelEditor = Assert.IsType<MenuItem>(window.FindName("EndLabelEditorMenuItem"));
-            var stuffingSheetEditor = Assert.IsType<MenuItem>(window.FindName("StuffingSheetEditorMenuItem"));
+            var manualButton = FindLogicalChildren<Button>(window)
+                .Single(button => Equals(button.Content, "Ручная обработка"));
+            var settingsButton = FindLogicalChildren<Button>(window)
+                .Single(button => Equals(button.ToolTip, "Настройки"));
 
             Assert.InRange(drawer.Width, 400, 420);
             Assert.Equal(
@@ -57,12 +57,10 @@ public sealed class ShellAndSettingsXamlSmokeTests
                 ScrollViewer.GetHorizontalScrollBarVisibility(notifications));
             Assert.Equal("Только проблемы", ((ComboBoxItem)filter.Items[0]).Content);
             Assert.Equal(0, fixture.Work.NotificationTabIndex);
-            Assert.Single(printMenu.Items);
-            Assert.Equal("Печать", printMenuItem.Header);
-            Assert.Equal("Редактор торцевой этикетки", endLabelEditor.Header);
-            Assert.Equal("Редактор листа сброса", stuffingSheetEditor.Header);
-            Assert.Same(fixture.Work.OpenEndLabelPreviewCommand, endLabelEditor.Command);
-            Assert.Same(fixture.Work.OpenStuffingSheetPreviewCommand, stuffingSheetEditor.Command);
+            Assert.Same(fixture.Shell.NavigateToManualCommand, manualButton.Command);
+            Assert.Same(fixture.Shell.NavigateToSettingsCommand, settingsButton.Command);
+            Assert.Null(window.FindName("PrintMenu"));
+            Assert.Empty(FindLogicalChildren<Menu>(window));
             Assert.Null(window.FindName("PrintSettingsButton"));
             Assert.True(window.ExtendsContentIntoTitleBar);
             Assert.Equal("LabelFlowStudio", window.Title);
@@ -135,7 +133,7 @@ public sealed class ShellAndSettingsXamlSmokeTests
             var editorView = Assert.Single(FindVisualChildren<PrintSettingsEditorView>(view));
             Assert.Equal(2, FindVisualChildren<UiNumberBox>(view).Count());
             Assert.Equal(2, FindVisualChildren<ComboBox>(view).Count());
-            Assert.Equal(3, FindVisualChildren<UiToggleSwitch>(view).Count());
+            Assert.Equal(4, FindVisualChildren<UiToggleSwitch>(view).Count());
             Assert.Equal(
                 ScrollBarVisibility.Disabled,
                 ScrollViewer.GetHorizontalScrollBarVisibility(
@@ -168,11 +166,13 @@ public sealed class ShellAndSettingsXamlSmokeTests
                 FindLogicalChildren<TextBlock>(endLabelStatus),
                 text => text.Text == "Принтер не найден");
 
-            var actionButtons = FindVisualChildren<Button>(view)
-                .Where(button => button.Content is "Отменить изменения" or "Сохранить")
-                .ToArray();
-            Assert.Equal(2, actionButtons.Length);
-            Assert.All(actionButtons, button => Assert.IsType<string>(button.Content));
+            var saveButton = Assert.Single(
+                FindVisualChildren<Button>(view),
+                button => Equals(button.Content, "Сохранить"));
+            Assert.Same(fixture.Settings.SaveCommand, saveButton.Command);
+            Assert.DoesNotContain(
+                FindVisualChildren<Button>(view),
+                button => Equals(button.Content, "Отменить изменения"));
 
             window.Content = null;
             window.Close();
@@ -196,7 +196,7 @@ public sealed class ShellAndSettingsXamlSmokeTests
     }
 
     [Fact]
-    public void SuccessfulSettingsSave_ShowsExactlyOneSnackbarAndDoesNotCreateUnreadProblem()
+    public void SuccessfulSettingsSave_ShowsCompactToastAndDoesNotCreateUnreadProblem()
     {
         WpfApplicationTestHost.Run(() =>
         {
@@ -214,9 +214,12 @@ public sealed class ShellAndSettingsXamlSmokeTests
                 .GetResult();
 
             Assert.True(saved);
-            Assert.Equal(1, snackbar.ShowCalls);
-            Assert.Equal("Настройки сохранены", snackbar.LastTitle);
-            Assert.Equal("Изменения успешно применены", snackbar.LastMessage);
+            Assert.Equal(0, snackbar.ShowCalls);
+            var toast = Assert.IsType<Border>(window.FindName("SettingsSavedToast"));
+            Assert.Equal(Visibility.Visible, toast.Visibility);
+            Assert.Contains(
+                FindLogicalChildren<TextBlock>(toast),
+                text => text.Text == "Настройки сохранены");
             Assert.Equal(unreadBefore, fixture.Work.UnreadProblemNotificationsCount);
             Assert.Empty(fixture.Work.Notifications);
             window.Close();
